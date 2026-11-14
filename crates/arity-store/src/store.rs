@@ -171,6 +171,31 @@ impl Store {
         Ok(Self { connection })
     }
 
+    /// Removes the full text of works from this database. The export calls
+    /// it on its copy for each work whose license does not let others share
+    /// the text. The evidence quotes stay.
+    pub fn remove_texts(&self, works: &[WorkId]) -> Result<()> {
+        let transaction = self.connection.unchecked_transaction()?;
+        for work in works {
+            transaction.execute(
+                "DELETE FROM block WHERE text_id IN (SELECT id FROM text WHERE work_id = ?1)",
+                [work.0],
+            )?;
+            transaction.execute("UPDATE text SET document = '' WHERE work_id = ?1", [work.0])?;
+        }
+        transaction.commit()?;
+        Ok(())
+    }
+
+    /// Writes a clean copy of the whole database to one file.
+    pub fn copy_to(&self, path: &Path) -> Result<()> {
+        let target = path.to_str().ok_or_else(|| {
+            StoreError::Conflict(format!("the path {} is not UTF-8", path.display()))
+        })?;
+        self.connection.execute("VACUUM INTO ?1", [target])?;
+        Ok(())
+    }
+
     pub fn schema_version(&self) -> Result<i64> {
         Ok(self
             .connection

@@ -71,6 +71,22 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    env:
+      MDBOOK: v0.5.4
+      MDBOOK_SHA256: 3f28de05dafca9d0f2eab99c662116b0e37b89b1d96a08f8f430b9eeae958cd7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install mdBook
+        run: |
+          curl --fail --silent --show-error --location --output mdbook.tar.gz \
+            "https://github.com/rust-lang/mdBook/releases/download/$MDBOOK/mdbook-$MDBOOK-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$MDBOOK_SHA256  mdbook.tar.gz" | sha256sum --check
+          tar --extract --gzip --file mdbook.tar.gz
+      - run: ./mdbook build docs
+
   dependencies:
     name: Dependencies
     runs-on: ubuntu-latest

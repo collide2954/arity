@@ -7,7 +7,7 @@ use arity_core::vocabulary::{
 use arity_core::{Curie, Decimal, Digest};
 use arity_protocol::{
     Checked, ConditionInput, EffectReportInput, EntityInput, EvidenceInput, MethodInput, Person,
-    PropertyDefinition, ReportInput, ValueInput, ValueReportInput,
+    PropertyDefinition, ReportInput, SkipInput, ValueInput, ValueReportInput,
 };
 use arity_units::Unit;
 use jiff::Timestamp;
@@ -93,6 +93,29 @@ struct Writer<'a> {
 }
 
 impl Writer<'_> {
+    fn skip(&self, position: usize, item: &SkipInput) -> Result<()> {
+        let path = format!("/skipped/{position}");
+        let range = self.positions.get(&path).ok_or_else(|| {
+            StoreError::Corrupt(format!("the checks give no position for {path}"))
+        })?;
+        self.connection.execute(
+            "INSERT INTO skip (run_id, text_id, path, block_key, quote, start, \"end\", reason,
+             note) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![
+                self.run.0,
+                self.text.0,
+                path,
+                item.block,
+                item.quote,
+                index(range.start),
+                index(range.end),
+                item.reason.as_str(),
+                item.note
+            ],
+        )?;
+        Ok(())
+    }
+
     fn evidence(
         &self,
         path: &str,
@@ -501,6 +524,9 @@ impl Store {
                 ReportInput::Value(value) => writer.value_report(position, value, &body)?,
                 ReportInput::Effect(effect) => writer.effect_report(position, effect, &body)?,
             };
+        }
+        for (position, skip) in submission.skipped.iter().enumerate() {
+            writer.skip(position, skip)?;
         }
         let run = writer.run;
         transaction.commit()?;

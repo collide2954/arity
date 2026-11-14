@@ -90,13 +90,27 @@ impl Store {
     /// reports that no person rejected. Each range counts Unicode scalar
     /// values of the text of its block.
     pub fn quoted_ranges(&self, text: TextId) -> Result<HashMap<String, Vec<Range<usize>>>> {
-        let mut statement = self.connection.prepare(
+        self.ranges(
             "SELECT evidence.block_key, evidence.start, evidence.\"end\"
              FROM evidence
              JOIN report_state ON report_state.report_id = evidence.report_id
              WHERE evidence.text_id = ?1 AND report_state.state != 'rejected'
              ORDER BY evidence.id",
-        )?;
+            text,
+        )
+    }
+
+    /// The ranges of each block of a text that readers skipped. Each range
+    /// counts Unicode scalar values of the text of its block.
+    pub fn skipped_ranges(&self, text: TextId) -> Result<HashMap<String, Vec<Range<usize>>>> {
+        self.ranges(
+            "SELECT block_key, start, \"end\" FROM skip WHERE text_id = ?1 ORDER BY id",
+            text,
+        )
+    }
+
+    fn ranges(&self, sql: &str, text: TextId) -> Result<HashMap<String, Vec<Range<usize>>>> {
+        let mut statement = self.connection.prepare(sql)?;
         let rows = statement
             .query_map([text.0], |row| {
                 Ok((
@@ -106,18 +120,18 @@ impl Store {
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
-        let mut quoted: HashMap<String, Vec<Range<usize>>> = HashMap::new();
+        let mut ranges: HashMap<String, Vec<Range<usize>>> = HashMap::new();
         for (block, start, end) in rows {
             let position = |value: i64| {
                 usize::try_from(value)
                     .map_err(|_| StoreError::Corrupt(format!("quote position {value}")))
             };
-            quoted
+            ranges
                 .entry(block)
                 .or_default()
                 .push(position(start)?..position(end)?);
         }
-        Ok(quoted)
+        Ok(ranges)
     }
 
     /// The newest canonical text of a work.

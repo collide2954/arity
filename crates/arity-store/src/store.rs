@@ -11,6 +11,7 @@ pub const SOFTWARE: &str = concat!("arity ", env!("CARGO_PKG_VERSION"));
 const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/001_initial.sql"),
     include_str!("../migrations/002_run_entity.sql"),
+    include_str!("../migrations/003_skip.sql"),
 ];
 
 macro_rules! id_type {

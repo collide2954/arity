@@ -151,6 +151,21 @@ fn gives_the_quoted_ranges_of_the_reports_that_no_person_rejected() {
 }
 
 #[test]
+fn stores_the_skipped_quotes_of_a_run() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let mut value = submission(&document, "0.24", "chemical");
+    value["skipped"] = json!([{
+        "block": "t1/r1c2", "quote": "IC50 (μM)", "reason": "other", "note": "A test."
+    }]);
+    store_one(&store, work, text, &document, &value).unwrap();
+    let skipped = store.skipped_ranges(text).unwrap();
+    assert_eq!(skipped.len(), 1);
+    assert_eq!(skipped["t1/r1c2"].len(), 1);
+    assert_eq!(skipped["t1/r1c2"][0], 0..9);
+}
+
+#[test]
 fn gives_back_the_texts_the_runs_and_the_checks() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");

@@ -5,6 +5,7 @@ pub mod archive;
 pub mod catalogue;
 pub mod config;
 pub mod context;
+pub mod coverage;
 pub mod error;
 pub mod fetch;
 pub mod notices;

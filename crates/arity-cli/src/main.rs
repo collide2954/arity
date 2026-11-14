@@ -6,7 +6,9 @@ use std::time::Duration;
 
 use arity_cli::config::{CONFIG_FILE, Config, PersonConfig};
 use arity_cli::submit::Outcome;
-use arity_cli::{CliError, Context, Result, archive, catalogue, fetch, notices, show, submit};
+use arity_cli::{
+    CliError, Context, Result, archive, catalogue, coverage, fetch, notices, show, submit,
+};
 use arity_core::vocabulary::CheckState;
 use arity_core::{EntityKind, License, NoticeKind, Orcid, PREFIXES, Scope};
 use arity_protocol::IssueCode;
@@ -62,6 +64,13 @@ enum Command {
     Show {
         identifier: String,
         /// Print the canonical text as JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    /// List the numbers of a work that no report quotes yet.
+    Coverage {
+        identifier: String,
+        /// Print the coverage as JSON.
         #[arg(long)]
         json: bool,
     },
@@ -164,6 +173,7 @@ fn run(cli: Cli, out: &mut impl Write) -> Result<ExitCode> {
         Command::Queue => queue(data, out),
         Command::Fetch { identifiers, next } => fetch_works(data, &identifiers, next, now, out),
         Command::Show { identifier, json } => show_work(data, &identifier, json, out),
+        Command::Coverage { identifier, json } => coverage_of(data, &identifier, json, out),
         Command::Submit { file, dry_run } => submit_file(data, &file, dry_run, now, out),
         Command::Check {
             report,
@@ -321,6 +331,23 @@ fn show_work(data: &Path, identifier: &str, json: bool, out: &mut impl Write) ->
             .digest()
             .map_err(|error| CliError::Usage(error.to_string()))?;
         emit(out, show::render(&metadata, &digest, &document))?;
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn coverage_of(
+    data: &Path,
+    identifier: &str,
+    json: bool,
+    out: &mut impl Write,
+) -> Result<ExitCode> {
+    let context = open(data)?;
+    let work = context.work(identifier)?;
+    let (document, coverage) = coverage::of_work(&context, work)?;
+    if json {
+        emit(out, json_text(&coverage)?)?;
+    } else {
+        emit(out, coverage::render(&document, &coverage).trim_end())?;
     }
     Ok(ExitCode::SUCCESS)
 }

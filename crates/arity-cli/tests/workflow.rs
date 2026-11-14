@@ -6,7 +6,7 @@ use std::path::Path;
 
 use arity_cli::config::{Config, PersonConfig};
 use arity_cli::submit::Outcome;
-use arity_cli::{Context, archive, catalogue, fetch, show, submit};
+use arity_cli::{Context, archive, catalogue, coverage, fetch, show, submit};
 use arity_core::vocabulary::CheckState;
 use arity_core::{CcElements, License, Notice, NoticeKind, NoticeSource};
 use arity_sources::{Http, Response, SourceError, europepmc, pmc};
@@ -212,6 +212,33 @@ fn catalogues_fetches_reads_submits_and_checks_a_work() {
         context.store.check_state(reports[0].0).unwrap(),
         CheckState::Confirmed
     );
+}
+
+#[test]
+fn lists_the_numbers_that_no_report_quotes() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = context(directory.path());
+    let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
+    fetch::fetch(&context, work, now()).unwrap();
+    let (_, before) = coverage::of_work(&context, work).unwrap();
+    assert!(before.cells.numbers > 100, "{:?}", before.cells);
+    assert_eq!((before.cells.quoted, before.text.quoted), (0, 0));
+
+    let path = directory.path().join("submission.json");
+    fs::write(
+        &path,
+        serde_json::to_vec(&submission(&context, "7.30")).unwrap(),
+    )
+    .unwrap();
+    submit::submit(&context, &path, false, now()).unwrap();
+    let (document, after) = coverage::of_work(&context, work).unwrap();
+    assert_eq!(after.text.quoted, 2);
+    assert_eq!(after.text.numbers, before.text.numbers);
+    assert_eq!(after.unquoted.len(), before.unquoted.len() - 2);
+
+    let text = coverage::render(&document, &after);
+    assert!(text.starts_with("Reports quote 0 of "), "{text}");
+    assert!(text.contains("[t1/r3c5] 19.53 ± 1.05"), "{text}");
 }
 
 #[test]

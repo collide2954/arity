@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { segments } from "./highlight";
+import { byBlock, segments, type Highlight } from "./highlight";
 
 describe("segments", () => {
   it("marks the quoted part of a block", () => {
@@ -53,5 +53,30 @@ describe("segments", () => {
       { text: "b", reports: [1] },
     ]);
     expect(segments("", [])).toEqual([]);
+  });
+});
+
+function highlight(
+  report: number,
+  index: number,
+  quote: string,
+  block: string,
+  start: number,
+  end: number,
+): Highlight {
+  return { report, index, block, quote, start, end, label: `report ${String(report)}` };
+}
+
+describe("byBlock", () => {
+  it("gives the highlights of each block, in their order", () => {
+    const first = highlight(1, 0, "a", "s1/p1", 0, 1);
+    const second = highlight(2, 0, "b", "s1/p2", 0, 1);
+    const third = highlight(2, 1, "c", "s1/p1", 2, 3);
+    expect(byBlock([first, second, third])).toEqual(
+      new Map([
+        ["s1/p1", [first, third]],
+        ["s1/p2", [second]],
+      ]),
+    );
   });
 });

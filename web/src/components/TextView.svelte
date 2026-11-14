@@ -1,6 +1,6 @@
 <script lang="ts">
   import { unquotedOf } from "../lib/coverage";
-  import { reveal, segments, type Highlight } from "../lib/highlight";
+  import { byBlock, reveal, segments, type Highlight } from "../lib/highlight";
   import type { Block, Coverage, TextDocument } from "../lib/types";
 
   let {
@@ -47,10 +47,14 @@
     return result;
   });
 
+  const blockHighlights = $derived(byBlock(highlights));
+
   function rangesOf(block: Block) {
-    return highlights
-      .filter((highlight) => highlight.block === block.key)
-      .map(({ start, end, report }) => ({ start, end, report }));
+    return (blockHighlights.get(block.key) ?? []).map(({ start, end, report }) => ({
+      start,
+      end,
+      report,
+    }));
   }
 
   let container: HTMLDivElement | undefined = $state();

@@ -49,6 +49,17 @@ export function mainMark(container: HTMLElement, report: number): HTMLElement | 
   return marks[0] ?? null;
 }
 
+/** The highlights of each block. */
+export function byBlock(highlights: readonly Highlight[]): Map<string, Highlight[]> {
+  const blocks = new Map<string, Highlight[]>();
+  for (const highlight of highlights) {
+    const list = blocks.get(highlight.block);
+    if (list) list.push(highlight);
+    else blocks.set(highlight.block, [highlight]);
+  }
+  return blocks;
+}
+
 export interface Segment {
   readonly text: string;
   /** The reports whose quotes cover this segment. */

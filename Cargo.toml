@@ -12,10 +12,12 @@ publish = false
 
 [workspace.dependencies]
 arity-core = { path = "crates/arity-core" }
+arity-text = { path = "crates/arity-text" }
 hex = "0.4.3"
 jiff = { version = "0.2.43", features = ["serde"] }
 proptest = "1.12.0"
 regex = "1.13.1"
+roxmltree = "0.21.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 sha2 = "0.11.1"

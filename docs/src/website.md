@@ -1,7 +1,9 @@
 # Website
 
 The website is a static site in Svelte and TypeScript. It reads the files that
-`arity export` writes, so it needs no server.
+`arity export` writes, so it needs no server. The public website is at
+<https://collide2954.github.io/arity/>. See
+[Archive and rebuild](archive.md#the-public-website) for how arity publishes it.
 
 ## Pages
 

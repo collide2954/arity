@@ -18,8 +18,12 @@ of measured value, in any unit that UCUM can express.
   canonical text, checks submissions, and stores them in a SQLite database.
 - The website. It shows each work with a mark on each quote in its PDF, the
   values as tables and figures, and the effects as a matrix.
-- The archive, in the repository arity-data. It holds the submissions and the
-  checks. arity can make the same database again from the archive.
+- The archive, in the repository
+  [arity-data](https://github.com/collide2954/arity-data). It holds the
+  submissions and the checks. arity can make the same database again from the
+  archive.
+
+The public website is at <https://collide2954.github.io/arity/>.
 
 ## Who reads the articles
 

@@ -44,6 +44,16 @@ arity is in early development. The data model and the interfaces can change.
 6. **Archive.** arity writes the submissions and the checks to an archive.
    From the archive, arity can make the same database again.
 
+## Website and data
+
+- The website: <https://collide2954.github.io/arity/>
+- The documentation: <https://collide2954.github.io/arity/docs/>
+- The data: [arity-data](https://github.com/collide2954/arity-data), the
+  archive of the submissions and the checks, under CC0 1.0.
+
+GitHub Actions makes the database again from arity-data and publishes the
+website each day, and after each change to arity.
+
 ## Build and run
 
 You need Rust (the file `rust-toolchain.toml` selects the version), and for

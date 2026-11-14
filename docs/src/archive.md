@@ -1,7 +1,8 @@
 # Archive and rebuild
 
 The archive is a set of files from which arity can make the same database
-again. The repository arity-data holds the public archive, under CC0 1.0.
+again. The repository [arity-data](https://github.com/collide2954/arity-data)
+holds the public archive, under CC0 1.0.
 
 The archive holds no file of a source. For each file, it holds the address and
 the SHA-256 digest. A rebuild downloads each file again and makes sure that it
@@ -60,3 +61,18 @@ you get the same files.
 
 In each case, the archive is not the problem: it records what was true. A
 person must decide what to do, for example read the work again.
+
+## The public website
+
+The workflow `.github/workflows/pages.yml` of arity makes the public website.
+It clones arity-data, rebuilds the database, exports the website data, builds
+the website and this book, and publishes them on GitHub Pages. The workflow
+runs each day, after each change to the main branch of arity, and when a
+maintainer starts it:
+
+```sh
+gh workflow run pages.yml --repo collide2954/arity
+```
+
+So a change to arity-data is on the website within one day, or at once when a
+maintainer starts the workflow.

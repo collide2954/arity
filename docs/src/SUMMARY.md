@@ -1,6 +1,6 @@
 # Summary
 
-[arity](introduction.md)
+[Introduction](introduction.md)
 
 # Guide
 

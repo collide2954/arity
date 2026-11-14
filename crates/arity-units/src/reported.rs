@@ -144,7 +144,13 @@ pub fn to_ucum(text: &str) -> Result<String, UnitError> {
         .replace('^', "");
     let trimmed = powers.trim_matches(|c: char| c == '.' || c.is_whitespace());
     let grouped = DENOMINATOR_FACTOR.replace_all(trimmed, "/($1.$2)");
-    Ok(join_words(&grouped))
+    let joined = join_words(&grouped);
+    // In a compound unit such as °C/min, a degree Celsius is a difference of
+    // temperature, which has the size of a kelvin.
+    if joined != "Cel" && joined.contains("Cel") {
+        return Ok(joined.replace("Cel", "K"));
+    }
+    Ok(joined)
 }
 
 fn replace_symbols(text: &str) -> String {
@@ -269,6 +275,7 @@ mod tests {
         let cases = [
             ("cells/well", "{cells}/{well}"),
             ("Ω/sq", "Ohm/{sq}"),
+            ("°C/min", "K/min"),
             ("colonies per plate", "{colonies}/{plate}"),
             ("µM", "umol/L"),
             ("μM", "umol/L"),

@@ -73,9 +73,14 @@ A complete reading leaves no number. Record each value that the work measured,
 with the settings of its method as conditions, for example a temperature or a
 time of incubation. When the work states the same value two times, for example
 in the abstract and in a table, give both quotes as the evidence of one report.
-A value that the work cites from another work is not a report of this work:
-skip it, so that it does not count two times. See
-[Skipped quotes](submissions.md#skipped-quotes).
+When an earlier run already reports the value, skip the second place with the
+reason `restated`. A value that the work cites from another work is not a
+report of this work: skip it with the reason `cited`, so that it does not count
+two times. See [Skipped quotes](submissions.md#skipped-quotes).
+
+A reading can take more than one run. Within one work, an entity id names the
+same entity in each run, so a later run can add the values of an entity that an
+earlier run named. `arity show` lists these ids.
 
 ## After the checks
 

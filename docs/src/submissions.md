@@ -91,6 +91,7 @@ A submission can list quotes with numbers that the reader does not report, in
 | Reason | Meaning |
 | --- | --- |
 | `cited` | The source states a value that another work reports. arity records that value from its own source, so that the value does not count two times. |
+| `restated` | The source states again a value that it states in another place, for example in the abstract, and a report quotes that other place. |
 | `other` | Another reason. The `note` must tell it. |
 
 ```json

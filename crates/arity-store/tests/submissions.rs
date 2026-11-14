@@ -187,12 +187,13 @@ fn stores_the_skipped_quotes_of_a_run() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
     let mut value = submission(&document, "0.24", "chemical");
-    value["skipped"] = json!([{
-        "block": "t1/r1c2", "quote": "IC50 (μM)", "reason": "other", "note": "A test."
-    }]);
+    value["skipped"] = json!([
+        { "block": "t1/r1c2", "quote": "IC50 (μM)", "reason": "other", "note": "A test." },
+        { "block": "s1/p1", "quote": "0.24 μM", "reason": "restated" }
+    ]);
     store_one(&store, work, text, &document, &value).unwrap();
     let skipped = store.skipped_ranges(text).unwrap();
-    assert_eq!(skipped.len(), 1);
+    assert_eq!(skipped.len(), 2);
     assert_eq!(skipped["t1/r1c2"].len(), 1);
     assert_eq!(skipped["t1/r1c2"][0], 0..9);
 }

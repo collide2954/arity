@@ -21,7 +21,7 @@ fn metadata() -> WorkMetadata {
 #[test]
 fn migrates_a_new_database() {
     let store = Store::open_in_memory().unwrap();
-    assert_eq!(store.schema_version().unwrap(), 3);
+    assert_eq!(store.schema_version().unwrap(), 4);
 }
 
 #[test]

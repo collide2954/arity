@@ -227,6 +227,9 @@ vocabulary! {
         /// that value from its own source, so that the value does not count
         /// two times.
         Cited => "cited",
+        /// The source states again a value that it states in another place,
+        /// for example in the abstract, and a report quotes that place.
+        Restated => "restated",
         /// Another reason. The note of the skipped quote tells it.
         Other => "other",
     }

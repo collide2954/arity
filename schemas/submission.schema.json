@@ -742,6 +742,11 @@
           "type": "string"
         },
         {
+          "const": "restated",
+          "description": "The source states again a value that it states in another place,\nfor example in the abstract, and a report quotes that place.",
+          "type": "string"
+        },
+        {
           "const": "other",
           "description": "Another reason. The note of the skipped quote tells it.",
           "type": "string"

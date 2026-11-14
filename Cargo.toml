@@ -13,6 +13,7 @@ publish = false
 [workspace.dependencies]
 arity-core = { path = "crates/arity-core" }
 arity-text = { path = "crates/arity-text" }
+arity-units = { path = "crates/arity-units" }
 hex = "0.4.3"
 jiff = { version = "0.2.43", features = ["serde"] }
 proptest = "1.12.0"

@@ -38,6 +38,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "arity-protocol"
+version = "0.1.0"
+dependencies = [
+ "arity-core",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "arity-text"
 version = "0.1.0"
 dependencies = [

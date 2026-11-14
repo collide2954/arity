@@ -9,6 +9,7 @@ mod blobs;
 mod store;
 mod submissions;
 mod texts;
+pub mod views;
 
 pub use blobs::{BlobError, Blobs};
 pub use store::{

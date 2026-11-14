@@ -262,6 +262,74 @@ fn records_checks_by_people() {
 }
 
 #[test]
+fn shows_reports_with_their_evidence_checks_and_provenance() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let run = store_one(
+        &store,
+        work,
+        text,
+        &document,
+        &submission(&document, "0.24", "chemical"),
+    )
+    .unwrap();
+    let report = store.reports_of_run(run).unwrap()[0].0;
+    let person = Person {
+        name: "A Person".to_owned(),
+        orcid: None,
+    };
+    store
+        .record_check(
+            report,
+            CheckState::Confirmed,
+            &person,
+            None,
+            at("2026-11-14T13:00:00Z"),
+        )
+        .unwrap();
+
+    let reports = store.report_views().unwrap();
+    assert_eq!(reports.len(), 1);
+    let view = &reports[0];
+    assert_eq!(view.kind, "value");
+    assert_eq!(view.property.as_deref(), Some("ic50"));
+    assert_eq!(view.check, "confirmed");
+    assert_eq!(view.checks[0].person, "A Person");
+    assert_eq!(view.body["value"]["number"], "0.24");
+    assert_eq!(view.coherent.unit.as_deref(), Some("m-3.mol"));
+    assert!((view.coherent.value.unwrap() - 0.24e-3).abs() < 1e-12);
+    let entity = view.entities["dox"];
+    assert_eq!(view.evidence.len(), 2);
+    assert_eq!(view.evidence[0].block, "s1/p1");
+    assert_eq!(view.evidence[0].start, 4);
+
+    let runs = store.run_views().unwrap();
+    assert_eq!(runs[0].reader.kind, "software");
+    assert_eq!(runs[0].responsible.name, "A Person");
+    assert_eq!(
+        runs[0].responsible.orcid.as_deref(),
+        Some("0000-0002-1825-0097")
+    );
+    assert_eq!(runs[0].text_sha256, document.digest().unwrap().as_str());
+
+    let entities = store.entity_views().unwrap();
+    assert_eq!(entities[0].id, entity);
+    assert_eq!(entities[0].xrefs, ["CHEBI:28748"]);
+    assert_eq!(entities[0].names, ["doxorubicin"]);
+
+    let properties = store.property_views().unwrap();
+    assert_eq!(properties[0].dimension.as_deref(), Some("L-3 N"));
+
+    let works = store.work_views().unwrap();
+    assert_eq!(works[0].reports, 1);
+    assert_eq!(works[0].retrievals[0].role, "full_text");
+    assert_eq!(
+        works[0].text_sha256.as_deref(),
+        Some(document.digest().unwrap().as_str())
+    );
+}
+
+#[test]
 fn refuses_a_file_that_the_checks_did_not_read() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");

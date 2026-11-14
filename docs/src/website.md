@@ -26,6 +26,16 @@ On the page of a work, each quote has a mark on the PDF. Put the pointer on a
 mark to see its report. Select a mark to go to its report in the list. Select a
 report in the list to go to its main quote in the PDF.
 
+The text of a PDF is not always the same as the canonical text. A PDF can split
+words, use ligatures, and give the wrong character for a symbol. Thus arity
+ignores white space, hyphens, symbols, and case when it finds a quote in the
+PDF. When the PDF has the quote in more than one place, arity compares the text
+around each place with the text around the quote in the canonical text. The
+mark goes on the place where the most text agrees. A short quote that is in
+more than one place, with too little text around it that agrees, gets no mark.
+Then the list of reports tells you that arity cannot find the quote in the PDF,
+and the text view shows the quote.
+
 ## Figures
 
 - In the figure of a property, each dot is one report of one source. A filled

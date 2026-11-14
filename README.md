@@ -41,8 +41,51 @@ arity is in early development. The data model and the interfaces can change.
    must agree with its property.
 5. **Confirm.** A person compares each report with its highlighted source text,
    and confirms or rejects the report.
+6. **Archive.** arity writes the submissions and the checks to an archive.
+   From the archive, arity can make the same database again.
+
+## Build and run
+
+You need Rust (the file `rust-toolchain.toml` selects the version), and for
+the website, Node.js 24 or later and pnpm.
+
+```sh
+cargo build --release
+target/release/arity init --name "Your Name"
+target/release/arity search 'doxorubicin AND "MCF-7" AND IC50' --limit 5
+target/release/arity fetch --next 1
+target/release/arity show PMC6274071
+```
+
+To see the website with your data:
+
+```sh
+target/release/arity export web/public/data
+pnpm --dir web install
+pnpm --dir web dev
+```
+
+To run all checks:
+
+```sh
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+pnpm --dir web lint
+pnpm --dir web check
+pnpm --dir web test
+```
+
+## Documentation
+
+The documentation is in [docs](docs/src/SUMMARY.md). To read it as a book,
+install [mdBook](https://rust-lang.github.io/mdBook/) and run
+`mdbook serve docs`. It tells how arity works, the submission format, the
+checks, the units, the notices, the provenance, the archive, and the website.
 
 ## License
 
-arity is licensed under the Apache License, Version 2.0. See
-[LICENSE](LICENSE) and [NOTICE](NOTICE).
+The code of arity is licensed under the Apache License, Version 2.0. See
+[LICENSE](LICENSE) and [NOTICE](NOTICE). The data that arity makes is under
+CC0 1.0. Each source keeps its own license. See
+[Licenses](docs/src/licenses.md).

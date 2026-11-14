@@ -7,6 +7,7 @@ mod entity;
 mod id;
 mod license;
 mod notice;
+pub mod vocabulary;
 mod work;
 
 pub use curie::{Curie, CurieError, PREFIXES, Prefix, Scope};

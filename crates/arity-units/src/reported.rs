@@ -74,6 +74,7 @@ const COUNT_NOUNS: &[&str] = &[
     "wells",
     "plate",
     "plates",
+    "sq",
     "copy",
     "copies",
     "particle",
@@ -267,6 +268,7 @@ mod tests {
     fn reads_units_as_articles_write_them() {
         let cases = [
             ("cells/well", "{cells}/{well}"),
+            ("Ω/sq", "Ohm/{sq}"),
             ("colonies per plate", "{colonies}/{plate}"),
             ("µM", "umol/L"),
             ("μM", "umol/L"),

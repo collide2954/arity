@@ -8,6 +8,6 @@ mod document;
 mod normalize;
 mod numbers;
 
-pub use document::{Block, BlockKind, Cell, DOCUMENT_FORMAT, Document, DocumentError};
+pub use document::{Attachment, Block, BlockKind, Cell, DOCUMENT_FORMAT, Document, DocumentError};
 pub use normalize::{Normalized, normalize};
 pub use numbers::{NumberMatch, contains_number, find_numbers};

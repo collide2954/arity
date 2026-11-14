@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub const DOCUMENT_FORMAT: &str = "arity-text/1";
 
-/// The canonical text of one source file, as a list of blocks.
+/// The canonical text of one work, as a list of blocks.
 ///
 /// A reader quotes from blocks, and arity checks each quote against the
 /// block that the reader names. The digest of the serialized document
@@ -14,11 +14,28 @@ pub const DOCUMENT_FORMAT: &str = "arity-text/1";
 #[serde(deny_unknown_fields)]
 pub struct Document {
     pub format: String,
-    /// The digest of the source file that the parser read.
+    /// The digest of the main source file that the parser read.
     pub source: Digest,
     /// The name and version of the parser.
     pub parser: String,
+    /// The other files that the blocks come from, for example
+    /// supplementary spreadsheets.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<Attachment>,
     pub blocks: Vec<Block>,
+}
+
+/// A file that some blocks of a document come from. The keys of its blocks
+/// start with its key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Attachment {
+    pub key: String,
+    pub name: String,
+    pub digest: Digest,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media_type: Option<String>,
+    pub parser: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,6 +134,8 @@ pub enum DocumentError {
     DuplicateKey(String),
     #[error("the document format {0:?} is not {DOCUMENT_FORMAT}")]
     UnknownFormat(String),
+    #[error("the block {key:?} does not start with the key of its file {attachment:?}")]
+    ForeignKey { key: String, attachment: String },
 }
 
 impl Document {
@@ -125,10 +144,32 @@ impl Document {
             format: DOCUMENT_FORMAT.to_owned(),
             source,
             parser: parser.to_owned(),
+            attachments: Vec::new(),
             blocks,
         };
         document.validate()?;
         Ok(document)
+    }
+
+    /// Adds the blocks of another file, and records the file.
+    pub fn attach(
+        &mut self,
+        attachment: Attachment,
+        blocks: Vec<Block>,
+    ) -> Result<(), DocumentError> {
+        let prefix = format!("{}/", attachment.key);
+        if let Some(block) = blocks.iter().find(|block| !block.key.starts_with(&prefix)) {
+            return Err(DocumentError::ForeignKey {
+                key: block.key.clone(),
+                attachment: attachment.key,
+            });
+        }
+        let mut candidate = self.clone();
+        candidate.attachments.push(attachment);
+        candidate.blocks.extend(blocks);
+        candidate.validate()?;
+        *self = candidate;
+        Ok(())
     }
 
     pub fn validate(&self) -> Result<(), DocumentError> {
@@ -236,6 +277,43 @@ mod tests {
         let mut changed = sample();
         changed.blocks[0].text.push('!');
         assert_ne!(changed.digest().unwrap(), digest);
+    }
+
+    #[test]
+    fn attaches_the_blocks_of_another_file() {
+        let mut document = sample();
+        let before = document.digest().unwrap();
+        let attachment = Attachment {
+            key: "supp1".to_owned(),
+            name: "data.csv".to_owned(),
+            digest: Digest::of(b"a,b"),
+            media_type: Some("text/csv".to_owned()),
+            parser: "sheets 1".to_owned(),
+        };
+        let cell = Block::new("supp1/s1/r1c1", BlockKind::SheetCell, "a");
+        document
+            .attach(attachment.clone(), vec![cell.clone()])
+            .unwrap();
+        assert_eq!(document.attachments, std::slice::from_ref(&attachment));
+        assert_eq!(document.block("supp1/s1/r1c1").unwrap().text, "a");
+        assert_ne!(document.digest().unwrap(), before);
+
+        let foreign = Block::new("t9/r1c1", BlockKind::SheetCell, "b");
+        assert!(matches!(
+            document.attach(attachment.clone(), vec![foreign]),
+            Err(DocumentError::ForeignKey { .. })
+        ));
+        assert_eq!(
+            document.attach(attachment, vec![cell]),
+            Err(DocumentError::DuplicateKey("supp1/s1/r1c1".to_owned()))
+        );
+        assert_eq!(document.attachments.len(), 1);
+    }
+
+    #[test]
+    fn a_document_without_attachments_has_no_attachment_field() {
+        let json = serde_json::to_value(sample()).unwrap();
+        assert!(json.get("attachments").is_none());
     }
 
     #[test]

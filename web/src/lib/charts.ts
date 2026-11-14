@@ -118,10 +118,12 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
           type: "point",
           size: 110,
           strokeWidth: 2,
-          color: tokens.series,
+          stroke: tokens.series,
           cursor: "pointer",
         },
-        params: [{ name: "hover", select: { type: "point", on: "pointerover", clear: "pointerout" } }],
+        params: [
+          { name: "hover", select: { type: "point", on: "pointerover", clear: "pointerout" } },
+        ],
         encoding: {
           x: {
             field: "value",
@@ -129,7 +131,10 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
             scale,
             title: options.unit,
           },
-          filled: { condition: { test: "datum.check === 'confirmed'", value: true }, value: false },
+          fill: {
+            condition: { test: "datum.check === 'confirmed'", value: tokens.series },
+            value: tokens.surface,
+          },
           shape: {
             field: "origin",
             type: "nominal",
@@ -181,7 +186,11 @@ export function effectSpec(rows: readonly EffectRow[], mode: Mode): TopLevelSpec
     config: config(mode),
     mark: { type: "point", size: 140, strokeWidth: 2, filled: true, cursor: "pointer" },
     encoding: {
-      x: { field: "target", type: "nominal", axis: { title: "Target", labelAngle: 0, labelLimit: 180 } },
+      x: {
+        field: "target",
+        type: "nominal",
+        axis: { title: "Target", labelAngle: 0, labelLimit: 180 },
+      },
       y: { field: "agent", type: "nominal", axis: { title: "Agent", labelLimit: 240 } },
       xOffset: { field: "slot", type: "nominal" },
       color: {

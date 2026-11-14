@@ -1,0 +1,27 @@
+{
+  "normalize": [
+    { "input": "  IC50  = 3.2 µM ", "output": "IC50 = 3.2 μM" },
+    { "input": "− 0.5", "output": "- 0.5" },
+    { "input": "eﬃcacy", "output": "efficacy" },
+    { "input": "inhi­bition", "output": "inhibition" },
+    { "input": "“no effect”", "output": "\"no effect\"" },
+    { "input": "5′-UTR", "output": "5'-UTR" },
+    { "input": "m²", "output": "m2" },
+    { "input": "10⁻³", "output": "10-3" },
+    { "input": "3–5 and 6—7", "output": "3-5 and 6-7" },
+    { "input": "line\nbreak\ttab\r\nend", "output": "line break tab end" },
+    { "input": "zero​width﻿", "output": "zerowidth" },
+    { "input": "Å and Ω", "output": "Å and Ω" },
+    { "input": "2×10", "output": "2×10" },
+    { "input": "℃", "output": "°C" },
+    { "input": "", "output": "" }
+  ],
+  "find": [
+    { "text": "The IC50 was 3.2 µM (n = 3).", "quote": "3.2 μM", "ranges": [[13, 19]] },
+    { "text": "no effect; no effect", "quote": "no effect", "ranges": [[0, 9], [11, 20]] },
+    { "text": "inhi­bition of growth", "quote": "inhibition", "ranges": [[0, 11]] },
+    { "text": "a  b", "quote": "a b", "ranges": [[0, 4]] },
+    { "text": "abc", "quote": "abd", "ranges": [] },
+    { "text": "abc", "quote": "   ", "ranges": [] }
+  ]
+}

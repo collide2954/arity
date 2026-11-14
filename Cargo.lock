@@ -26,6 +26,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "arity-text"
+version = "0.1.0"
+dependencies = [
+ "arity-core",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "arity-units"
 version = "0.1.0"
 dependencies = [

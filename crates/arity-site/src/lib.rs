@@ -13,8 +13,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use arity_core::License;
+use arity_protocol::Coverage;
 use arity_store::views::{EntityView, PropertyView, ReportView, RunView, WorkView};
-use arity_store::{BlobError, Blobs, RetrievalRole, Store, StoreError, WorkId};
+use arity_store::{BlobError, Blobs, RetrievalRole, Store, StoreError, TextId, WorkId};
 use arity_text::Document;
 use jiff::Timestamp;
 use serde::Serialize;
@@ -113,9 +114,18 @@ struct WorkPage<'a> {
     work: &'a WorkView,
     attribution: Attribution,
     document: Option<Document>,
+    /// The numbers of the text that the reports quote. The page lists the
+    /// unquoted numbers only when it holds the text.
+    coverage: Option<Coverage>,
     runs: Vec<&'a RunView>,
     reports: Vec<i64>,
     pdf: Option<String>,
+}
+
+fn coverage_of(store: &Store, text: TextId, document: &Document) -> Result<Coverage> {
+    let quoted = store.quoted_ranges(text)?;
+    let skipped = store.skipped_ranges(text)?;
+    Ok(arity_protocol::coverage(document, &quoted, &skipped))
 }
 
 fn write_json(path: &Path, value: &impl Serialize) -> Result<()> {
@@ -238,11 +248,17 @@ fn write_work_pages(
     let runs = store.run_views()?;
     let mut pdfs = 0;
     for work in works {
+        let latest = store.latest_text(WorkId(work.id))?;
+        let mut coverage = latest
+            .as_ref()
+            .map(|(text, document)| coverage_of(store, *text, document))
+            .transpose()?;
         let document = if shareable(work) {
-            store
-                .latest_text(WorkId(work.id))?
-                .map(|(_, document)| document)
+            latest.map(|(_, document)| document)
         } else {
+            if let Some(coverage) = coverage.as_mut() {
+                coverage.unquoted.clear();
+            }
             None
         };
         let pdf = copy_pdf(store, blobs, out, work)?;
@@ -251,6 +267,7 @@ fn write_work_pages(
             work,
             attribution: attribution(work),
             document,
+            coverage,
             runs: runs.iter().filter(|run| run.work == work.id).collect(),
             reports: reports
                 .iter()

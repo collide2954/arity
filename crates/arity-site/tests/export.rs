@@ -150,11 +150,17 @@ fn writes_the_site_and_leaves_out_text_that_may_not_be_shared() {
     assert_eq!(shared_page["document"]["blocks"][0]["key"], "s1/p1");
     assert_eq!(shared_page["attribution"]["license"], "CC BY 4.0");
     assert_eq!(shared_page["runs"][0]["responsible"]["name"], "A Person");
+    assert_eq!(
+        shared_page["coverage"]["text"],
+        serde_json::json!({ "numbers": 2, "quoted": 2, "skipped": 0 })
+    );
+    assert_eq!(shared_page["coverage"]["unquoted"], serde_json::json!([]));
     assert!(out.join(format!("works/{}.pdf", shared.0)).is_file());
 
     let closed_page = read(&out.join(format!("works/{}.json", closed.0)));
     assert_eq!(closed_page["pdf"], Value::Null);
     assert_eq!(closed_page["document"], Value::Null);
+    assert_eq!(closed_page["coverage"]["text"]["numbers"], 2);
     assert!(!out.join(format!("works/{}.pdf", closed.0)).exists());
 
     let copy = Store::open(&out.join("arity.sqlite")).unwrap();

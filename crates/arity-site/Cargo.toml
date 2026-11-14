@@ -10,6 +10,7 @@ publish.workspace = true
 
 [dependencies]
 arity-core.workspace = true
+arity-protocol.workspace = true
 arity-store.workspace = true
 arity-text.workspace = true
 arity-units.workspace = true
@@ -19,7 +20,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-arity-protocol.workspace = true
 tempfile.workspace = true
 
 [lints]

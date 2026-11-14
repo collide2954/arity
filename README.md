@@ -52,7 +52,9 @@ arity is in early development. The data model and the interfaces can change.
   archive of the submissions and the checks, under CC0 1.0.
 
 GitHub Actions makes the database again from arity-data and publishes the
-website each day, and after each change to arity.
+website each day, and after each change to arity. Each Monday, a workflow of
+arity-data reads the notices of each work again, and commits the new ones, for
+example a new retraction.
 
 ## Build and run
 

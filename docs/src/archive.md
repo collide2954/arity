@@ -76,3 +76,6 @@ gh workflow run pages.yml --repo collide2954/arity
 
 So a change to arity-data is on the website within one day, or at once when a
 maintainer starts the workflow.
+
+A second workflow, in arity-data, reads the notices of each work again each
+Monday and commits the new ones. See [Notices](notices.md).

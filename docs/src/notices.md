@@ -37,3 +37,13 @@ each notice.
 `arity fetch` reads the notices of the PMC store. `arity notices` reads the
 notices of all three sources again, for each work or for the works that you
 name.
+
+## New notices on the public website
+
+Each Monday, the workflow `.github/workflows/notices.yml` of
+[arity-data](https://github.com/collide2954/arity-data) rebuilds the database
+and reads the notices of each work again. When a source states a new notice,
+the workflow commits it to arity-data, and the next daily build of the website
+shows it. So the website shows a new retraction within about one week after a
+source states it. The workflow commits only new notices: when no source states
+a new notice, nothing changes.

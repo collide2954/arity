@@ -83,7 +83,15 @@ fn push(
     let Some(value) = value.scaled_by_power_of_ten(power) else {
         return;
     };
-    found.push(with_sign(chars, value, range));
+    let signed = with_sign(chars, value, range.clone());
+    let char_at = |back: usize| range.start.checked_sub(back).map(|index| chars[index]);
+    let after_number = char_at(1) == Some('-')
+        && char_at(2).is_some_and(char::is_whitespace)
+        && char_at(3).is_some_and(|c| c.is_ascii_digit());
+    if after_number && signed.range != range {
+        found.push(NumberMatch { value, range });
+    }
+    found.push(signed);
 }
 
 fn with_sign(chars: &[char], value: Decimal, range: Range<usize>) -> NumberMatch {
@@ -296,6 +304,12 @@ mod tests {
         assert_eq!(values("3-5"), ["3", "5"]);
         assert_eq!(values("pH 7.4-7.6"), ["7.4", "7.6"]);
         assert_eq!(values("\u{2212}5 to \u{2212}3"), ["-5", "-3"]);
+    }
+
+    #[test]
+    fn reads_a_spaced_hyphen_after_a_number_as_a_range_and_as_a_sign() {
+        assert_eq!(values("7.05 -7.15"), ["7.05", "7.15", "-7.15"]);
+        assert_eq!(values("at -20 °C"), ["-20"]);
     }
 
     #[test]

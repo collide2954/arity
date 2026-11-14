@@ -10,6 +10,9 @@ publish.workspace = true
 
 [dependencies]
 arity-core.workspace = true
+arity-protocol.workspace = true
+arity-text.workspace = true
+arity-units.workspace = true
 jiff.workspace = true
 rusqlite.workspace = true
 serde_json.workspace = true

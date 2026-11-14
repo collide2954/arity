@@ -7,6 +7,8 @@
 
 mod blobs;
 mod store;
+mod submissions;
+mod texts;
 
 pub use blobs::{BlobError, Blobs};
 pub use store::{

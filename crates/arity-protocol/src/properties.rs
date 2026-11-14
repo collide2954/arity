@@ -33,7 +33,7 @@ impl<S: BuildHasher> Properties for HashMap<String, PropertyDefinition, S> {
     }
 }
 
-impl Properties for [PropertyDefinition] {
+impl Properties for Vec<PropertyDefinition> {
     fn property(&self, key: &str) -> Option<PropertyDefinition> {
         self.iter()
             .find(|definition| definition.key == key)

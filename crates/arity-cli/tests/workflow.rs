@@ -1,0 +1,257 @@
+#![cfg(test)]
+
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+
+use arity_cli::config::{Config, PersonConfig};
+use arity_cli::submit::Outcome;
+use arity_cli::{Context, catalogue, fetch, show, submit};
+use arity_core::vocabulary::CheckState;
+use arity_core::{CcElements, License};
+use arity_sources::{Http, Response, SourceError, europepmc, pmc};
+use jiff::Timestamp;
+use serde_json::json;
+
+const XML: &[u8] = include_bytes!("../../../testdata/jats/PMC6274071.xml");
+const TOPIC: &str = "biphenylurea";
+
+struct Fake(HashMap<String, Vec<u8>>);
+
+impl Http for Fake {
+    fn get(&self, url: &str) -> Result<Response, SourceError> {
+        Ok(match self.0.get(url) {
+            Some(body) => Response {
+                status: 200,
+                content_type: None,
+                body: body.clone(),
+            },
+            None => Response {
+                status: 404,
+                content_type: None,
+                body: Vec::new(),
+            },
+        })
+    }
+}
+
+fn fake() -> Fake {
+    let pmcid = "PMC6274071".parse().unwrap();
+    let query = europepmc::open_access_query(TOPIC);
+    let first_page = json!({
+        "hitCount": 1,
+        "nextCursorMark": "next",
+        "resultList": { "result": [{
+            "source": "MED",
+            "pmcid": "PMC6274071",
+            "doi": "10.3390/molecules21060762",
+            "title": "Synthesis and Cytotoxic Activity of Biphenylurea Derivatives",
+            "pubYear": "2016",
+            "isOpenAccess": "Y",
+            "inPMC": "Y",
+            "license": "cc by"
+        }]}
+    });
+    let last_page =
+        json!({ "hitCount": 1, "nextCursorMark": "next", "resultList": { "result": [] } });
+    let listing = r#"<?xml version="1.0" encoding="UTF-8"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><CommonPrefixes><Prefix>PMC6274071.1/</Prefix></CommonPrefixes></ListBucketResult>"#;
+    let record = json!({
+        "pmcid": "PMC6274071",
+        "version": 1,
+        "is_pmc_openaccess": true,
+        "license_code": "CC BY",
+        "xml_url": "s3://pmc-oa-opendata/PMC6274071.1/PMC6274071.1.xml?md5=00000000000000000000000000000000",
+        "pdf_url": "s3://pmc-oa-opendata/PMC6274071.1/PMC6274071.1.pdf?md5=00000000000000000000000000000000",
+        "media_urls": ["s3://pmc-oa-opendata/PMC6274071.1/molecules-21-00762-s001.pdf?md5=00000000000000000000000000000000"]
+    });
+    Fake(
+        [
+            (
+                europepmc::search_url(&query, 5, "*"),
+                serde_json::to_vec(&first_page).unwrap(),
+            ),
+            (
+                europepmc::search_url(&query, 4, "next"),
+                serde_json::to_vec(&last_page).unwrap(),
+            ),
+            (pmc::list_url(&pmcid), listing.as_bytes().to_vec()),
+            (
+                pmc::record_url(&pmcid, 1),
+                serde_json::to_vec(&record).unwrap(),
+            ),
+            (
+                format!("{}/PMC6274071.1/PMC6274071.1.xml", pmc::BUCKET),
+                XML.to_vec(),
+            ),
+            (
+                format!("{}/PMC6274071.1/PMC6274071.1.pdf", pmc::BUCKET),
+                b"%PDF-1.4 article".to_vec(),
+            ),
+            (
+                format!("{}/PMC6274071.1/molecules-21-00762-s001.pdf", pmc::BUCKET),
+                b"%PDF-1.4 supplement".to_vec(),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
+}
+
+fn now() -> Timestamp {
+    "2026-11-14T10:00:00Z".parse().unwrap()
+}
+
+fn context(directory: &Path) -> Context {
+    Config {
+        person: Some(PersonConfig {
+            name: "A Person".to_owned(),
+            orcid: None,
+        }),
+        ..Config::default()
+    }
+    .save(directory)
+    .unwrap();
+    Context::open(directory, Box::new(fake())).unwrap()
+}
+
+fn submission(context: &Context, number: &str) -> serde_json::Value {
+    let work = context.work("PMC6274071").unwrap();
+    let (_, document) = context.store.latest_text(work).unwrap().unwrap();
+    let block = document
+        .blocks
+        .iter()
+        .find(|block| {
+            block
+                .text
+                .contains("reference drug, doxorubicin (IC50 = 7.30")
+        })
+        .unwrap();
+    json!({
+        "format": "arity-submission/1",
+        "work": "PMC6274071",
+        "text": document.digest().unwrap(),
+        "reader": { "kind": "person", "name": "A Reader" },
+        "responsible": { "name": "A Person" },
+        "entities": [
+            {
+                "id": "dox", "kind": "chemical", "label": "doxorubicin", "xrefs": ["CHEBI:28748"],
+                "mentions": [{ "block": block.key, "quote": "doxorubicin" }]
+            },
+            {
+                "id": "mcf7", "kind": "cell_line", "label": "MCF-7", "xrefs": ["CELLOSAURUS:CVCL_0031"],
+                "mentions": [{ "block": block.key, "quote": "MCF-7", "occurrence": 1 }]
+            }
+        ],
+        "properties": [{
+            "id": "ic50", "label": "half maximal inhibitory concentration",
+            "value_type": "quantity", "unit": "umol/L"
+        }],
+        "reports": [{
+            "type": "value", "id": "r1", "subject": ["dox"], "property": "ic50",
+            "value": {
+                "number": number, "unit": "umol/L", "unit_text": "μM",
+                "uncertainty": { "kind": "other", "number": "0.84" }
+            },
+            "conditions": [{ "role": "cell_line", "entity": "mcf7" }],
+            "evidence": [{ "block": block.key, "quote": "doxorubicin (IC50 = 7.30 ± 0.84 μM)" }]
+        }]
+    })
+}
+
+#[test]
+fn catalogues_fetches_reads_submits_and_checks_a_work() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = context(directory.path());
+
+    let added = catalogue::search(&context, TOPIC, 5, now()).unwrap();
+    assert_eq!(added.len(), 1);
+    assert!(added[0].new);
+    let work = added[0].work;
+
+    let fetched = fetch::fetch(&context, work, now()).unwrap();
+    assert_eq!(fetched.version, "PMC6274071.1");
+    assert!(fetched.pdf);
+    assert_eq!(fetched.supplements, 1);
+    assert_eq!(
+        fetched.license,
+        Some(License::CreativeCommons {
+            elements: CcElements::By,
+            version: Some("4.0".to_owned())
+        })
+    );
+    let record = context.store.work(work).unwrap();
+    assert_eq!(record.metadata.authors[0].name, "Wagdy M Eldehna");
+    assert_eq!(context.store.retrievals(work).unwrap().len(), 3);
+
+    let (_, document) = context.store.latest_text(work).unwrap().unwrap();
+    let digest = document.digest().unwrap();
+    let text = show::render(&record.metadata, &digest, &document);
+    assert!(text.contains("[t1/r3c5] 19.53 ± 1.05"));
+
+    let path = directory.path().join("submission.json");
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&submission(&context, "7.30")).unwrap(),
+    )
+    .unwrap();
+    let Outcome::Passed { .. } = submit::submit(&context, &path, true, now()).unwrap() else {
+        panic!("the dry run did not pass");
+    };
+    let Outcome::Stored { reports, .. } = submit::submit(&context, &path, false, now()).unwrap()
+    else {
+        panic!("the submission was not stored");
+    };
+    assert_eq!(reports.len(), 1);
+    assert_eq!(
+        context.store.work(work).unwrap().state,
+        Some(arity_store::QueueState::Read)
+    );
+
+    submit::record_check(&context, reports[0].0, CheckState::Confirmed, None, now()).unwrap();
+    assert_eq!(
+        context.store.check_state(reports[0].0).unwrap(),
+        CheckState::Confirmed
+    );
+}
+
+#[test]
+fn rejects_a_submission_with_a_number_that_the_source_does_not_state() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = context(directory.path());
+    let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
+    fetch::fetch(&context, work, now()).unwrap();
+    let path = directory.path().join("submission.json");
+    fs::write(
+        &path,
+        serde_json::to_vec(&submission(&context, "7.31")).unwrap(),
+    )
+    .unwrap();
+    let Outcome::Rejected { issues } = submit::submit(&context, &path, false, now()).unwrap()
+    else {
+        panic!("the submission was not rejected");
+    };
+    let codes: Vec<&str> = issues.iter().map(|issue| issue.code).collect();
+    assert!(codes.contains(&"number_not_in_evidence"), "{codes:?}");
+}
+
+#[test]
+fn records_a_failed_fetch_in_the_queue() {
+    let directory = tempfile::tempdir().unwrap();
+    let context = Context::open(directory.path(), Box::new(Fake(HashMap::new()))).unwrap();
+    let work = context
+        .store
+        .upsert_work(
+            &arity_core::WorkMetadata {
+                title: "No files".to_owned(),
+                pmcid: Some("PMC1".parse().unwrap()),
+                ..arity_core::WorkMetadata::default()
+            },
+            now(),
+        )
+        .unwrap();
+    assert!(fetch::fetch(&context, work, now()).is_err());
+    assert_eq!(
+        context.store.work(work).unwrap().state,
+        Some(arity_store::QueueState::Failed)
+    );
+}

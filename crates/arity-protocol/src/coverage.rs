@@ -20,11 +20,13 @@ const SIGNS: &[char] = &[
     '=', '<', '>', '\u{2264}', '\u{2265}', '\u{2248}', '~', '\u{223C}', '\u{B1}',
 ];
 
-/// The numbers of one kind of block, and how many of them a quote contains.
+/// The numbers of one kind of block: how many a quote of a report contains,
+/// and how many a reader skipped.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 pub struct Count {
     pub numbers: usize,
     pub quoted: usize,
+    pub skipped: usize,
 }
 
 /// A number that no quote contains.
@@ -48,7 +50,8 @@ pub struct Coverage {
     /// The numbers in the other blocks that have a unit, a percent sign, or an
     /// uncertainty after them, or a sign such as `=` or `<` before them.
     pub text: Count,
-    /// Each number that no quote contains, in the order of the text.
+    /// Each number that no quote contains and no reader skipped, in the order
+    /// of the text.
     pub unquoted: Vec<Unquoted>,
 }
 
@@ -99,12 +102,26 @@ fn has_measure(chars: &[char], range: &Range<usize>) -> bool {
         .is_some_and(|c| SIGNS.contains(c))
 }
 
+fn within<S: BuildHasher>(
+    ranges: &HashMap<String, Vec<Range<usize>>, S>,
+    block: &str,
+    range: &Range<usize>,
+) -> bool {
+    ranges.get(block).is_some_and(|ranges| {
+        ranges
+            .iter()
+            .any(|outer| outer.start <= range.start && range.end <= outer.end)
+    })
+}
+
 /// Counts the numbers of a text, and finds each number that no quote
-/// contains. `quoted` holds the quoted ranges of each block, in Unicode scalar
-/// values of the text of the block.
-pub fn coverage<S: BuildHasher>(
+/// contains. `quoted` holds the quoted ranges of the reports, and `skipped`
+/// the ranges that readers skipped, for each block, in Unicode scalar values
+/// of the text of the block.
+pub fn coverage<S: BuildHasher, T: BuildHasher>(
     document: &Document,
     quoted: &HashMap<String, Vec<Range<usize>>, S>,
+    skipped: &HashMap<String, Vec<Range<usize>>, T>,
 ) -> Coverage {
     let mut coverage = Coverage::default();
     for block in &document.blocks {
@@ -139,13 +156,10 @@ pub fn coverage<S: BuildHasher>(
                 &mut coverage.text
             };
             count.numbers += 1;
-            let is_quoted = quoted.get(&block.key).is_some_and(|ranges| {
-                ranges
-                    .iter()
-                    .any(|quote| quote.start <= original.start && original.end <= quote.end)
-            });
-            if is_quoted {
+            if within(quoted, &block.key, &original) {
                 count.quoted += 1;
+            } else if within(skipped, &block.key, &original) {
+                count.skipped += 1;
             } else {
                 coverage.unquoted.push(Unquoted {
                     block: block.key.clone(),

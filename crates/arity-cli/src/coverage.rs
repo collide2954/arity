@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use arity_protocol::Coverage;
+use arity_protocol::{Count, Coverage};
 use arity_store::WorkId;
 use arity_text::Document;
 
@@ -18,7 +18,8 @@ pub fn of_work(context: &Context, work: WorkId) -> Result<(Document, Coverage)> 
         CliError::Usage("the work has no text yet; run `arity fetch` first".to_owned())
     })?;
     let quoted = context.store.quoted_ranges(text)?;
-    let coverage = arity_protocol::coverage(&document, &quoted);
+    let skipped = context.store.skipped_ranges(text)?;
+    let coverage = arity_protocol::coverage(&document, &quoted, &skipped);
     Ok((document, coverage))
 }
 
@@ -36,13 +37,24 @@ fn excerpt(text: &str, start: usize, end: usize) -> String {
     excerpt
 }
 
+fn count_line(name: &str, count: &Count) -> String {
+    format!(
+        "{name}: {} numbers. Reports quote {}, readers skipped {}, and {} are left.\n",
+        count.numbers,
+        count.quoted,
+        count.skipped,
+        count
+            .numbers
+            .saturating_sub(count.quoted)
+            .saturating_sub(count.skipped)
+    )
+}
+
 /// The coverage as text: the counts, and then each block with the numbers
-/// that no report quotes.
+/// that no report quotes and no reader skipped.
 pub fn render(document: &Document, coverage: &Coverage) -> String {
-    let mut out = format!(
-        "Reports quote {} of {} numbers in table cells, and {} of {} numbers with a unit or a sign in the text.\n",
-        coverage.cells.quoted, coverage.cells.numbers, coverage.text.quoted, coverage.text.numbers
-    );
+    let mut out = count_line("Table cells", &coverage.cells);
+    out.push_str(&count_line("Text with a unit or a sign", &coverage.text));
     let mut index = 0;
     while let Some(first) = coverage.unquoted.get(index) {
         let numbers: Vec<_> = coverage.unquoted[index..]

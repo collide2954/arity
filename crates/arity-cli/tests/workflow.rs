@@ -237,7 +237,11 @@ fn lists_the_numbers_that_no_report_quotes() {
     assert_eq!(after.unquoted.len(), before.unquoted.len() - 2);
 
     let text = coverage::render(&document, &after);
-    assert!(text.starts_with("Reports quote 0 of "), "{text}");
+    assert!(text.starts_with("Table cells: "), "{text}");
+    assert!(
+        text.contains("Reports quote 0, readers skipped 0"),
+        "{text}"
+    );
     assert!(text.contains("[t1/r3c5] 19.53 ± 1.05"), "{text}");
 }
 

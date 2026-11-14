@@ -321,10 +321,36 @@ impl Prefix {
     fn accepts(&'static self, local: &str) -> bool {
         PREFIXES
             .iter()
-            .position(|candidate| std::ptr::eq(candidate, self))
+            .position(|candidate| candidate == self)
             .and_then(|index| PATTERNS.get(index))
             .and_then(Option::as_ref)
             .is_some_and(|pattern| pattern.is_match(local))
+    }
+}
+
+impl PartialEq for Prefix {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Prefix {}
+
+impl std::hash::Hash for Prefix {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl PartialOrd for Prefix {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Prefix {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(other.name)
     }
 }
 
@@ -342,17 +368,17 @@ pub enum CurieError {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct Curie {
-    prefix: &'static str,
+    prefix: &'static Prefix,
     local: String,
 }
 
 impl Curie {
     pub fn prefix(&self) -> &'static Prefix {
-        Prefix::lookup(self.prefix).unwrap_or(&PREFIXES[0])
+        self.prefix
     }
 
     pub fn prefix_name(&self) -> &'static str {
-        self.prefix
+        self.prefix.name
     }
 
     pub fn local(&self) -> &str {
@@ -390,7 +416,7 @@ impl FromStr for Curie {
             });
         }
         Ok(Self {
-            prefix: prefix.name,
+            prefix,
             local: local.to_owned(),
         })
     }
@@ -398,7 +424,7 @@ impl FromStr for Curie {
 
 impl fmt::Display for Curie {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.prefix, self.local)
+        write!(f, "{}:{}", self.prefix.name, self.local)
     }
 }
 

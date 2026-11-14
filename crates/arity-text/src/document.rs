@@ -53,6 +53,26 @@ pub enum BlockKind {
     Footnote,
 }
 
+impl BlockKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Title => "title",
+            Self::Abstract => "abstract",
+            Self::Heading => "heading",
+            Self::Paragraph => "paragraph",
+            Self::ListItem => "list_item",
+            Self::TableCaption => "table_caption",
+            Self::TableCell => "table_cell",
+            Self::TableFootnote => "table_footnote",
+            Self::FigureCaption => "figure_caption",
+            Self::SupplementCaption => "supplement_caption",
+            Self::SheetCell => "sheet_cell",
+            Self::Formula => "formula",
+            Self::Footnote => "footnote",
+        }
+    }
+}
+
 /// The position of a block in a table or a sheet.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -216,6 +236,22 @@ mod tests {
         let mut changed = sample();
         changed.blocks[0].text.push('!');
         assert_ne!(changed.digest().unwrap(), digest);
+    }
+
+    #[test]
+    fn block_kind_names_match_the_json_names() {
+        for kind in [
+            BlockKind::Title,
+            BlockKind::ListItem,
+            BlockKind::TableCell,
+            BlockKind::SupplementCaption,
+            BlockKind::SheetCell,
+        ] {
+            assert_eq!(
+                serde_json::to_value(kind).unwrap(),
+                serde_json::json!(kind.as_str())
+            );
+        }
     }
 
     #[test]

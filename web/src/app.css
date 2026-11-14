@@ -1,0 +1,223 @@
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --secondary: #52514e;
+  --muted: #898781;
+  --line: #e1e0d9;
+  --axis: #c3c2b7;
+  --ring: rgb(11 11 11 / 0.1);
+  --accent: #2a78d6;
+  --accent-ink: #1c5cab;
+  --mark: rgb(42 120 214 / 0.22);
+  --mark-strong: rgb(42 120 214 / 0.45);
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --warning: #fab219;
+  --warning-ink: #6b4b00;
+  --critical: #d03b3b;
+  --critical-ink: #a32a2a;
+  --critical-bg: #fbecec;
+  --notice-bg: #fff6df;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --secondary: #c3c2b7;
+    --muted: #898781;
+    --line: #2c2c2a;
+    --axis: #383835;
+    --ring: rgb(255 255 255 / 0.1);
+    --accent: #3987e5;
+    --accent-ink: #86b6ef;
+    --mark: rgb(57 135 229 / 0.3);
+    --mark-strong: rgb(57 135 229 / 0.55);
+    --good-ink: #0ca30c;
+    --warning-ink: #fab219;
+    --critical-ink: #e66767;
+    --critical-bg: #3a1d1d;
+    --notice-bg: #33290f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #f0efec;
+  --secondary: #c3c2b7;
+  --muted: #898781;
+  --line: #2c2c2a;
+  --axis: #383835;
+  --ring: rgb(255 255 255 / 0.1);
+  --accent: #3987e5;
+  --accent-ink: #86b6ef;
+  --mark: rgb(57 135 229 / 0.3);
+  --mark-strong: rgb(57 135 229 / 0.55);
+  --good-ink: #0ca30c;
+  --warning-ink: #fab219;
+  --critical-ink: #e66767;
+  --critical-bg: #3a1d1d;
+  --notice-bg: #33290f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.5 var(--font);
+}
+
+a {
+  color: var(--accent-ink);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.25rem;
+}
+
+main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.lede {
+  color: var(--secondary);
+  max-width: 70ch;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--ring);
+  padding: 1rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.secondary {
+  color: var(--secondary);
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+button,
+select,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: var(--surface);
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+}
+
+button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+input[type="search"] {
+  width: 100%;
+  max-width: 28rem;
+  background: var(--surface);
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  font-size: 0.8rem;
+  box-shadow: 0 0 0 1px var(--ring);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 1rem 16px 3rem;
+  }
+}

@@ -111,6 +111,7 @@ impl FromStr for NoticeKind {
 pub enum NoticeSource {
     Crossref,
     EuropePmc,
+    Pmc,
     RetractionWatch,
     Publisher,
 }
@@ -120,8 +121,19 @@ impl NoticeSource {
         match self {
             Self::Crossref => "crossref",
             Self::EuropePmc => "europe_pmc",
+            Self::Pmc => "pmc",
             Self::RetractionWatch => "retraction_watch",
             Self::Publisher => "publisher",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Crossref => "Crossref",
+            Self::EuropePmc => "Europe PMC",
+            Self::Pmc => "PubMed Central",
+            Self::RetractionWatch => "Retraction Watch",
+            Self::Publisher => "the publisher",
         }
     }
 }
@@ -161,6 +173,23 @@ mod tests {
             );
         }
         assert!("Retraction".parse::<NoticeKind>().is_err());
+    }
+
+    #[test]
+    fn source_names_match_the_json_names() {
+        for source in [
+            NoticeSource::Crossref,
+            NoticeSource::EuropePmc,
+            NoticeSource::Pmc,
+            NoticeSource::RetractionWatch,
+            NoticeSource::Publisher,
+        ] {
+            assert_eq!(
+                serde_json::to_value(source).unwrap(),
+                serde_json::json!(source.as_str())
+            );
+            assert_ne!(source.label(), "");
+        }
     }
 
     #[test]

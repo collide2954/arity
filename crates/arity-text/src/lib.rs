@@ -5,5 +5,7 @@
 //! shared test vectors in `testdata/text` keep the two implementations equal.
 
 mod normalize;
+mod numbers;
 
 pub use normalize::{Normalized, normalize};
+pub use numbers::{NumberMatch, contains_number, find_numbers};

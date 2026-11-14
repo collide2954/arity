@@ -6,9 +6,11 @@
 //! scales to convert values for comparison.
 
 mod dimension;
+mod reported;
 mod table;
 mod unit;
 
 pub use dimension::{Dimension, DimensionError};
+pub use reported::to_ucum;
 pub use table::{Atom, Prefix, prefixes, symbols};
 pub use unit::{Unit, UnitError};

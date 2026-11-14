@@ -9,8 +9,10 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
+regex.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+unicode-normalization.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

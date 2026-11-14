@@ -91,6 +91,7 @@
       {#if shown === "pdf" && page.pdf}
         <PdfViewer
           url={dataUrl(page.pdf)}
+          blocks={page.document?.blocks ?? []}
           {highlights}
           {selected}
           onselect={select}

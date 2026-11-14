@@ -1,21 +1,31 @@
 <script lang="ts">
   import * as pdfjs from "pdfjs-dist";
-  import { SvelteSet } from "svelte/reactivity";
   import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-  import { anchor, type Match } from "../lib/anchor";
-  import { mainMark, reveal, type Highlight } from "../lib/highlight";
+  import { finder, type Match } from "../lib/anchor";
+  import {
+    labelsOf,
+    mainMark,
+    place,
+    quotedParts,
+    reveal,
+    type Highlight,
+    type Mark,
+  } from "../lib/highlight";
+  import type { Block } from "../lib/types";
 
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
   let {
     url,
+    blocks,
     highlights,
     selected,
     onselect,
     onlocate,
   }: {
     url: string;
+    blocks: readonly Block[];
     highlights: readonly Highlight[];
     selected: number | null;
     onselect: (report: number) => void;
@@ -24,17 +34,30 @@
 
   const SCALE = 1.4;
 
+  type TextContent = Awaited<ReturnType<pdfjs.PDFPageProxy["getTextContent"]>>;
+
   interface Page {
     readonly page: pdfjs.PDFPageProxy;
     readonly viewport: pdfjs.PageViewport;
     readonly wrapper: HTMLDivElement;
     readonly canvas: HTMLCanvasElement;
+    /** True when the page has come near the view. */
+    near: boolean;
+    /** The text layer and the marks of the page, when arity adds them. */
+    annotated: Promise<HTMLElement | null> | null;
+  }
+
+  interface Shown {
+    /** The page of the main mark of each report that the PDF shows. */
+    readonly pages: ReadonlyMap<number, number>;
+    /** Adds the text layer and the marks of a page one time, and gives the page. */
+    readonly show: (page: number) => Promise<HTMLElement | null>;
   }
 
   let viewer: HTMLDivElement | undefined = $state();
   let pages: HTMLDivElement | undefined = $state();
   let status = $state("arity is loading the PDF.");
-  let drawn = $state(0);
+  let shown: Shown | null = $state.raw(null);
   let tip: { x: number; y: number; text: string } | null = $state(null);
 
   function sized(element: HTMLElement, viewport: pdfjs.PageViewport): void {
@@ -55,7 +78,7 @@
     sized(canvas, viewport);
     wrapper.append(canvas);
     container.append(wrapper);
-    return { page, viewport, wrapper, canvas };
+    return { page, viewport, wrapper, canvas, near: false, annotated: null };
   }
 
   async function paint(entry: Page): Promise<void> {
@@ -69,14 +92,15 @@
     }).promise;
   }
 
-  function rectangles(divs: readonly HTMLElement[], match: Match, page: HTMLElement): DOMRect[] {
+  const labels = $derived(labelsOf(highlights));
+
+  function rectangles(divs: readonly HTMLElement[], match: Match, origin: DOMRect): DOMRect[] {
     const first = divs[match.start.item]?.firstChild;
     const last = divs[match.end.item]?.firstChild;
     if (!(first instanceof Text) || !(last instanceof Text)) return [];
     const range = document.createRange();
     range.setStart(first, Math.min(match.start.offset, first.length));
     range.setEnd(last, Math.min(match.end.offset, last.length));
-    const origin = page.getBoundingClientRect();
     return Array.from(range.getClientRects())
       .filter((rect) => rect.width > 0.5 && rect.height > 0.5)
       .map(
@@ -85,68 +109,83 @@
       );
   }
 
-  function mark(rect: DOMRect, highlight: Highlight): HTMLButtonElement {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "mark";
-    button.dataset.report = String(highlight.report);
-    button.dataset.evidence = String(highlight.index);
-    button.setAttribute("aria-label", highlight.label);
-    button.style.left = `${String(rect.x - 1)}px`;
-    button.style.top = `${String(rect.y - 1)}px`;
-    button.style.width = `${String(rect.width + 2)}px`;
-    button.style.height = `${String(rect.height + 2)}px`;
-    return button;
+  function describe(reports: readonly number[]): string {
+    const first = reports[0] === undefined ? "" : (labels.get(reports[0]) ?? "");
+    return reports.length > 1 ? `${first} (and ${String(reports.length - 1)} more)` : first;
   }
 
-  /** Builds the text layer of a page and marks each quote on it. */
+  function button(box: DOMRect, mark: Mark): HTMLButtonElement {
+    const element = document.createElement("button");
+    element.type = "button";
+    element.className = "mark";
+    element.classList.toggle("selected", selected !== null && mark.reports.includes(selected));
+    element.dataset.reports = mark.reports.join(" ");
+    element.dataset.main = mark.main.join(" ");
+    element.setAttribute("aria-label", describe(mark.reports));
+    element.style.left = `${String(box.x - 1)}px`;
+    element.style.top = `${String(box.y - 1)}px`;
+    element.style.width = `${String(box.width + 2)}px`;
+    element.style.height = `${String(box.height + 2)}px`;
+    return element;
+  }
+
+  /** Adds the text layer of a page, and then its marks in one step. */
   async function annotate(
     entry: Page,
-    wanted: readonly Highlight[],
-    located: Set<number>,
+    content: TextContent,
+    marks: readonly Mark[],
   ): Promise<void> {
     const text = document.createElement("div");
     text.className = "textLayer";
-    const marks = document.createElement("div");
-    marks.className = "marks";
-    entry.wrapper.append(text, marks);
-    const layer = new pdfjs.TextLayer({
-      textContentSource: await entry.page.getTextContent(),
+    const layer = document.createElement("div");
+    layer.className = "marks";
+    entry.wrapper.append(text, layer);
+    const textLayer = new pdfjs.TextLayer({
+      textContentSource: content,
       container: text,
       viewport: entry.viewport,
     });
-    await layer.render();
-    const items = layer.textContentItemsStr;
-    for (const highlight of wanted) {
-      for (const match of anchor(items, highlight.quote)) {
-        for (const rect of rectangles(layer.textDivs, match, entry.wrapper)) {
-          marks.append(mark(rect, highlight));
-          located.add(highlight.report);
-        }
-      }
-    }
+    await textLayer.render();
+    const origin = entry.wrapper.getBoundingClientRect();
+    layer.append(
+      ...marks.flatMap((mark) =>
+        rectangles(textLayer.textDivs, mark.match, origin).map((box) => button(box, mark)),
+      ),
+    );
+  }
+
+  /** The text of each item that the text layer shows, in the order of its text divs. */
+  function itemsOf(content: TextContent): string[] {
+    return content.items.flatMap((item) => ("str" in item ? [item.str] : []));
   }
 
   $effect(() => {
     const target = pages;
     const scroller = viewer;
     if (!target || !scroller) return;
-    const wanted = highlights;
+    const parts = quotedParts(blocks, highlights);
     let cancelled = false;
     const task = pdfjs.getDocument({ url });
-    const located = new SvelteSet<number>();
-    const painted = new WeakSet<Element>();
-    let entries: Page[] = [];
+    const laid: Page[] = [];
+    /** Adds the text layer and the marks of a page, when arity has found the quotes. */
+    let build: ((page: number) => Promise<HTMLElement | null>) | null = null;
+
+    function fail(error: unknown): void {
+      if (!cancelled) {
+        status = `The PDF cannot show: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+
     const observer = new IntersectionObserver(
       (changes) => {
         for (const change of changes) {
-          const entry = entries.find((candidate) => candidate.wrapper === change.target);
-          if (!change.isIntersecting || !entry || painted.has(entry.wrapper)) continue;
-          painted.add(entry.wrapper);
+          const index = laid.findIndex((entry) => entry.wrapper === change.target);
+          const entry = laid[index];
+          if (!change.isIntersecting || !entry) continue;
           observer.unobserve(entry.wrapper);
-          paint(entry).catch(() => {
-            painted.delete(entry.wrapper);
-          });
+          entry.near = true;
+          paint(entry).catch(fail);
+          void build?.(index);
         }
       },
       { root: scroller, rootMargin: "1200px 0px" },
@@ -154,69 +193,95 @@
 
     async function draw(container: HTMLDivElement): Promise<void> {
       const pdf = await task.promise;
-      const laid: Page[] = [];
       for (let number = 1; number <= pdf.numPages; number += 1) {
         if (cancelled) return;
         laid.push(lay(await pdf.getPage(number), number, container));
       }
-      entries = laid;
       for (const entry of laid) observer.observe(entry.wrapper);
-      for (const entry of laid) {
-        if (cancelled) return;
-        await annotate(entry, wanted, located);
-      }
+      const contents = await Promise.all(laid.map((entry) => entry.page.getTextContent()));
+      if (cancelled) return;
+      const placed = place(parts, finder(contents.map(itemsOf)));
+      const show = (index: number): Promise<HTMLElement | null> => {
+        const entry = laid[index];
+        const content = contents[index];
+        if (!entry || !content) return Promise.resolve(null);
+        entry.annotated ??= annotate(entry, content, placed.marks.get(index) ?? [])
+          .then(() => entry.wrapper)
+          .catch((error: unknown) => {
+            fail(error);
+            return null;
+          });
+        return entry.annotated;
+      };
+      build = show;
+      laid.forEach((entry, index) => {
+        if (entry.near) void show(index);
+      });
+      shown = { pages: placed.pages, show };
+      status = "";
+      onlocate(new Set(placed.pages.keys()));
     }
 
-    draw(target)
-      .then(() => {
-        if (cancelled) return;
-        status = "";
-        drawn += 1;
-        onlocate(located);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          status = `The PDF cannot show: ${error instanceof Error ? error.message : String(error)}`;
-        }
-      });
+    draw(target).catch(fail);
 
     return () => {
       cancelled = true;
       observer.disconnect();
       void task.destroy();
       target.replaceChildren();
+      shown = null;
     };
   });
 
   $effect(() => {
     const target = pages;
-    if (!target || drawn === 0) return;
-    const current = selected === null ? null : String(selected);
-    for (const element of target.querySelectorAll<HTMLElement>(".mark")) {
-      element.classList.toggle("selected", element.dataset.report === current);
+    const scroller = viewer;
+    const current = shown;
+    const report = selected;
+    if (!target || !scroller || !current) return;
+    for (const element of target.querySelectorAll<HTMLElement>(".mark.selected")) {
+      element.classList.remove("selected");
     }
-    const main = selected === null ? null : mainMark(target, selected);
-    if (main && viewer) reveal(viewer, main);
+    if (report === null) return;
+    for (const element of target.querySelectorAll<HTMLElement>(
+      `[data-reports~="${String(report)}"]`,
+    )) {
+      element.classList.add("selected");
+    }
+    const page = current.pages.get(report);
+    if (page === undefined) return;
+    let stale = false;
+    void current.show(page).then((wrapper) => {
+      const main = wrapper && mainMark(wrapper, report);
+      if (!stale && main) reveal(scroller, main);
+    });
+    return () => {
+      stale = true;
+    };
   });
 
-  function reportOf(event: Event): number | null {
+  /** The reports of the mark under the pointer, with its main reports first. */
+  function reportsOf(event: Event): number[] {
     const element =
       event.target instanceof HTMLElement ? event.target.closest<HTMLElement>(".mark") : null;
-    const value = element?.dataset.report;
-    return value === undefined ? null : Number(value);
+    if (!element) return [];
+    const words = (value: string | undefined) =>
+      (value ?? "").split(" ").filter(Boolean).map(Number);
+    const main = words(element.dataset.main);
+    return [...main, ...words(element.dataset.reports).filter((report) => !main.includes(report))];
   }
 
   function hover(event: PointerEvent): void {
-    const report = reportOf(event);
-    const highlight = highlights.find((candidate) => candidate.report === report);
-    tip = highlight
-      ? { x: event.clientX + 14, y: event.clientY + 14, text: highlight.label }
-      : null;
+    const reports = reportsOf(event);
+    tip =
+      reports.length > 0
+        ? { x: event.clientX + 14, y: event.clientY + 14, text: describe(reports) }
+        : null;
   }
 
   function choose(event: MouseEvent): void {
-    const report = reportOf(event);
-    if (report !== null) onselect(report);
+    const [report] = reportsOf(event);
+    if (report !== undefined) onselect(report);
   }
 </script>
 

@@ -62,7 +62,7 @@ fn is_unit(token: &str) -> bool {
 }
 
 /// True when the number is a part of a name or a code, for example `IC50`,
-/// `5o`, `CO2`, or `MCF-7`.
+/// `5o`, `CO2`, `MCF-7`, or the version `9.5.1`.
 fn in_name(chars: &[char], range: &Range<usize>) -> bool {
     let before = range
         .start
@@ -75,9 +75,17 @@ fn in_name(chars: &[char], range: &Range<usize>) -> bool {
             .checked_sub(2)
             .and_then(|index| chars.get(index))
             .is_some_and(|c| c.is_alphabetic());
+    let digit_at = |index: Option<usize>| {
+        index
+            .and_then(|index| chars.get(index))
+            .is_some_and(char::is_ascii_digit)
+    };
+    let dotted = (after == Some(&'.') && digit_at(Some(range.end + 1)))
+        || (before == Some(&'.') && digit_at(range.start.checked_sub(2)));
     before.is_some_and(|c| c.is_alphabetic())
         || after.is_some_and(|c| c.is_alphabetic())
         || hyphen_after_letter
+        || dotted
 }
 
 /// True when a unit, a percent sign, or an uncertainty follows the number, or

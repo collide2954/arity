@@ -149,3 +149,11 @@ fn does_not_count_the_numbers_of_an_address() {
     let result = coverage(&text, &HashMap::new(), &HashMap::new());
     assert_eq!(numbers(&result), ["5"]);
 }
+
+#[test]
+fn does_not_count_the_parts_of_a_version_number() {
+    let paragraph = "We used GraphPad Prism 9.5.1 and section 3.2.4 to fit 2.5 mg.";
+    let text = document(vec![Block::new("s1/p1", BlockKind::Paragraph, paragraph)]);
+    let result = coverage(&text, &HashMap::new(), &HashMap::new());
+    assert_eq!(numbers(&result), ["2.5"]);
+}

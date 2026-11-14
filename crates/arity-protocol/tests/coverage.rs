@@ -140,3 +140,12 @@ fn counts_skipped_numbers_apart_from_quoted_numbers() {
     );
     assert_eq!(numbers(&result), ["0.24"]);
 }
+
+#[test]
+fn does_not_count_the_numbers_of_an_address() {
+    let paragraph =
+        "See http://www.mdpi.com/1420-3049/21/6/762/s1 and www.example.org/2/3 for 5 mg.";
+    let text = document(vec![Block::new("s1/p1", BlockKind::Paragraph, paragraph)]);
+    let result = coverage(&text, &HashMap::new(), &HashMap::new());
+    assert_eq!(numbers(&result), ["5"]);
+}

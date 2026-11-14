@@ -102,6 +102,28 @@ fn has_measure(chars: &[char], range: &Range<usize>) -> bool {
         .is_some_and(|c| SIGNS.contains(c))
 }
 
+/// The ranges of the addresses in a text, for example `http://…` or `www.…`.
+fn addresses(chars: &[char]) -> Vec<Range<usize>> {
+    let mut found = Vec::new();
+    let mut start = 0;
+    while start < chars.len() {
+        if chars[start] == ' ' {
+            start += 1;
+            continue;
+        }
+        let end = chars[start..]
+            .iter()
+            .position(|c| *c == ' ')
+            .map_or(chars.len(), |length| start + length);
+        let token: String = chars[start..end].iter().collect();
+        if token.contains("://") || token.trim_start_matches('(').starts_with("www.") {
+            found.push(start..end);
+        }
+        start = end;
+    }
+    found
+}
+
 fn within<S: BuildHasher>(
     ranges: &HashMap<String, Vec<Range<usize>>, S>,
     block: &str,
@@ -135,12 +157,16 @@ pub fn coverage<S: BuildHasher, T: BuildHasher>(
         let chars: Vec<char> = normalized.as_str().chars().collect();
         let mut found = find_numbers(normalized.as_str());
         found.sort_by_key(|number| (number.range.start, usize::MAX - number.range.end));
+        let links = addresses(&chars);
         let mut counted: Vec<Range<usize>> = Vec::new();
         for number in found {
             let range = number.range;
             if counted
                 .iter()
                 .any(|other| other.start < range.end && range.start < other.end)
+                || links
+                    .iter()
+                    .any(|link| link.start <= range.start && range.end <= link.end)
                 || in_name(&chars, &range)
                 || !(in_cell || has_measure(&chars, &range))
             {

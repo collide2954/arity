@@ -17,6 +17,15 @@ use crate::store::{
     AgentId, EntityId, ReportId, Result, RunId, SOFTWARE, Store, StoreError, TextId, WorkId,
 };
 
+/// An entity that a run of a work names, with the id that the run gives it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkEntity {
+    pub local_id: String,
+    pub entity: EntityId,
+    pub kind: String,
+    pub label: String,
+}
+
 fn number_text(value: Option<Decimal>) -> Option<String> {
     value.map(|value| value.to_string())
 }
@@ -168,6 +177,22 @@ impl Writer<'_> {
         Ok(())
     }
 
+    /// The entity that an earlier run of the same work names with this id.
+    fn earlier_entity(&self, local_id: &str) -> Result<Option<EntityId>> {
+        Ok(self
+            .connection
+            .query_row(
+                "SELECT run_entity.entity_id FROM run_entity
+                 JOIN run ON run.id = run_entity.run_id
+                 WHERE run.work_id = ?1 AND run_entity.local_id = ?2 AND run.id != ?3
+                 ORDER BY run_entity.run_id LIMIT 1",
+                params![self.work.0, local_id, self.run.0],
+                |row| row.get(0),
+            )
+            .optional()?
+            .map(EntityId))
+    }
+
     fn entity(&mut self, position: usize, entity: &EntityInput) -> Result<()> {
         let mut found: Option<(EntityId, String)> = None;
         for xref in &entity.xrefs {
@@ -190,6 +215,17 @@ impl Writer<'_> {
                 _ => {}
             }
         }
+        let found = match (found, self.earlier_entity(&entity.id)?) {
+            (Some((id, curie)), Some(earlier)) if id != earlier => {
+                return Err(StoreError::Conflict(format!(
+                    "the id {} names entity {} in an earlier run of this work, but {curie} belongs to entity {}",
+                    entity.id, earlier.0, id.0
+                )));
+            }
+            (Some(found), _) => Some(found),
+            (None, Some(earlier)) => Some((earlier, format!("the id {}", entity.id))),
+            (None, None) => None,
+        };
         let id = if let Some((id, curie)) = found {
             let kind: String = self.connection.query_row(
                 "SELECT kind FROM entity WHERE id = ?1",
@@ -583,6 +619,32 @@ impl Store {
             .connection
             .query_row("SELECT COUNT(*) FROM entity", [], |row| row.get(0))?;
         Ok(u64::try_from(count).unwrap_or(0))
+    }
+
+    /// The entities that the runs of a work name, each with the id of its
+    /// first run, in the order of the runs.
+    pub fn entities_of_work(&self, work: WorkId) -> Result<Vec<WorkEntity>> {
+        let mut statement = self.connection.prepare(
+            "SELECT run_entity.local_id, entity.id, entity.kind, entity.label FROM run_entity
+             JOIN run ON run.id = run_entity.run_id
+             JOIN entity ON entity.id = run_entity.entity_id
+             WHERE run.work_id = ?1 ORDER BY run_entity.run_id, run_entity.rowid",
+        )?;
+        let rows = statement
+            .query_map([work.0], |row| {
+                Ok(WorkEntity {
+                    local_id: row.get(0)?,
+                    entity: EntityId(row.get(1)?),
+                    kind: row.get(2)?,
+                    label: row.get(3)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut seen = std::collections::HashSet::new();
+        Ok(rows
+            .into_iter()
+            .filter(|row| seen.insert(row.local_id.clone()))
+            .collect())
     }
 
     pub fn reports_of_run(&self, run: RunId) -> Result<Vec<(ReportId, String)>> {

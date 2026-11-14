@@ -18,3 +18,4 @@ pub use store::{
     AgentId, EntityId, QueueState, ReportId, Result, Retrieval, RetrievalId, RetrievalRole, RunId,
     SOFTWARE, Store, StoreError, TextId, WorkId, WorkRecord,
 };
+pub use submissions::WorkEntity;

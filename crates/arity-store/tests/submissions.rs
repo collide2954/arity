@@ -151,6 +151,38 @@ fn gives_the_quoted_ranges_of_the_reports_that_no_person_rejected() {
 }
 
 #[test]
+fn keeps_one_entity_for_an_id_in_each_run_of_a_work() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let mut first = submission(&document, "0.24", "chemical");
+    first["entities"][0]["xrefs"] = json!([]);
+    let mut second = first.clone();
+    second["note"] = json!("A second reading.");
+    store_one(&store, work, text, &document, &first).unwrap();
+    assert_eq!(store.entity_count().unwrap(), 1);
+    store_one(&store, work, text, &document, &second).unwrap();
+    assert_eq!(store.entity_count().unwrap(), 1);
+    let named = store.entities_of_work(work).unwrap();
+    assert_eq!(named.len(), 1);
+    assert_eq!(
+        (
+            named[0].local_id.as_str(),
+            named[0].kind.as_str(),
+            named[0].label.as_str()
+        ),
+        ("dox", "chemical", "doxorubicin")
+    );
+
+    let mut other_kind = first.clone();
+    other_kind["note"] = json!("A third reading.");
+    other_kind["entities"][0]["kind"] = json!("material");
+    assert!(matches!(
+        store_one(&store, work, text, &document, &other_kind),
+        Err(StoreError::Conflict(_))
+    ));
+}
+
+#[test]
 fn stores_the_skipped_quotes_of_a_run() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");

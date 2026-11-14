@@ -31,11 +31,22 @@ impl Normalized {
             .match_indices(&needle)
             .filter_map(|(byte, _)| {
                 let first = self.text[..byte].chars().count();
-                let start = *self.origins.get(first)?;
-                let end = *self.origins.get(first + needle_chars - 1)? + 1;
-                Some(start..end)
+                self.original(first..first + needle_chars)
             })
             .collect()
+    }
+
+    /// The range in the original text that a range of the normal form comes
+    /// from. Both ranges count Unicode scalar values. An empty range, or a
+    /// range past the end, has no original.
+    pub fn original(&self, range: Range<usize>) -> Option<Range<usize>> {
+        let last = range
+            .end
+            .checked_sub(1)
+            .filter(|last| *last >= range.start)?;
+        let start = *self.origins.get(range.start)?;
+        let end = *self.origins.get(last)? + 1;
+        Some(start..end)
     }
 }
 
@@ -134,6 +145,15 @@ mod tests {
                 case.text
             );
         }
+    }
+
+    #[test]
+    fn maps_a_normalized_range_back_to_the_original_text() {
+        let normalized = normalize("a\u{00AD}b  7.3 \u{00B5}M");
+        assert_eq!(normalized.as_str(), "ab 7.3 \u{03BC}M");
+        assert_eq!(normalized.original(3..6), Some(5..8));
+        assert_eq!(normalized.original(0..0), None);
+        assert_eq!(normalized.original(8..12), None);
     }
 
     proptest! {

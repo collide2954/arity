@@ -73,15 +73,15 @@ issue_codes! {
     EmptyLabel => "empty_label", Error,
         "The label of an entity is empty.";
     EmptyMethod => "empty_method", Error,
-        "A value from a figure does not tell how the reader read it.";
+        "A value from an image does not tell how the reader read it.";
     EmptyName => "empty_name", Error,
         "A name that the submission must give is empty, for example the name of the reader.";
     EmptyQuote => "empty_quote", Error,
         "A quote is empty.";
     FigureNotFound => "figure_not_found", Error,
-        "The text has no figure caption with the key that the value names.";
+        "The text has no caption of a figure or of a table with the key that the value names.";
     FigureNotInEvidence => "figure_not_in_evidence", Error,
-        "A value from a figure does not have the caption of the figure in its evidence.";
+        "A value from an image does not have the caption of the figure or the table in its evidence.";
     InvalidId => "invalid_id", Error,
         "An identifier is empty or has a space.";
     InvalidInterval => "invalid_interval", Error,
@@ -95,7 +95,7 @@ issue_codes! {
     InvalidP => "invalid_p", Error,
         "A p-value is not from 0 to 1.";
     InvalidResolution => "invalid_resolution", Error,
-        "The resolution of a reading from a figure is not more than zero.";
+        "The resolution of a reading from an image is not more than zero.";
     InvalidSampleSize => "invalid_sample_size", Error,
         "The number of samples is less than 1.";
     InvalidUnit => "invalid_unit", Error,
@@ -140,6 +140,8 @@ issue_codes! {
         "A quote that the reader skips contains no number.";
     SignificanceShape => "significance_shape", Error,
         "A significance does not have a statement, a p-value, or both.";
+    TableHasCells => "table_has_cells", Error,
+        "A value is read from the image of a table, but the text has the cells of that table. Quote the cells.";
     TextMismatch => "text_mismatch", Error,
         "The submission names a text that is not the current text of the work.";
     TextNotInEvidence => "text_not_in_evidence", Error,
@@ -152,6 +154,8 @@ issue_codes! {
         "The submission gives a field that does not apply, for example a unit for a property that is not a quantity.";
     UnitRequired => "unit_required", Error,
         "A quantity has no UCUM unit.";
+    UnitTextFromImage => "unit_text_from_image", Warning,
+        "No quote contains the unit of a value that the reader read from an image, so a person must check the unit against the image.";
     UnitTextMismatch => "unit_text_mismatch", Error,
         "The unit that the source writes is not the same unit as the UCUM unit.";
     UnitTextNotInEvidence => "unit_text_not_in_evidence", Error,

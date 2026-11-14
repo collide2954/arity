@@ -14,18 +14,18 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `direction_cue_missing` | warning | No quote has a word that states the direction of the effect. |
 | `duplicate_id` | error | Two entities, or two reports, have the same identifier. |
 | `empty_label` | error | The label of an entity is empty. |
-| `empty_method` | error | A value from a figure does not tell how the reader read it. |
+| `empty_method` | error | A value from an image does not tell how the reader read it. |
 | `empty_name` | error | A name that the submission must give is empty, for example the name of the reader. |
 | `empty_quote` | error | A quote is empty. |
-| `figure_not_found` | error | The text has no figure caption with the key that the value names. |
-| `figure_not_in_evidence` | error | A value from a figure does not have the caption of the figure in its evidence. |
+| `figure_not_found` | error | The text has no caption of a figure or of a table with the key that the value names. |
+| `figure_not_in_evidence` | error | A value from an image does not have the caption of the figure or the table in its evidence. |
 | `invalid_id` | error | An identifier is empty or has a space. |
 | `invalid_interval` | error | The low end of an interval is greater than the high end. |
 | `invalid_json` | error | The file is not JSON, or it does not have the fields of a submission. |
 | `invalid_key` | error | A property key does not start with a letter, or has characters other than lower-case letters, digits, and underscores. |
 | `invalid_level` | error | The level of an interval is not a percent from 0 to 100. |
 | `invalid_p` | error | A p-value is not from 0 to 1. |
-| `invalid_resolution` | error | The resolution of a reading from a figure is not more than zero. |
+| `invalid_resolution` | error | The resolution of a reading from an image is not more than zero. |
 | `invalid_sample_size` | error | The number of samples is less than 1. |
 | `invalid_unit` | error | The unit is not a valid UCUM unit. |
 | `label_differs` | warning | The label of a property is not the stored label. arity keeps the stored label. |
@@ -48,12 +48,14 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `skip_note_required` | error | A quote that the reader skips for the reason `other` has no note that tells the reason. |
 | `skip_without_number` | error | A quote that the reader skips contains no number. |
 | `significance_shape` | error | A significance does not have a statement, a p-value, or both. |
+| `table_has_cells` | error | A value is read from the image of a table, but the text has the cells of that table. Quote the cells. |
 | `text_mismatch` | error | The submission names a text that is not the current text of the work. |
 | `text_not_in_evidence` | error | No quote contains a text that the report gives, for example the comparator. |
 | `text_unreadable` | error | arity cannot make the digest of the text. |
 | `uncertainty_shape` | error | An uncertainty does not have a number, or a low and a high end. |
 | `unexpected_field` | error | The submission gives a field that does not apply, for example a unit for a property that is not a quantity. |
 | `unit_required` | error | A quantity has no UCUM unit. |
+| `unit_text_from_image` | warning | No quote contains the unit of a value that the reader read from an image, so a person must check the unit against the image. |
 | `unit_text_mismatch` | error | The unit that the source writes is not the same unit as the UCUM unit. |
 | `unit_text_not_in_evidence` | error | No quote contains the unit as the source writes it. |
 | `unit_text_required` | error | A quantity does not give the unit as the source writes it. |

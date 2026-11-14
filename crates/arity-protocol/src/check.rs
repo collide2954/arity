@@ -708,7 +708,9 @@ impl Checker<'_> {
         self.number_in_evidence(&format!("{path}/number"), magnitude.number, evidence);
         if let Some(code) = &magnitude.unit {
             match Unit::parse(code) {
-                Ok(unit) => self.unit_text(path, &unit, magnitude.unit_text.as_deref(), evidence),
+                Ok(unit) => {
+                    self.unit_text(path, &unit, magnitude.unit_text.as_deref(), evidence, false);
+                }
                 Err(error) => self.raise(
                     format!("{path}/unit"),
                     IssueCode::InvalidUnit,
@@ -928,7 +930,13 @@ impl Checker<'_> {
                 ),
             );
         }
-        self.unit_text(path, &unit, value.unit_text.as_deref(), evidence);
+        self.unit_text(
+            path,
+            &unit,
+            value.unit_text.as_deref(),
+            evidence,
+            value.read_from_figure.is_some(),
+        );
 
         let stated = match &value.read_from_figure {
             Some(reading) => {
@@ -984,7 +992,14 @@ impl Checker<'_> {
         }
     }
 
-    fn unit_text(&mut self, path: &str, unit: &Unit, text: Option<&str>, evidence: &Evidence) {
+    fn unit_text(
+        &mut self,
+        path: &str,
+        unit: &Unit,
+        text: Option<&str>,
+        evidence: &Evidence,
+        from_image: bool,
+    ) {
         let Some(text) = text else {
             if !unit.dimension().is_none() || unit.is_arbitrary() {
                 self.raise(
@@ -996,11 +1011,21 @@ impl Checker<'_> {
             return;
         };
         if !evidence.has_text(text, false) {
-            self.raise(
-                format!("{path}/unit_text"),
-                IssueCode::UnitTextNotInEvidence,
-                format!("no quote contains the unit text {text:?}"),
-            );
+            if from_image {
+                self.raise(
+                    format!("{path}/unit_text"),
+                    IssueCode::UnitTextFromImage,
+                    format!(
+                        "no quote contains the unit text {text:?}; a person must check it against the image"
+                    ),
+                );
+            } else {
+                self.raise(
+                    format!("{path}/unit_text"),
+                    IssueCode::UnitTextNotInEvidence,
+                    format!("no quote contains the unit text {text:?}"),
+                );
+            }
         }
         match Unit::parse_reported(text) {
             Ok(reported) if !reported.is_equivalent_to(unit) => self.raise(
@@ -1100,22 +1125,47 @@ impl Checker<'_> {
         }
     }
 
+    /// True when the text has the cells of the table that a caption key names.
+    fn has_cells(&self, caption: &str) -> bool {
+        let table = caption.split('/').next().unwrap_or_default();
+        let prefix = format!("{table}/");
+        self.document
+            .blocks
+            .iter()
+            .any(|block| block.kind == BlockKind::TableCell && block.key.starts_with(&prefix))
+    }
+
+    /// Checks a value that the reader read from an image: a plot, or a table
+    /// that the source gives only as an image.
     fn figure_reading(&mut self, path: &str, reading: &FigureReadingInput, evidence: &Evidence) {
-        let is_figure = self
-            .document
-            .block(&reading.figure)
-            .is_some_and(|block| block.kind == BlockKind::FigureCaption);
-        if !is_figure {
-            self.raise(
-                format!("{path}/figure"),
-                IssueCode::FigureNotFound,
-                format!("the text has no figure caption {:?}", reading.figure),
-            );
-        } else if !evidence.blocks.contains(&reading.figure) {
+        let kind = self.document.block(&reading.figure).map(|block| block.kind);
+        let image = match kind {
+            Some(BlockKind::TableCaption) if self.has_cells(&reading.figure) => {
+                self.raise(
+                    format!("{path}/figure"),
+                    IssueCode::TableHasCells,
+                    "the text has the cells of this table; quote the cells",
+                );
+                false
+            }
+            Some(BlockKind::FigureCaption | BlockKind::TableCaption) => true,
+            _ => {
+                self.raise(
+                    format!("{path}/figure"),
+                    IssueCode::FigureNotFound,
+                    format!(
+                        "the text has no caption of a figure or of a table {:?}",
+                        reading.figure
+                    ),
+                );
+                false
+            }
+        };
+        if image && !evidence.blocks.contains(&reading.figure) {
             self.raise(
                 format!("{path}/figure"),
                 IssueCode::FigureNotInEvidence,
-                "quote the caption of the figure in the evidence of the report",
+                "quote the caption of the figure or the table in the evidence of the report",
             );
         }
         if reading.method.trim().is_empty() {

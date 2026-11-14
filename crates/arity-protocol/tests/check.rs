@@ -33,6 +33,16 @@ fn document() -> Document {
             BlockKind::FigureCaption,
             "Viability of MCF-7 cells after 48 h of treatment.",
         ),
+        Block::new(
+            "t1/caption",
+            BlockKind::TableCaption,
+            "Table 1: IC50 values.",
+        ),
+        Block::new(
+            "t2/caption",
+            BlockKind::TableCaption,
+            "Table 2: IC50 values of the compounds in MCF-7 cells.",
+        ),
     ];
     Document::new(Digest::of(b"source"), "test 1", blocks).unwrap()
 }
@@ -413,10 +423,11 @@ fn accepts_values_read_from_a_figure_with_their_evidence() {
         })
     };
     let accepted = reading("f1/caption", "f1/caption");
-    assert_eq!(
-        errors(&accepted),
-        one("/reports/1/value/unit_text", "unit_text_not_in_evidence")
-    );
+    assert_eq!(errors(&accepted), Vec::<(String, &str)>::new());
+    assert!(warnings(&accepted).contains(&(
+        "/reports/1/value/unit_text".to_owned(),
+        "unit_text_from_image"
+    )));
     let with_percent = {
         let mut value = accepted;
         value["reports"][1]["value"]["unit"] = json!("1");
@@ -430,16 +441,10 @@ fn accepts_values_read_from_a_figure_with_their_evidence() {
     assert!(run(&with_percent).is_ok());
     assert_eq!(
         errors(&reading("t1/r2c2", "f1/caption")),
-        [
-            (
-                "/reports/1/value/unit_text".to_owned(),
-                "unit_text_not_in_evidence"
-            ),
-            (
-                "/reports/1/value/read_from_figure/figure".to_owned(),
-                "figure_not_found"
-            ),
-        ]
+        one(
+            "/reports/1/value/read_from_figure/figure",
+            "figure_not_found"
+        )
     );
 }
 
@@ -597,4 +602,46 @@ fn accepts_a_submission_that_only_skips_quotes() {
     assert!(run(&value).is_ok());
     let empty = changed(|value| value["reports"] = json!([]));
     assert_eq!(errors(&empty), one("/reports", "no_reports"));
+}
+
+fn read_from_table(table: &str) -> Value {
+    changed(|value| {
+        let report = &mut value["reports"][0];
+        report["value"]["number"] = json!("0.31");
+        report["value"]["read_from_figure"] = json!({
+            "figure": format!("{table}/caption"),
+            "method": "transcribed from the image of the table",
+            "resolution": "0.01"
+        });
+        report["evidence"] = json!([
+            { "block": format!("{table}/caption"), "quote": "IC50 values" },
+            {
+                "block": "s2/p1",
+                "quote": "treated for 48 h. Values are mean ± SD of three experiments (n = 3)"
+            }
+        ]);
+    })
+}
+
+#[test]
+fn accepts_a_value_read_from_the_image_of_a_table_and_warns_about_its_unit() {
+    let found = warnings(&read_from_table("t2"));
+    assert!(
+        found.contains(&(
+            "/reports/0/value/unit_text".to_owned(),
+            "unit_text_from_image"
+        )),
+        "{found:?}"
+    );
+}
+
+#[test]
+fn refuses_to_read_the_image_of_a_table_whose_cells_are_in_the_text() {
+    assert_eq!(
+        errors(&read_from_table("t1")),
+        one(
+            "/reports/0/value/read_from_figure/figure",
+            "table_has_cells"
+        )
+    );
 }

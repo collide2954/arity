@@ -74,6 +74,7 @@ dependencies = [
  "arity-core",
  "arity-jats",
  "arity-protocol",
+ "arity-site",
  "arity-sources",
  "arity-store",
  "arity-text",
@@ -127,6 +128,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "arity-site"
+version = "0.1.0"
+dependencies = [
+ "arity-core",
+ "arity-protocol",
+ "arity-store",
+ "arity-text",
+ "arity-units",
+ "jiff",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "arity-sources"
 version = "0.1.0"
 dependencies = [
@@ -151,6 +168,7 @@ dependencies = [
  "arity-units",
  "jiff",
  "rusqlite",
+ "serde",
  "serde_json",
  "tempfile",
  "thiserror",

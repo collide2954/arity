@@ -81,6 +81,11 @@ enum Command {
     },
     /// Read the notices about works again: retractions, corrections, and others.
     Notices { identifiers: Vec<String> },
+    /// Write the static files of the website into a folder.
+    Export {
+        /// The folder for the website data, for example `web/static/data`.
+        out: PathBuf,
+    },
     /// List the terms of a vocabulary.
     Vocab {
         #[arg(value_enum)]
@@ -150,6 +155,7 @@ fn run(cli: Cli, out: &mut impl Write) -> Result<ExitCode> {
             note,
         } => check(data, report, verdict, note.as_deref(), now, out),
         Command::Notices { identifiers } => refresh_notices(data, &identifiers, now, out),
+        Command::Export { out: folder } => export(data, &folder, now, out),
         Command::Vocab { list } => vocab(list, data, out),
         Command::Schema => {
             emit(out, json_text(&arity_protocol::schema())?)?;
@@ -396,6 +402,23 @@ fn refresh_notices(
             )?;
         }
     }
+    Ok(ExitCode::SUCCESS)
+}
+
+fn export(data: &Path, folder: &Path, now: Timestamp, out: &mut impl Write) -> Result<ExitCode> {
+    let context = open(data)?;
+    let exported = arity_site::export(&context.store, &context.blobs, folder, now)
+        .map_err(|error| CliError::Usage(error.to_string()))?;
+    emit(
+        out,
+        format!(
+            "Wrote {} works, {} reports, and {} PDFs to {}.",
+            exported.works,
+            exported.reports,
+            exported.pdfs,
+            folder.display()
+        ),
+    )?;
     Ok(ExitCode::SUCCESS)
 }
 

@@ -14,6 +14,7 @@ publish = false
 arity-core = { path = "crates/arity-core" }
 arity-jats = { path = "crates/arity-jats" }
 arity-protocol = { path = "crates/arity-protocol" }
+arity-site = { path = "crates/arity-site" }
 arity-sources = { path = "crates/arity-sources" }
 arity-store = { path = "crates/arity-store" }
 arity-text = { path = "crates/arity-text" }

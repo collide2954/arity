@@ -7,7 +7,10 @@ use rusqlite::{Connection, OptionalExtension, params};
 /// The name and version that each stored record names as its software.
 pub const SOFTWARE: &str = concat!("arity ", env!("CARGO_PKG_VERSION"));
 
-const MIGRATIONS: &[&str] = &[include_str!("../migrations/001_initial.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("../migrations/001_initial.sql"),
+    include_str!("../migrations/002_run_entity.sql"),
+];
 
 macro_rules! id_type {
     ($name:ident) => {

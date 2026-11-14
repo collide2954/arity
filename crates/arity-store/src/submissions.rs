@@ -201,6 +201,10 @@ impl Writer<'_> {
             let path = format!("/entities/{position}/mentions/{mention_index}");
             self.evidence(&path, mention, None, Some(id))?;
         }
+        self.connection.execute(
+            "INSERT INTO run_entity (run_id, local_id, entity_id) VALUES (?1, ?2, ?3)",
+            params![self.run.0, entity.id, id.0],
+        )?;
         self.entities.insert(entity.id.clone(), id);
         Ok(())
     }

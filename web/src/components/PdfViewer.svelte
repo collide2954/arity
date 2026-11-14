@@ -4,7 +4,7 @@
   import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
   import { anchor, type Match } from "../lib/anchor";
-  import type { Highlight } from "../lib/highlight";
+  import { mainMark, reveal, type Highlight } from "../lib/highlight";
 
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -24,9 +24,50 @@
 
   const SCALE = 1.4;
 
+  interface Page {
+    readonly page: pdfjs.PDFPageProxy;
+    readonly viewport: pdfjs.PageViewport;
+    readonly wrapper: HTMLDivElement;
+    readonly canvas: HTMLCanvasElement;
+  }
+
+  let viewer: HTMLDivElement | undefined = $state();
   let pages: HTMLDivElement | undefined = $state();
   let status = $state("arity is loading the PDF.");
+  let drawn = $state(0);
   let tip: { x: number; y: number; text: string } | null = $state(null);
+
+  function sized(element: HTMLElement, viewport: pdfjs.PageViewport): void {
+    element.style.width = `${String(viewport.width)}px`;
+    element.style.height = `${String(viewport.height)}px`;
+  }
+
+  function lay(page: pdfjs.PDFPageProxy, number: number, container: HTMLDivElement): Page {
+    const viewport = page.getViewport({ scale: SCALE });
+    const wrapper = document.createElement("div");
+    wrapper.className = "page";
+    wrapper.dataset.page = String(number);
+    sized(wrapper, viewport);
+    wrapper.style.setProperty("--scale-factor", String(viewport.scale));
+    wrapper.style.setProperty("--total-scale-factor", String(viewport.scale));
+    wrapper.style.setProperty("--user-unit", "1");
+    const canvas = document.createElement("canvas");
+    sized(canvas, viewport);
+    wrapper.append(canvas);
+    container.append(wrapper);
+    return { page, viewport, wrapper, canvas };
+  }
+
+  async function paint(entry: Page): Promise<void> {
+    const ratio = window.devicePixelRatio || 1;
+    entry.canvas.width = Math.floor(entry.viewport.width * ratio);
+    entry.canvas.height = Math.floor(entry.viewport.height * ratio);
+    await entry.page.render({
+      canvas: entry.canvas,
+      viewport: entry.viewport,
+      ...(ratio === 1 ? {} : { transform: [ratio, 0, 0, ratio, 0, 0] }),
+    }).promise;
+  }
 
   function rectangles(divs: readonly HTMLElement[], match: Match, page: HTMLElement): DOMRect[] {
     const first = divs[match.start.item]?.firstChild;
@@ -49,6 +90,7 @@
     button.type = "button";
     button.className = "mark";
     button.dataset.report = String(highlight.report);
+    button.dataset.evidence = String(highlight.index);
     button.setAttribute("aria-label", highlight.label);
     button.style.left = `${String(rect.x - 1)}px`;
     button.style.top = `${String(rect.y - 1)}px`;
@@ -57,60 +99,71 @@
     return button;
   }
 
+  /** Builds the text layer of a page and marks each quote on it. */
+  async function annotate(
+    entry: Page,
+    wanted: readonly Highlight[],
+    located: Set<number>,
+  ): Promise<void> {
+    const text = document.createElement("div");
+    text.className = "textLayer";
+    const marks = document.createElement("div");
+    marks.className = "marks";
+    entry.wrapper.append(text, marks);
+    const layer = new pdfjs.TextLayer({
+      textContentSource: await entry.page.getTextContent(),
+      container: text,
+      viewport: entry.viewport,
+    });
+    await layer.render();
+    const items = layer.textContentItemsStr;
+    for (const highlight of wanted) {
+      for (const match of anchor(items, highlight.quote)) {
+        for (const rect of rectangles(layer.textDivs, match, entry.wrapper)) {
+          marks.append(mark(rect, highlight));
+          located.add(highlight.report);
+        }
+      }
+    }
+  }
+
   $effect(() => {
     const target = pages;
-    if (!target) return;
+    const scroller = viewer;
+    if (!target || !scroller) return;
     const wanted = highlights;
     let cancelled = false;
     const task = pdfjs.getDocument({ url });
     const located = new SvelteSet<number>();
+    const painted = new WeakSet<Element>();
+    let entries: Page[] = [];
+    const observer = new IntersectionObserver(
+      (changes) => {
+        for (const change of changes) {
+          const entry = entries.find((candidate) => candidate.wrapper === change.target);
+          if (!change.isIntersecting || !entry || painted.has(entry.wrapper)) continue;
+          painted.add(entry.wrapper);
+          observer.unobserve(entry.wrapper);
+          paint(entry).catch(() => {
+            painted.delete(entry.wrapper);
+          });
+        }
+      },
+      { root: scroller, rootMargin: "1200px 0px" },
+    );
 
     async function draw(container: HTMLDivElement): Promise<void> {
       const pdf = await task.promise;
+      const laid: Page[] = [];
       for (let number = 1; number <= pdf.numPages; number += 1) {
         if (cancelled) return;
-        const page = await pdf.getPage(number);
-        const viewport = page.getViewport({ scale: SCALE });
-        const ratio = window.devicePixelRatio || 1;
-        const wrapper = document.createElement("div");
-        wrapper.className = "page";
-        wrapper.dataset.page = String(number);
-        wrapper.style.width = `${String(viewport.width)}px`;
-        wrapper.style.height = `${String(viewport.height)}px`;
-        wrapper.style.setProperty("--scale-factor", String(viewport.scale));
-        wrapper.style.setProperty("--total-scale-factor", String(viewport.scale));
-        wrapper.style.setProperty("--user-unit", "1");
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.floor(viewport.width * ratio);
-        canvas.height = Math.floor(viewport.height * ratio);
-        canvas.style.width = `${String(viewport.width)}px`;
-        canvas.style.height = `${String(viewport.height)}px`;
-        const text = document.createElement("div");
-        text.className = "textLayer";
-        const marks = document.createElement("div");
-        marks.className = "marks";
-        wrapper.append(canvas, text, marks);
-        container.append(wrapper);
-        await page.render({
-          canvas,
-          viewport,
-          ...(ratio === 1 ? {} : { transform: [ratio, 0, 0, ratio, 0, 0] }),
-        }).promise;
-        const layer = new pdfjs.TextLayer({
-          textContentSource: await page.getTextContent(),
-          container: text,
-          viewport,
-        });
-        await layer.render();
-        const items = layer.textContentItemsStr;
-        for (const highlight of wanted) {
-          for (const match of anchor(items, highlight.quote)) {
-            for (const rect of rectangles(layer.textDivs, match, wrapper)) {
-              marks.append(mark(rect, highlight));
-              located.add(highlight.report);
-            }
-          }
-        }
+        laid.push(lay(await pdf.getPage(number), number, container));
+      }
+      entries = laid;
+      for (const entry of laid) observer.observe(entry.wrapper);
+      for (const entry of laid) {
+        if (cancelled) return;
+        await annotate(entry, wanted, located);
       }
     }
 
@@ -118,6 +171,7 @@
       .then(() => {
         if (cancelled) return;
         status = "";
+        drawn += 1;
         onlocate(located);
       })
       .catch((error: unknown) => {
@@ -128,6 +182,7 @@
 
     return () => {
       cancelled = true;
+      observer.disconnect();
       void task.destroy();
       target.replaceChildren();
     };
@@ -135,16 +190,13 @@
 
   $effect(() => {
     const target = pages;
-    if (!target) return;
+    if (!target || drawn === 0) return;
     const current = selected === null ? null : String(selected);
     for (const element of target.querySelectorAll<HTMLElement>(".mark")) {
       element.classList.toggle("selected", element.dataset.report === current);
     }
-    if (current !== null) {
-      target
-        .querySelector<HTMLElement>(`.mark[data-report="${current}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    const main = selected === null ? null : mainMark(target, selected);
+    if (main && viewer) reveal(viewer, main);
   });
 
   function reportOf(event: Event): number | null {
@@ -168,7 +220,7 @@
   }
 </script>
 
-<div class="viewer">
+<div class="viewer" bind:this={viewer}>
   {#if status}<p class="muted status">{status}</p>{/if}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div

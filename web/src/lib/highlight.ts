@@ -4,6 +4,8 @@ import type { Report } from "./types";
 /** One quote of one report, to mark in the source. */
 export interface Highlight {
   readonly report: number;
+  /** The position of the quote in the evidence of its report. 0 is the main quote. */
+  readonly index: number;
   readonly block: string;
   readonly quote: string;
   readonly start: number;
@@ -14,8 +16,9 @@ export interface Highlight {
 export function highlightsOf(reports: readonly Report[], lookup: Names): Highlight[] {
   return reports.flatMap((report) => {
     const label = headline(report, lookup);
-    return report.evidence.map((evidence) => ({
+    return report.evidence.map((evidence, index) => ({
       report: report.id,
+      index,
       block: evidence.block,
       quote: evidence.quote,
       start: evidence.start,
@@ -23,6 +26,27 @@ export function highlightsOf(reports: readonly Report[], lookup: Names): Highlig
       label,
     }));
   });
+}
+
+/**
+ * Scrolls a container so that an element inside it is in the middle of the
+ * view. Only the container moves, not the page.
+ */
+export function reveal(container: HTMLElement, element: HTMLElement): void {
+  const offset =
+    element.getBoundingClientRect().top -
+    container.getBoundingClientRect().top +
+    container.scrollTop;
+  container.scrollTo({ top: offset - container.clientHeight / 2, behavior: "smooth" });
+}
+
+/** The mark of the main quote of a report, or its first mark. */
+export function mainMark(container: HTMLElement, report: number): HTMLElement | null {
+  const marks = [...container.querySelectorAll<HTMLElement>(`[data-report="${String(report)}"]`)];
+  marks.sort(
+    (a, b) => Number(a.dataset.evidence ?? Infinity) - Number(b.dataset.evidence ?? Infinity),
+  );
+  return marks[0] ?? null;
 }
 
 export interface Segment {

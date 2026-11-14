@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { segments, type Highlight } from "../lib/highlight";
+  import { reveal, segments, type Highlight } from "../lib/highlight";
   import type { Block, TextDocument } from "../lib/types";
 
   let {
@@ -50,11 +50,18 @@
       .map(({ start, end, report }) => ({ start, end, report }));
   }
 
+  let container: HTMLDivElement | undefined = $state();
+
   $effect(() => {
-    if (selected === null) return;
-    window.document
-      .querySelector(`.text-view mark[data-reports~="${String(selected)}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (selected === null || !container) return;
+    const main = highlights
+      .filter((highlight) => highlight.report === selected)
+      .sort((a, b) => a.index - b.index)[0];
+    if (!main) return;
+    const element = container.querySelector<HTMLElement>(
+      `[data-block="${CSS.escape(main.block)}"]`,
+    );
+    if (element) reveal(container, element);
   });
 </script>
 
@@ -75,7 +82,7 @@
   {/each}
 {/snippet}
 
-<div class="text-view">
+<div class="text-view" bind:this={container}>
   {#each parts as part, index (index)}
     {#if part.kind === "table"}
       <div class="table-wrap">
@@ -88,7 +95,8 @@
                     this={cell.cell?.header ? "th" : "td"}
                     colspan={cell.cell?.column_span ?? 1}
                     rowspan={cell.cell?.row_span ?? 1}
-                    title={cell.key}>{@render content(cell)}</svelte:element
+                    title={cell.key}
+                    data-block={cell.key}>{@render content(cell)}</svelte:element
                   >
                 {/each}
               </tr>
@@ -97,11 +105,11 @@
         </table>
       </div>
     {:else if part.block.kind === "title"}
-      <h2>{@render content(part.block)}</h2>
+      <h2 data-block={part.block.key}>{@render content(part.block)}</h2>
     {:else if part.block.kind === "heading"}
-      <h3>{@render content(part.block)}</h3>
+      <h3 data-block={part.block.key}>{@render content(part.block)}</h3>
     {:else}
-      <p title={part.block.key}>
+      <p title={part.block.key} data-block={part.block.key}>
         {#if part.block.label}<strong>{part.block.label}. </strong>{/if}{@render content(
           part.block,
         )}

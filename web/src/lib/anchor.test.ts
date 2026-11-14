@@ -38,6 +38,14 @@ describe("finder", () => {
     expect(find(quote("abd"))).toBeNull();
   });
 
+  it("ignores symbols, because the font of a PDF can give the wrong character for a symbol", () => {
+    expect(finder([["m.p. > 300 \u{2dd}C;"]])(quote("m.p. > 300 \u{b0}C"))).toEqual({
+      page: 0,
+      start: { item: 0, offset: 0 },
+      end: { item: 0, offset: 13 },
+    });
+  });
+
   it("counts offsets in UTF-16 code units", () => {
     expect(finder([["\u{1d6fc} is 2"]])(quote("is 2"))).toEqual({
       page: 0,

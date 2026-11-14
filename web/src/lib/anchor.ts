@@ -1,7 +1,9 @@
 /**
  * Finds quotes in the text of a PDF. The text of a page comes in items, and
- * the items can split words, break lines with hyphens, and use ligatures. So
- * the search ignores white space, hyphens, and case.
+ * the items can split words, break lines with hyphens, and use ligatures. The
+ * font of a PDF can also give the wrong character for a symbol, for example
+ * "˝" for "°". So the search ignores white space, hyphens, symbols, combining
+ * marks, and case.
  */
 
 import { fold } from "./normalize";
@@ -36,12 +38,14 @@ export interface Quote {
  */
 const CERTAIN = 8;
 
+const IGNORED = /[\p{S}\p{M}]/u;
+
 function loose(character: string): string {
   const decomposed = character.charCodeAt(0) < 0x80 ? character : character.normalize("NFKC");
   let out = "";
   for (const part of decomposed) {
     const folded = fold(part);
-    if (folded !== " " && folded !== "-") out += folded.toLowerCase();
+    if (folded !== " " && folded !== "-" && !IGNORED.test(folded)) out += folded.toLowerCase();
   }
   return out;
 }

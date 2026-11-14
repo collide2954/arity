@@ -20,6 +20,7 @@ path = "src/main.rs"
 arity-core.workspace = true
 arity-jats.workspace = true
 arity-protocol.workspace = true
+arity-sheets.workspace = true
 arity-site.workspace = true
 arity-sources.workspace = true
 arity-store.workspace = true

@@ -1,10 +1,13 @@
-use arity_core::License;
+use arity_core::{Digest, License};
 use arity_sources::pmc;
 use arity_store::{QueueState, Retrieval, RetrievalId, RetrievalRole, WorkId};
+use arity_text::Attachment;
 use jiff::Timestamp;
 
 use crate::context::Context;
 use crate::error::{CliError, Result};
+
+const SHEETS_PARSER: &str = concat!("arity-sheets ", env!("CARGO_PKG_VERSION"));
 
 /// What a fetch stored.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,6 +17,9 @@ pub struct Fetched {
     pub blocks: usize,
     pub pdf: bool,
     pub supplements: usize,
+    /// The supplementary data files that arity could not read, with the
+    /// reason.
+    pub skipped: Vec<String>,
     pub license: Option<License>,
 }
 
@@ -56,6 +62,62 @@ pub fn fetch(context: &Context, work: WorkId, now: Timestamp) -> Result<Fetched>
     })
 }
 
+/// Downloads the supplementary files, and adds the cells of each data file
+/// to the document. Gives the number of files and the files that arity
+/// could not read.
+fn read_supplements(
+    context: &Context,
+    work: WorkId,
+    entry: &pmc::PmcRecord,
+    article: &arity_jats::Article,
+    document: &mut arity_text::Document,
+    now: Timestamp,
+) -> Result<(usize, Vec<String>)> {
+    let mut supplements = 0;
+    let mut skipped = Vec::new();
+    for supplement in &article.supplements {
+        let file = supplement
+            .href
+            .rsplit('/')
+            .next()
+            .unwrap_or(&supplement.href);
+        let Some(url) = entry.media_url(file) else {
+            continue;
+        };
+        let (_, bytes) = download(
+            context,
+            work,
+            RetrievalRole::Supplement,
+            Some(&supplement.key),
+            &url,
+            supplement.media_type.as_deref(),
+            now,
+        )?;
+        supplements += 1;
+        let Some(format) = arity_sheets::format_of(file) else {
+            continue;
+        };
+        let blocks = match arity_sheets::read(&bytes, format, &supplement.key) {
+            Ok(blocks) => blocks,
+            Err(error) => {
+                skipped.push(format!("{file}: {error}"));
+                continue;
+            }
+        };
+        let attachment = Attachment {
+            key: supplement.key.clone(),
+            name: file.to_owned(),
+            digest: Digest::of(&bytes),
+            media_type: supplement.media_type.clone(),
+            parser: SHEETS_PARSER.to_owned(),
+        };
+        document
+            .attach(attachment, blocks)
+            .map_err(|error| CliError::Usage(error.to_string()))?;
+    }
+    Ok((supplements, skipped))
+}
+
 fn fetch_files(context: &Context, work: WorkId, now: Timestamp) -> Result<Fetched> {
     let record = context.store.work(work)?;
     let pmcid = record.metadata.pmcid.clone().ok_or_else(|| {
@@ -94,9 +156,7 @@ fn fetch_files(context: &Context, work: WorkId, now: Timestamp) -> Result<Fetche
         metadata.year = record.metadata.year;
     }
     let work = context.store.upsert_work(&metadata, now)?;
-    context
-        .store
-        .add_text(work, retrieval, &article.document, now)?;
+    let mut document = article.document.clone();
 
     let pdf_url = entry.pdf_url.as_deref().and_then(pmc::https_url);
     if let Some(url) = &pdf_url {
@@ -110,26 +170,9 @@ fn fetch_files(context: &Context, work: WorkId, now: Timestamp) -> Result<Fetche
             now,
         )?;
     }
-    let mut supplements = 0;
-    for supplement in &article.supplements {
-        let file = supplement
-            .href
-            .rsplit('/')
-            .next()
-            .unwrap_or(&supplement.href);
-        if let Some(url) = entry.media_url(file) {
-            download(
-                context,
-                work,
-                RetrievalRole::Supplement,
-                Some(&supplement.key),
-                &url,
-                supplement.media_type.as_deref(),
-                now,
-            )?;
-            supplements += 1;
-        }
-    }
+    let (supplements, skipped) =
+        read_supplements(context, work, &entry, &article, &mut document, now)?;
+    context.store.add_text(work, retrieval, &document, now)?;
     for notice in entry.notices(now) {
         context.store.add_notice(work, &notice)?;
     }
@@ -140,9 +183,10 @@ fn fetch_files(context: &Context, work: WorkId, now: Timestamp) -> Result<Fetche
     Ok(Fetched {
         work,
         version: entry.version_id(),
-        blocks: article.document.blocks.len(),
+        blocks: document.blocks.len(),
         pdf: pdf_url.is_some(),
         supplements,
+        skipped,
         license: metadata.license,
     })
 }

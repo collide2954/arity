@@ -235,6 +235,55 @@ fn rejects_a_submission_with_a_number_that_the_source_does_not_state() {
 }
 
 #[test]
+fn adds_the_cells_of_supplementary_data_files_to_the_text() {
+    let article = br#"<article xmlns:xlink="http://www.w3.org/1999/xlink" article-type="research-article"><front><article-meta><article-id pub-id-type="pmcid">PMC77</article-id><title-group><article-title>Data</article-title></title-group><permissions><license><ali:license_ref xmlns:ali="http://www.niso.org/schemas/ali/1.0/">https://creativecommons.org/licenses/by/4.0/</ali:license_ref></license></permissions></article-meta></front><body><p>See the data.</p><supplementary-material><label>Data S1</label><media xlink:href="values.csv" mimetype="text" mime-subtype="csv"/></supplementary-material><supplementary-material><label>Data S2</label><media xlink:href="broken.xlsx"/></supplementary-material></body></article>"#;
+    let pmcid = "PMC77".parse().unwrap();
+    let record = json!({
+        "pmcid": "PMC77", "version": 2,
+        "xml_url": "s3://pmc-oa-opendata/PMC77.2/PMC77.2.xml",
+        "media_urls": [
+            "s3://pmc-oa-opendata/PMC77.2/values.csv",
+            "s3://pmc-oa-opendata/PMC77.2/broken.xlsx"
+        ]
+    });
+    let fake = Fake(
+        [
+            (
+                pmc::list_url(&pmcid),
+                b"<ListBucketResult><CommonPrefixes><Prefix>PMC77.2/</Prefix></CommonPrefixes></ListBucketResult>".to_vec(),
+            ),
+            (pmc::record_url(&pmcid, 2), serde_json::to_vec(&record).unwrap()),
+            (format!("{}/PMC77.2/PMC77.2.xml", pmc::BUCKET), article.to_vec()),
+            (format!("{}/PMC77.2/values.csv", pmc::BUCKET), b"compound,IC50\nDOX,0.24\n".to_vec()),
+            (format!("{}/PMC77.2/broken.xlsx", pmc::BUCKET), b"not a workbook".to_vec()),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    let directory = tempfile::tempdir().unwrap();
+    let context = Context::open(directory.path(), Box::new(fake)).unwrap();
+    let work = context
+        .store
+        .upsert_work(
+            &arity_core::WorkMetadata {
+                title: "Data".to_owned(),
+                pmcid: Some("PMC77".parse().unwrap()),
+                ..arity_core::WorkMetadata::default()
+            },
+            now(),
+        )
+        .unwrap();
+    let fetched = fetch::fetch(&context, work, now()).unwrap();
+    assert_eq!(fetched.supplements, 2);
+    assert_eq!(fetched.skipped.len(), 1);
+    assert!(fetched.skipped[0].starts_with("broken.xlsx"));
+    let (_, document) = context.store.latest_text(work).unwrap().unwrap();
+    assert_eq!(document.block("supp1/s1/r2c2").unwrap().text, "0.24");
+    assert_eq!(document.attachments.len(), 1);
+    assert_eq!(document.attachments[0].name, "values.csv");
+}
+
+#[test]
 fn records_a_failed_fetch_in_the_queue() {
     let directory = tempfile::tempdir().unwrap();
     let context = Context::open(directory.path(), Box::new(Fake(HashMap::new()))).unwrap();

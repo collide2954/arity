@@ -271,6 +271,12 @@ fn fetch_works(
                         fetched.version, fetched.blocks, fetched.supplements
                     ),
                 )?;
+                for skipped in &fetched.skipped {
+                    emit(
+                        out,
+                        format!("  arity cannot read the supplementary file {skipped}"),
+                    )?;
+                }
             }
             Err(error) => {
                 code = ExitCode::FAILURE;

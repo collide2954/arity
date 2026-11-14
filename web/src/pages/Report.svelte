@@ -6,6 +6,7 @@
   import {
     directionLabel,
     formatNumber,
+    imageReading,
     reportedValue,
     scoreLabel,
     significanceLabel,
@@ -69,12 +70,12 @@
             <dd>{body.value.statistic}</dd>{/if}
           {#if body.value.n !== undefined}<dt>Number of samples</dt>
             <dd>{body.value.n}</dd>{/if}
-          {#if body.value.read_from_figure}
-            <dt>Read from figure</dt>
+          {@const reading = imageReading(body.value)}
+          {#if reading && body.value.read_from_figure}
+            <dt>{reading.label}</dt>
             <dd>
-              The reader read this value from a plot, by "{body.value.read_from_figure.method}",
-              with a resolution of {body.value.read_from_figure.resolution}. The source does not
-              state the number.
+              {reading.explanation} Method: "{body.value.read_from_figure.method}". Resolution:
+              {body.value.read_from_figure.resolution}. Image: {body.value.read_from_figure.figure}.
             </dd>
           {/if}
           {#if report.display?.value !== null && report.display?.value !== undefined}

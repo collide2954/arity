@@ -68,7 +68,7 @@ export function figureRows(rows: readonly ValueTableRow[]): ValueRow[] {
         reported: reportedValue(row.body.value),
         work: row.citation,
         check: row.report.check,
-        origin: row.body.value.read_from_figure ? "read from figure" : "stated",
+        origin: row.body.value.read_from_figure ? "read from an image" : "stated",
         notices: noticeNames(row.notices) || "none",
       },
     ];

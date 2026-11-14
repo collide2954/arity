@@ -160,3 +160,20 @@ export function significanceLabel(significance: EffectBody["significance"]): str
   if (significance.statement === "significant") parts.push("significant");
   return parts.join(", ");
 }
+
+/** The label and the explanation of a value that the reader read from an image. */
+export function imageReading(value: ValueInput): { label: string; explanation: string } | null {
+  const reading = value.read_from_figure;
+  if (!reading) return null;
+  return reading.figure.startsWith("t")
+    ? {
+        label: "Read from table image",
+        explanation:
+          "The reader read this value from the image of a table. The text of the source does not state the number.",
+      }
+    : {
+        label: "Read from figure",
+        explanation:
+          "The reader read this value from a plot. The source does not state the number.",
+      };
+}

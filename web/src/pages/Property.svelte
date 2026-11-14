@@ -5,7 +5,7 @@
   import { valueSpec } from "../lib/charts";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
-  import { formatNumber, reportedValue, unitLabel } from "../lib/format";
+  import { formatNumber, imageReading, reportedValue, unitLabel } from "../lib/format";
   import { link } from "../lib/route";
   import { theme } from "../lib/state.svelte";
   import type { Report } from "../lib/types";
@@ -79,8 +79,9 @@
     <p class="lede">
       Each dot is one report of one source. arity does not average or weigh the reports. A filled
       dot is a report that a person confirmed; a hollow dot is a report that no person checked yet.
-      A diamond is a value that the reader read from a plot. If the source has a notice, for example
-      a retraction, the label starts with the name of the notice.
+      A diamond is a value that the reader read from an image: a plot, or a table that the source
+      gives only as an image. If the source has a notice, for example a retraction, the label starts
+      with the name of the notice.
     </p>
     <div class="controls">
       <button
@@ -145,8 +146,12 @@
               <td>{row.subject}</td>
               <td>{row.conditions.join(" · ")}</td>
               <td>
-                {reportedValue(row.body.value)}{#if row.body.value.read_from_figure}
-                  <span class="chip">Read from figure</span>{/if}
+                {reportedValue(row.body.value)}
+                {#if imageReading(row.body.value)}<span
+                    class="chip"
+                    title={imageReading(row.body.value)?.explanation}
+                    >{imageReading(row.body.value)?.label}</span
+                  >{/if}
               </td>
               {#if property.unit}
                 <td>

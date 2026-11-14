@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatNumber,
+  imageReading,
   reportedValue,
   scoreLabel,
   significanceLabel,
@@ -93,5 +94,18 @@ describe("labels", () => {
       "p = 0.34, not significant",
     );
     expect(significanceLabel(undefined)).toBeNull();
+  });
+});
+
+describe("imageReading", () => {
+  it("tells whether the reader read a value from a plot or from a table image", () => {
+    const reading = { method: "transcribed", resolution: "0.01" };
+    expect(imageReading({ number: "1" })).toBeNull();
+    expect(
+      imageReading({ number: "1", read_from_figure: { ...reading, figure: "f2/caption" } })?.label,
+    ).toBe("Read from figure");
+    expect(
+      imageReading({ number: "1", read_from_figure: { ...reading, figure: "t1/caption" } })?.label,
+    ).toBe("Read from table image");
   });
 });

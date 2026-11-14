@@ -1,5 +1,6 @@
 <script lang="ts">
   import { conditions, headline, type Names } from "../lib/describe";
+  import { imageReading } from "../lib/format";
   import { link } from "../lib/route";
   import type { Report } from "../lib/types";
   import CheckBadge from "./CheckBadge.svelte";
@@ -21,9 +22,7 @@
     onselect?: (report: number) => void;
   } = $props();
 
-  const fromFigure = $derived(
-    report.body.type === "value" && report.body.value.read_from_figure !== undefined,
-  );
+  const reading = $derived(report.body.type === "value" ? imageReading(report.body.value) : null);
 </script>
 
 <article class:selected id="report-{report.id}">
@@ -33,12 +32,8 @@
   <div class="details">
     <CheckBadge state={report.check} />
     <NoticeChips kinds={notices} />
-    {#if fromFigure}
-      <span
-        class="chip"
-        title="The reader read this value from a plot. The source does not state the number."
-        >Read from figure</span
-      >
+    {#if reading}
+      <span class="chip" title={reading.explanation}>{reading.label}</span>
     {/if}
     {#each conditions(report, lookup) as condition (condition)}
       <span class="chip">{condition}</span>

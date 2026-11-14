@@ -76,7 +76,7 @@ export interface ValueRow {
   reported: string;
   work: string;
   check: "unchecked" | "confirmed" | "rejected";
-  origin: "stated" | "read from figure";
+  origin: "stated" | "read from an image";
   notices: string;
 }
 
@@ -138,7 +138,7 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
           shape: {
             field: "origin",
             type: "nominal",
-            scale: { domain: ["stated", "read from figure"], range: ["circle", "diamond"] },
+            scale: { domain: ["stated", "read from an image"], range: ["circle", "diamond"] },
             legend: { title: "Value" },
           },
           opacity: { condition: { param: "hover", empty: false, value: 1 }, value: 0.9 },

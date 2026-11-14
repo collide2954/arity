@@ -6,8 +6,15 @@
 //! in its block, each number occurs in a quote, and each unit agrees with its
 //! property. A submission with an error does not go into the database.
 
+mod check;
+mod cues;
+mod issue;
+mod properties;
 mod submission;
 
+pub use check::{Checked, Rejected, check};
+pub use issue::{Issue, Severity};
+pub use properties::{Properties, PropertyDefinition};
 pub use submission::{
     AgentInput, ConditionInput, EffectReportInput, EntityInput, EvidenceInput, FigureReadingInput,
     MagnitudeInput, MethodInput, Person, PropertyInput, Reader, ReportInput, SUBMISSION_FORMAT,

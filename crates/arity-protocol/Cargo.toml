@@ -10,9 +10,12 @@ publish.workspace = true
 
 [dependencies]
 arity-core.workspace = true
+arity-text.workspace = true
+arity-units.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 
 [lints]
 workspace = true

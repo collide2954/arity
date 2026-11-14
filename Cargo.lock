@@ -42,9 +42,12 @@ name = "arity-protocol"
 version = "0.1.0"
 dependencies = [
  "arity-core",
+ "arity-text",
+ "arity-units",
  "schemars",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

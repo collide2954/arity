@@ -6,12 +6,14 @@
 //! content.
 
 mod blobs;
+mod history;
 mod store;
 mod submissions;
 mod texts;
 pub mod views;
 
 pub use blobs::{BlobError, Blobs};
+pub use history::{CheckEvent, QueueEntry, RunRecord, TextRecord};
 pub use store::{
     AgentId, EntityId, QueueState, ReportId, Result, Retrieval, RetrievalId, RetrievalRole, RunId,
     SOFTWARE, Store, StoreError, TextId, WorkId, WorkRecord,

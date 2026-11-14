@@ -47,6 +47,7 @@ fn work(
                 media_type: None,
                 digest: document.source.clone(),
                 bytes: 1,
+                software: arity_store::SOFTWARE.to_owned(),
                 retrieved_at: at(),
             },
         )
@@ -62,6 +63,7 @@ fn work(
                 media_type: Some("application/pdf".to_owned()),
                 digest: pdf,
                 bytes: 9,
+                software: arity_store::SOFTWARE.to_owned(),
                 retrieved_at: at(),
             },
         )

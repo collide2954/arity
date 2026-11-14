@@ -43,6 +43,7 @@ fn download(
         media_type: media_type.map(str::to_owned).or(response.content_type),
         digest,
         bytes: u64::try_from(response.body.len()).unwrap_or(u64::MAX),
+        software: arity_store::SOFTWARE.to_owned(),
         retrieved_at: now,
     };
     let id = context.store.add_retrieval(work, &retrieval)?;

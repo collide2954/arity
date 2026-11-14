@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use arity_core::{Digest, Notice, NoticeKind, NoticeSource, WorkMetadata};
-use arity_store::{QueueState, Retrieval, RetrievalRole, Store};
+use arity_store::{QueueEntry, QueueState, Retrieval, RetrievalRole, Store};
 use jiff::Timestamp;
 
 fn at(text: &str) -> Timestamp {
@@ -144,10 +144,45 @@ fn records_retrievals() {
         media_type: Some("application/xml".to_owned()),
         digest: Digest::of(b"<article/>"),
         bytes: 10,
+        software: "arity 0.0.9".to_owned(),
         retrieved_at: at("2026-11-14T10:05:00Z"),
     };
     let id = store.add_retrieval(work, &retrieval).unwrap();
     assert_eq!(store.retrievals(work).unwrap(), [(id, retrieval)]);
+}
+
+#[test]
+fn restores_the_queue_entry_and_the_times_of_a_work() {
+    let store = Store::open_in_memory().unwrap();
+    let work = store
+        .upsert_work(&metadata(), at("2026-11-14T10:00:00Z"))
+        .unwrap();
+    assert_eq!(store.queue_entry(work).unwrap(), None);
+    let entry = QueueEntry {
+        state: QueueState::Failed,
+        query: Some("doxorubicin".to_owned()),
+        note: Some("no files".to_owned()),
+        added_at: at("2026-11-14T10:01:00Z"),
+        updated_at: at("2026-11-14T10:02:00Z"),
+    };
+    store.restore_queue(work, &entry).unwrap();
+    assert_eq!(store.queue_entry(work).unwrap(), Some(entry.clone()));
+    let replaced = QueueEntry {
+        state: QueueState::Read,
+        note: None,
+        ..entry
+    };
+    store.restore_queue(work, &replaced).unwrap();
+    assert_eq!(store.queue_entry(work).unwrap(), Some(replaced));
+
+    store
+        .restore_times(work, at("2026-11-13T09:00:00Z"), at("2026-11-14T11:00:00Z"))
+        .unwrap();
+    let record = store.work(work).unwrap();
+    assert_eq!(
+        (record.added_at, record.updated_at),
+        (at("2026-11-13T09:00:00Z"), at("2026-11-14T11:00:00Z"))
+    );
 }
 
 #[test]

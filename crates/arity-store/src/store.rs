@@ -64,7 +64,7 @@ impl QueueState {
         }
     }
 
-    fn parse(text: &str) -> Result<Self> {
+    pub(crate) fn parse(text: &str) -> Result<Self> {
         [
             Self::Queued,
             Self::Fetched,
@@ -123,6 +123,8 @@ pub struct Retrieval {
     pub media_type: Option<String>,
     pub digest: Digest,
     pub bytes: u64,
+    /// The software that downloaded the file.
+    pub software: String,
     pub retrieved_at: Timestamp,
 }
 
@@ -387,7 +389,7 @@ impl Store {
                 retrieval.media_type,
                 retrieval.digest.as_str(),
                 i64::try_from(retrieval.bytes).unwrap_or(i64::MAX),
-                SOFTWARE,
+                retrieval.software,
                 retrieval.retrieved_at.to_string(),
             ],
         )?;
@@ -396,8 +398,8 @@ impl Store {
 
     pub fn retrievals(&self, work: WorkId) -> Result<Vec<(RetrievalId, Retrieval)>> {
         let mut statement = self.connection.prepare(
-            "SELECT id, role, supplement_key, url, media_type, sha256, bytes, retrieved_at
-             FROM retrieval WHERE work_id = ?1 ORDER BY id",
+            "SELECT id, role, supplement_key, url, media_type, sha256, bytes, software,
+             retrieved_at FROM retrieval WHERE work_id = ?1 ORDER BY id",
         )?;
         let rows = statement
             .query_map([work.0], |row| {
@@ -410,12 +412,13 @@ impl Store {
                     row.get::<_, String>(5)?,
                     row.get::<_, i64>(6)?,
                     row.get::<_, String>(7)?,
+                    row.get::<_, String>(8)?,
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         rows.into_iter()
             .map(
-                |(id, role, supplement_key, url, media_type, digest, bytes, at)| {
+                |(id, role, supplement_key, url, media_type, digest, bytes, software, at)| {
                     Ok((
                         RetrievalId(id),
                         Retrieval {
@@ -427,6 +430,7 @@ impl Store {
                                 .parse()
                                 .map_err(|_| StoreError::Corrupt(format!("digest {digest:?}")))?,
                             bytes: u64::try_from(bytes).unwrap_or(0),
+                            software,
                             retrieved_at: timestamp(&at)?,
                         },
                     ))

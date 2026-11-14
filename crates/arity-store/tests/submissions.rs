@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use arity_core::vocabulary::CheckState;
 use arity_core::{Digest, WorkMetadata};
 use arity_protocol::{Person, PropertyDefinition, check};
-use arity_store::{Retrieval, RetrievalRole, Store, StoreError, TextId, WorkId};
+use arity_store::{
+    CheckEvent, Retrieval, RetrievalRole, RunRecord, Store, StoreError, TextId, TextRecord, WorkId,
+};
 use arity_text::{Block, BlockKind, Document};
 use jiff::Timestamp;
 use serde_json::{Value, json};
@@ -48,6 +50,7 @@ fn setup(store: &Store, pmcid: &str, text: &str) -> (WorkId, TextId, Document) {
                 media_type: Some("application/xml".to_owned()),
                 digest: document.source.clone(),
                 bytes: 1,
+                software: arity_store::SOFTWARE.to_owned(),
                 retrieved_at: at("2026-11-14T10:00:00Z"),
             },
         )
@@ -113,6 +116,60 @@ fn stores_texts_once() {
     assert_eq!(store.latest_text(work).unwrap().unwrap().0, text);
     let digest = document.digest().unwrap();
     assert_eq!(store.text_by_digest(&digest).unwrap(), Some(text));
+}
+
+#[test]
+fn gives_back_the_texts_the_runs_and_the_checks() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let value = submission(&document, "0.24", "chemical");
+    let run = store_one(&store, work, text, &document, &value).unwrap();
+    let report = store.reports_of_run(run).unwrap()[0].0;
+    let person = Person {
+        name: "A Person".to_owned(),
+        orcid: None,
+    };
+    store
+        .record_check(
+            report,
+            CheckState::Rejected,
+            &person,
+            Some("The unit is not the unit of the source."),
+            at("2026-11-14T13:00:00Z"),
+        )
+        .unwrap();
+
+    assert_eq!(
+        store.texts(work).unwrap(),
+        [TextRecord {
+            digest: document.digest().unwrap(),
+            parser: "test 1".to_owned(),
+            source: document.source.clone(),
+        }]
+    );
+    let raw = serde_json::to_string(&value).unwrap();
+    assert_eq!(
+        store.runs().unwrap(),
+        [RunRecord {
+            id: run,
+            work,
+            digest: Digest::of(raw.as_bytes()),
+            submission: raw,
+            software: arity_store::SOFTWARE.to_owned(),
+            submitted_at: at("2026-11-14T12:00:00Z"),
+        }]
+    );
+    assert_eq!(
+        store.check_events().unwrap(),
+        [CheckEvent {
+            run,
+            report: "r1".to_owned(),
+            state: CheckState::Rejected,
+            person,
+            note: Some("The unit is not the unit of the source.".to_owned()),
+            at: at("2026-11-14T13:00:00Z"),
+        }]
+    );
 }
 
 #[test]

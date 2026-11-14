@@ -45,6 +45,11 @@ const index: Index = {
   ],
 };
 
+const withoutNotices: Index = {
+  ...index,
+  works: index.works.map((work) => ({ ...work, notices: [] })),
+};
+
 function value(id: number, check: Report["check"], display: number | null): Report {
   return {
     id,
@@ -128,8 +133,22 @@ describe("valueRows", () => {
       report: 1,
       value: 0.24,
       origin: "stated",
-      notices: "retraction",
+      notices: "Retraction",
     });
+  });
+
+  it("starts the figure label with the notices of the source", () => {
+    const [noticed] = figureRows(valueRows(index, [value(1, "confirmed", 0.24)], "ic50", true));
+    expect(noticed?.label).toBe(
+      "\u{26a0}\u{fe0e} Retraction \u{b7} doxorubicin \u{b7} cell line: MCF-7 \u{2014} Lafi et al. 2023, PLOS ONE",
+    );
+    const [plain] = figureRows(
+      valueRows(withoutNotices, [value(1, "confirmed", 0.24)], "ic50", true),
+    );
+    expect(plain?.label).toBe(
+      "doxorubicin \u{b7} cell line: MCF-7 \u{2014} Lafi et al. 2023, PLOS ONE",
+    );
+    expect(plain?.notices).toBe("none");
   });
 });
 
@@ -147,5 +166,16 @@ describe("effectRows", () => {
       [1, "increase (+1)"],
     ]);
     expect(rows[0]?.detail).toBe("p = 0.34");
+  });
+
+  it("gives each mark the notices of its source", () => {
+    const rows = effectRows(index, [effect(5, "no_change", 0)]);
+    expect(rows[0]?.notices).toEqual(["retraction"]);
+    expect(matrixRows(rows)[0]).toMatchObject({
+      notices: "Retraction",
+      marker: "\u{26a0}\u{fe0e}",
+    });
+    const plain = matrixRows(effectRows(withoutNotices, [effect(5, "no_change", 0)]));
+    expect(plain[0]).toMatchObject({ notices: "none", marker: "" });
   });
 });

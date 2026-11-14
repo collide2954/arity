@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   isSerious,
+  markerSign,
   noticeLabel,
   noticeMarker,
+  noticeNames,
   noticesOfWorks,
   seriousFirst,
   sourceLabel,
@@ -42,6 +44,21 @@ describe("seriousFirst", () => {
       "correction",
       "erratum",
     ]);
+  });
+});
+
+describe("noticeNames", () => {
+  it("names the kinds with the serious kinds first", () => {
+    expect(noticeNames(["erratum", "withdrawal"])).toBe("Withdrawal, Erratum");
+    expect(noticeNames([])).toBe("");
+  });
+});
+
+describe("markerSign", () => {
+  it("is the sign of the most serious kind, or empty", () => {
+    expect(markerSign(["erratum", "withdrawal"])).toBe("\u{26a0}\u{fe0e}");
+    expect(markerSign(["erratum"])).toBe("\u{2139}\u{fe0e}");
+    expect(markerSign([])).toBe("");
   });
 });
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import CheckBadge from "../components/CheckBadge.svelte";
   import Chart from "../components/Chart.svelte";
+  import NoticeChips from "../components/NoticeChips.svelte";
   import { effectSpec } from "../lib/charts";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
@@ -26,6 +27,7 @@
           "details",
           "conditions",
           "check",
+          "notices",
         ],
         rows.map((row) => [
           row.report.id,
@@ -37,6 +39,7 @@
           row.detail,
           row.context,
           row.report.check,
+          row.notices.join("; "),
         ]),
       ),
     );
@@ -52,7 +55,8 @@
 <p class="lede">
   Each mark is one effect or association that one source reports. Up is an increase (+1), down is a
   decrease (−1), and a dot is a statement of no change or no effect (0). Two sources that disagree
-  show as two marks in the same cell: arity does not combine them.
+  show as two marks in the same cell: arity does not combine them. If the source has a notice, for
+  example a retraction, a sign shows above the mark.
 </p>
 
 {#await data}
@@ -91,6 +95,7 @@
             <th>Conditions</th>
             <th>Source</th>
             <th>Check</th>
+            <th>Notices</th>
           </tr>
         </thead>
         <tbody>
@@ -110,6 +115,7 @@
                 >
               </td>
               <td><CheckBadge state={row.report.check} /></td>
+              <td><NoticeChips kinds={row.notices} /></td>
             </tr>
           {/each}
         </tbody>

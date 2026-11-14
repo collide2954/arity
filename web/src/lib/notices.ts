@@ -53,15 +53,23 @@ export function seriousFirst(kinds: readonly string[]): string[] {
   return [...kinds.filter(isSerious), ...kinds.filter((kind) => !isSerious(kind))];
 }
 
+/** The names of the kinds, with the serious kinds first. */
+export function noticeNames(kinds: readonly string[]): string {
+  return seriousFirst(kinds).map(noticeLabel).join(", ");
+}
+
+/** The sign of the most serious kind. It is empty if there are no kinds. */
+export function markerSign(kinds: readonly string[]): string {
+  const first = seriousFirst(kinds)[0];
+  return first === undefined ? "" : noticeSign(first);
+}
+
 /**
  * The text that a figure shows before a report whose source has notices: a
  * sign and the names of the kinds. It is empty for a source without notices.
  */
 export function noticeMarker(kinds: readonly string[]): string {
-  const ordered = seriousFirst(kinds);
-  const first = ordered[0];
-  if (first === undefined) return "";
-  return `${noticeSign(first)} ${ordered.map(noticeLabel).join(", ")}`;
+  return kinds.length === 0 ? "" : `${markerSign(kinds)} ${noticeNames(kinds)}`;
 }
 
 /** A lookup from a work to the kinds of its notices. */

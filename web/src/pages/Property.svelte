@@ -1,6 +1,7 @@
 <script lang="ts">
   import CheckBadge from "../components/CheckBadge.svelte";
   import Chart from "../components/Chart.svelte";
+  import NoticeChips from "../components/NoticeChips.svelte";
   import { valueSpec } from "../lib/charts";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
@@ -78,7 +79,8 @@
     <p class="lede">
       Each dot is one report of one source. arity does not average or weigh the reports. A filled
       dot is a report that a person confirmed; a hollow dot is a report that no person checked yet.
-      A diamond is a value that the reader read from a plot.
+      A diamond is a value that the reader read from a plot. If the source has a notice, for example
+      a retraction, the label starts with the name of the notice.
     </p>
     <div class="controls">
       <button
@@ -154,7 +156,7 @@
                 </td>
               {/if}
               <td><CheckBadge state={row.report.check} /></td>
-              <td>{row.notices.join(", ")}</td>
+              <td><NoticeChips kinds={row.notices} /></td>
             </tr>
           {/each}
         </tbody>

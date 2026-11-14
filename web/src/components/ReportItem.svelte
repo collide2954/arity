@@ -3,16 +3,19 @@
   import { link } from "../lib/route";
   import type { Report } from "../lib/types";
   import CheckBadge from "./CheckBadge.svelte";
+  import NoticeChips from "./NoticeChips.svelte";
 
   let {
     report,
     lookup,
+    notices = [],
     selected = false,
     located = true,
     onselect,
   }: {
     report: Report;
     lookup: Names;
+    notices?: readonly string[];
     selected?: boolean;
     located?: boolean;
     onselect?: (report: number) => void;
@@ -29,6 +32,7 @@
   </button>
   <div class="details">
     <CheckBadge state={report.check} />
+    <NoticeChips kinds={notices} />
     {#if fromFigure}
       <span
         class="chip"

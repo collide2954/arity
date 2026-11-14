@@ -166,6 +166,8 @@ export interface EffectRow {
   work: string;
   detail: string;
   check: "unchecked" | "confirmed" | "rejected";
+  notices: string;
+  marker: string;
 }
 
 export const DIRECTIONS = ["increase", "no_change", "decrease", "mixed"] as const;
@@ -173,7 +175,8 @@ export const DIRECTIONS = ["increase", "no_change", "decrease", "mixed"] as cons
 /**
  * A grid of agents and targets. Each report is its own mark in its cell: up
  * for an increase, down for a decrease, a dot for no change (0), and a
- * diamond for a mixed result.
+ * diamond for a mixed result. A mark whose source has notices has the notice
+ * sign above it.
  */
 export function effectSpec(rows: readonly EffectRow[], mode: Mode): TopLevelSpec {
   const tokens = TOKENS[mode];
@@ -184,7 +187,6 @@ export function effectSpec(rows: readonly EffectRow[], mode: Mode): TopLevelSpec
     height: Math.max(120, agents * 44),
     data: { values: rows.map((row) => ({ ...row })) },
     config: config(mode),
-    mark: { type: "point", size: 140, strokeWidth: 2, filled: true, cursor: "pointer" },
     encoding: {
       x: {
         field: "target",
@@ -193,38 +195,50 @@ export function effectSpec(rows: readonly EffectRow[], mode: Mode): TopLevelSpec
       },
       y: { field: "agent", type: "nominal", axis: { title: "Agent", labelLimit: 240 } },
       xOffset: { field: "slot", type: "nominal" },
-      color: {
-        field: "direction",
-        type: "nominal",
-        scale: {
-          domain: [...DIRECTIONS],
-          range: [tokens.increase, tokens.neutral, tokens.decrease, tokens.neutral],
-        },
-        legend: {
-          title: "Direction",
-          labelExpr:
-            "{'increase': 'Increase (+1)', 'no_change': 'No change (0)', 'decrease': 'Decrease (\u{2212}1)', 'mixed': 'Mixed'}[datum.label]",
-        },
-      },
-      shape: {
-        field: "direction",
-        type: "nominal",
-        scale: {
-          domain: [...DIRECTIONS],
-          range: ["triangle-up", "circle", "triangle-down", "diamond"],
-        },
-        legend: null,
-      },
-      stroke: { value: tokens.surface },
-      opacity: { condition: { test: "datum.check === 'rejected'", value: 0.35 }, value: 1 },
-      tooltip: [
-        { field: "agent", title: "Agent" },
-        { field: "target", title: "Target" },
-        { field: "score", title: "Direction" },
-        { field: "detail", title: "Details" },
-        { field: "work", title: "Source" },
-        { field: "check", title: "Check" },
-      ],
     },
+    layer: [
+      {
+        mark: { type: "point", size: 140, strokeWidth: 2, filled: true, cursor: "pointer" },
+        encoding: {
+          color: {
+            field: "direction",
+            type: "nominal",
+            scale: {
+              domain: [...DIRECTIONS],
+              range: [tokens.increase, tokens.neutral, tokens.decrease, tokens.neutral],
+            },
+            legend: {
+              title: "Direction",
+              labelExpr:
+                "{'increase': 'Increase (+1)', 'no_change': 'No change (0)', 'decrease': 'Decrease (\u{2212}1)', 'mixed': 'Mixed'}[datum.label]",
+            },
+          },
+          shape: {
+            field: "direction",
+            type: "nominal",
+            scale: {
+              domain: [...DIRECTIONS],
+              range: ["triangle-up", "circle", "triangle-down", "diamond"],
+            },
+            legend: null,
+          },
+          stroke: { value: tokens.surface },
+          opacity: { condition: { test: "datum.check === 'rejected'", value: 0.35 }, value: 1 },
+          tooltip: [
+            { field: "agent", title: "Agent" },
+            { field: "target", title: "Target" },
+            { field: "score", title: "Direction" },
+            { field: "detail", title: "Details" },
+            { field: "work", title: "Source" },
+            { field: "check", title: "Check" },
+            { field: "notices", title: "Notices" },
+          ],
+        },
+      },
+      {
+        mark: { type: "text", dy: -16, fontSize: 13, color: tokens.ink, cursor: "pointer" },
+        encoding: { text: { field: "marker" } },
+      },
+    ],
   };
 }

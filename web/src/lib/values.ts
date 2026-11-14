@@ -1,6 +1,7 @@
 import type { ValueRow } from "./charts";
 import { conditions, entityName, names } from "./describe";
 import { reportedValue } from "./format";
+import { noticeMarker, noticeNames } from "./notices";
 import type { Index, Report, ValueBody } from "./types";
 
 /** One reported value of a property, for the table and the figure. */
@@ -48,7 +49,10 @@ export function valueRows(
     });
 }
 
-/** The rows that the figure can plot: those with a value in the display unit. */
+/**
+ * The rows that the figure can plot: those with a value in the display unit.
+ * The label of a report whose source has notices starts with the notices.
+ */
 export function figureRows(rows: readonly ValueTableRow[]): ValueRow[] {
   return rows.flatMap((row) => {
     const display = row.report.display;
@@ -56,7 +60,8 @@ export function figureRows(rows: readonly ValueTableRow[]): ValueRow[] {
     return [
       {
         report: row.report.id,
-        label: row.label,
+        label:
+          row.notices.length > 0 ? `${noticeMarker(row.notices)} \u{b7} ${row.label}` : row.label,
         value: display.value,
         low: display.interval_low,
         high: display.interval_high,
@@ -64,7 +69,7 @@ export function figureRows(rows: readonly ValueTableRow[]): ValueRow[] {
         work: row.citation,
         check: row.report.check,
         origin: row.body.value.read_from_figure ? "read from figure" : "stated",
-        notices: row.notices.join(", ") || "none",
+        notices: noticeNames(row.notices) || "none",
       },
     ];
   });

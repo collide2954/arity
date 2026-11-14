@@ -25,7 +25,20 @@ const effect: EffectRow = {
   work: "Lafi et al. 2023, PLOS ONE",
   detail: "p = 0.34",
   check: "confirmed",
+  notices: "none",
+  marker: "",
 };
+
+interface EffectLayers {
+  layer: {
+    mark: { type: string };
+    encoding: {
+      color?: { scale: { domain: string[]; range: string[] } };
+      shape?: { scale: { domain: string[]; range: string[] } };
+      text?: { field: string };
+    };
+  }[];
+}
 
 describe("config", () => {
   it("uses the surface and the ink of each mode", () => {
@@ -61,19 +74,19 @@ describe("valueSpec", () => {
 
 describe("effectSpec", () => {
   it("shows no change with the neutral color and a dot", () => {
-    const spec = effectSpec([effect], "light") as unknown as {
-      encoding: {
-        color: { scale: { domain: string[]; range: string[] } };
-        shape: { scale: { domain: string[]; range: string[] } };
-      };
-    };
-    const colors = spec.encoding.color.scale;
-    const shapes = spec.encoding.shape.scale;
-    const index = colors.domain.indexOf("no_change");
-    expect(colors.range[index]).toBe(TOKENS.light.neutral);
-    expect(shapes.range[shapes.domain.indexOf("no_change")]).toBe("circle");
-    expect(shapes.range[shapes.domain.indexOf("increase")]).toBe("triangle-up");
-    expect(shapes.range[shapes.domain.indexOf("decrease")]).toBe("triangle-down");
+    const [marks] = (effectSpec([effect], "light") as unknown as EffectLayers).layer;
+    const colors = marks?.encoding.color?.scale;
+    const shapes = marks?.encoding.shape?.scale;
+    expect(colors?.range[colors.domain.indexOf("no_change")]).toBe(TOKENS.light.neutral);
+    expect(shapes?.range[shapes.domain.indexOf("no_change")]).toBe("circle");
+    expect(shapes?.range[shapes.domain.indexOf("increase")]).toBe("triangle-up");
+    expect(shapes?.range[shapes.domain.indexOf("decrease")]).toBe("triangle-down");
+  });
+
+  it("puts the notice sign of the source above each mark", () => {
+    const [, signs] = (effectSpec([effect], "light") as unknown as EffectLayers).layer;
+    expect(signs?.mark.type).toBe("text");
+    expect(signs?.encoding.text).toEqual({ field: "marker" });
   });
 
   it("keeps each report as its own mark", () => {

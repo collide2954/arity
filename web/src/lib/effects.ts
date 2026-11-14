@@ -1,6 +1,7 @@
 import type { EffectRow } from "./charts";
 import { conditions, entityName, names, propertyName } from "./describe";
 import { directionLabel, scoreLabel, significanceLabel } from "./format";
+import { markerSign, noticeNames } from "./notices";
 import type { EffectBody, Index, Report } from "./types";
 
 /** One reported effect, for the table and the matrix. */
@@ -10,6 +11,7 @@ export interface EffectTableRow {
   readonly agent: string;
   readonly target: string;
   readonly citation: string;
+  readonly notices: readonly string[];
   readonly detail: string;
   readonly context: string;
 }
@@ -31,12 +33,14 @@ export function effectRows(index: Index, reports: readonly Report[]): EffectTabl
       const detail = [magnitude, significanceLabel(body.significance) ?? ""]
         .filter((part) => part.length > 0)
         .join(", ");
+      const work = works.get(report.work);
       return {
         report,
         body,
         agent,
         target: `${entityName(report, body.target.entity, lookup)}${property}`,
-        citation: works.get(report.work)?.citation ?? `work ${String(report.work)}`,
+        citation: work?.citation ?? `work ${String(report.work)}`,
+        notices: work?.notices ?? [],
         detail,
         context: conditions(report, lookup).join(" \u{b7} "),
       };
@@ -63,6 +67,8 @@ export function matrixRows(rows: readonly EffectTableRow[]): EffectRow[] {
       work: row.citation,
       detail: row.detail || "none",
       check: row.report.check,
+      notices: noticeNames(row.notices) || "none",
+      marker: markerSign(row.notices),
     };
   });
 }

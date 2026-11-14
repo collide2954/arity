@@ -2,6 +2,7 @@
   import ReportItem from "../components/ReportItem.svelte";
   import { loadIndex, loadReports } from "../lib/data";
   import { names } from "../lib/describe";
+  import { noticesOfWorks } from "../lib/notices";
   import { link } from "../lib/route";
 
   let { id }: { id: number } = $props();
@@ -22,6 +23,7 @@
     <p>arity has no entity {id}.</p>
   {:else}
     {@const lookup = names(index)}
+    {@const noticesOf = noticesOfWorks(index.works)}
     {@const related = reports.filter((report) => Object.values(report.entities).includes(id))}
     <h1>{entity.label}</h1>
     <p class="secondary">{entity.kind.replaceAll("_", " ")}</p>
@@ -39,6 +41,7 @@
         <ReportItem
           {report}
           {lookup}
+          notices={noticesOf(report.work)}
           onselect={(selected: number) => {
             open(selected, report.work);
           }}

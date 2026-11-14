@@ -119,6 +119,38 @@ fn stores_texts_once() {
 }
 
 #[test]
+fn gives_the_quoted_ranges_of_the_reports_that_no_person_rejected() {
+    let store = Store::open_in_memory().unwrap();
+    let text_of_block = "The IC50 of doxorubicin was 0.24 μM.";
+    let (work, text, document) = setup(&store, "PMC1", text_of_block);
+    let value = submission(&document, "0.24", "chemical");
+    let run = store_one(&store, work, text, &document, &value).unwrap();
+    let quoted = store.quoted_ranges(text).unwrap();
+    let start = text_of_block.chars().take_while(|c| *c != 'I').count();
+    assert_eq!(quoted.len(), 2);
+    assert_eq!(quoted["s1/p1"].len(), 1);
+    assert_eq!(quoted["s1/p1"][0], start..start + 31);
+    assert_eq!(quoted["t1/r1c2"].len(), 1);
+    assert_eq!(quoted["t1/r1c2"][0], 0..9);
+
+    let report = store.reports_of_run(run).unwrap()[0].0;
+    let person = Person {
+        name: "A Person".to_owned(),
+        orcid: None,
+    };
+    store
+        .record_check(
+            report,
+            CheckState::Rejected,
+            &person,
+            None,
+            at("2026-11-14T13:00:00Z"),
+        )
+        .unwrap();
+    assert!(store.quoted_ranges(text).unwrap().is_empty());
+}
+
+#[test]
 fn gives_back_the_texts_the_runs_and_the_checks() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");

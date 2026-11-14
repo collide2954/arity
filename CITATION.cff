@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: If you use arity in your research, cite it with the metadata in this file.
+type: software
+title: arity
+abstract: >-
+  arity collects the values and effects that open-access research articles
+  report. It keeps each value with its source text and its full provenance.
+authors:
+  - family-names: Gilio
+    given-names: Brett
+repository-code: https://github.com/collide2954/arity
+license: Apache-2.0
+version: 0.1.0
+keywords:
+  - research data
+  - provenance
+  - open access
+  - literature curation
+  - data extraction

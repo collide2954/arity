@@ -90,12 +90,12 @@
         {:else}
           <dt>Agents</dt>
           <dd>
-            {#each body.agents as agent, position (agent.entity)}
-              {#if position > 0}
-                +
-              {/if}{entityName(report, agent.entity, lookup)}{#if agent.dose}
-                ({reportedValue(agent.dose)}){/if}
-            {/each}
+            {body.agents
+              .map((agent) => {
+                const name = entityName(report, agent.entity, lookup);
+                return agent.dose ? `${name} (${reportedValue(agent.dose)})` : name;
+              })
+              .join(" + ")}
           </dd>
           <dt>Target</dt>
           <dd>

@@ -78,9 +78,9 @@
             <td>
               <a href={link({ page: "work", id: work.id, report: null })}>{work.title}</a>
               <div class="muted">
-                {work.citation}{#if work.pmcid}
-                  · {work.pmcid}{/if}{#if work.is_preprint}
-                  · <span class="chip">Preprint</span>{/if}
+                {work.citation}
+                {#if work.pmcid}· {work.pmcid}{/if}
+                {#if work.is_preprint}· <span class="chip">Preprint</span>{/if}
               </div>
             </td>
             <td>{work.year ?? ""}</td>

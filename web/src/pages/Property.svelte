@@ -71,8 +71,9 @@
     {@const positive = plotted.every((row) => row.value > 0 && (row.low ?? 1) > 0)}
     <h1>{property.label}</h1>
     <p class="secondary">
-      Key <span class="mono">{property.key}</span>{#if property.unit}
-        · values in {unit} · dimension <span class="mono">{property.dimension}</span>{/if}
+      Key <span class="mono">{property.key}</span>
+      {#if property.unit}· values in {unit} · dimension
+        <span class="mono">{property.dimension}</span>{/if}
     </p>
     <p class="lede">
       Each dot is one report of one source. arity does not average or weigh the reports. A filled

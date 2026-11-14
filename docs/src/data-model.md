@@ -48,8 +48,9 @@ A value report states the value of a property for one or more subjects. For
 example: the IC50 of doxorubicin in MCF-7 cells after 72 h is 7.30 ± 0.84 µM.
 The value can be a number, an interval, a bound such as "> 100", a boolean, or
 a category. It can have an uncertainty, a statistic, and a number of samples.
-A value that the reader read from a plot has a label, with the figure, the
-method of the reading, and its resolution.
+A value that the reader read from an image has a label, with the caption of
+the image, the method of the reading, and its resolution. The image is a plot,
+or a table that the source gives only as an image.
 
 An effect report states that agents change a target, or that they associate
 with it. For example: compound 4d had no effect on MCF-7 cells. The direction

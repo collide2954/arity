@@ -23,7 +23,11 @@ See [Issue codes](reference/issues.md) for the full list.
   the submission or in the database.
 - They make sure that a registry identifier can identify an entity of that
   kind.
-- They make sure that a value read from a plot quotes the caption of its figure.
+- They make sure that a value read from an image quotes the caption of its
+  figure or its table. A value can come from the image of a table only when
+  the text has no cells of that table. For a value from an image, the checks do
+  not look for its numbers in the quotes, and a unit that no quote contains
+  gives a warning, so that a person checks it against the image.
 
 ## Cue words
 

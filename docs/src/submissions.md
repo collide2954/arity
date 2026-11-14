@@ -53,7 +53,7 @@ it). Other fields of a value:
 | `uncertainty` | `kind` (`sd`, `sem`, `ci`, `range`, `iqr`, or `other`), with `number` or `low` and `high`, and `level` for an interval. |
 | `statistic` | `mean`, `median`, `geometric_mean`, `mode`, `single`, `minimum`, `maximum`, or `other`. |
 | `n` | The number of samples. |
-| `read_from_figure` | For a value that the reader read from a plot: the `figure` block, the `method`, and the `resolution`. |
+| `read_from_figure` | For a value that the reader read from an image: the `figure` key of the caption (of a figure, or of a table that the source gives only as an image, for example `t1/caption`), the `method`, and the `resolution`. |
 
 ## Effect reports
 

@@ -1,0 +1,10 @@
+[book]
+title = "arity"
+description = "Values and effects from open-access research articles, each with its source and its provenance."
+authors = ["Brett Gilio"]
+language = "en"
+src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/collide2954/arity"
+edit-url-template = "https://github.com/collide2954/arity/edit/main/docs/{path}"

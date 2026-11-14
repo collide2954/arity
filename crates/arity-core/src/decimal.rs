@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
 
@@ -233,6 +234,49 @@ impl fmt::Display for Decimal {
     }
 }
 
+impl Ord for Decimal {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.coefficient.signum().cmp(&other.coefficient.signum()) {
+            Ordering::Equal if self.is_zero() => Ordering::Equal,
+            Ordering::Equal => {
+                let magnitude = compare_magnitude(*self, *other);
+                if self.is_negative() {
+                    magnitude.reverse()
+                } else {
+                    magnitude
+                }
+            }
+            unequal => unequal,
+        }
+    }
+}
+
+impl PartialOrd for Decimal {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+fn compare_magnitude(a: Decimal, b: Decimal) -> Ordering {
+    let digits_a = a.coefficient.unsigned_abs().to_string();
+    let digits_b = b.coefficient.unsigned_abs().to_string();
+    let adjusted = |exponent: i32, digits: &str| {
+        i64::from(exponent) + i64::try_from(digits.len()).unwrap_or(i64::MAX)
+    };
+    adjusted(a.exponent, &digits_a)
+        .cmp(&adjusted(b.exponent, &digits_b))
+        .then_with(|| {
+            let width = digits_a.len().max(digits_b.len());
+            format!("{digits_a:0<width$}").cmp(&format!("{digits_b:0<width$}"))
+        })
+}
+
+impl From<u32> for Decimal {
+    fn from(value: u32) -> Self {
+        Self::new(i128::from(value), 0)
+    }
+}
+
 impl TryFrom<String> for Decimal {
     type Error = DecimalError;
 
@@ -382,7 +426,29 @@ mod tests {
         assert!(serde_json::from_str::<Decimal>("\"abc\"").is_err());
     }
 
+    #[test]
+    fn orders_values_exactly() {
+        let ordered = [
+            "-1e30", "-3.2", "-3.1", "-0.5", "0", "0.001", "0.01", "3.2", "3.25", "99999", "1e5",
+        ];
+        for pair in ordered.windows(2) {
+            assert!(parse(pair[0]) < parse(pair[1]), "{} < {}", pair[0], pair[1]);
+        }
+        assert_eq!(parse("3.20").cmp(&parse("3.2")), Ordering::Equal);
+        assert_eq!(Decimal::from(42_u32), parse("42"));
+    }
+
     proptest! {
+        #[test]
+        fn ordering_agrees_with_floats(
+            a in any::<i32>(), b in any::<i32>(), x in -10_i32..10, y in -10_i32..10,
+        ) {
+            let left = Decimal::new(i128::from(a), x);
+            let right = Decimal::new(i128::from(b), y);
+            let expected = left.to_f64().partial_cmp(&right.to_f64()).unwrap();
+            prop_assert_eq!(left.cmp(&right), expected);
+        }
+
         #[test]
         fn display_and_parse_are_inverse(coefficient in any::<i64>(), exponent in -400_i32..400) {
             let value = Decimal::new(i128::from(coefficient), exponent);

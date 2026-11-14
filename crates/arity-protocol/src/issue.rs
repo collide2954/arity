@@ -117,7 +117,7 @@ issue_codes! {
     NoMention => "no_mention", Error,
         "An entity has no quote of a place where the source names it.";
     NoReports => "no_reports", Error,
-        "The submission has no reports.";
+        "The submission has no reports and no skipped quotes.";
     NoSubject => "no_subject", Error,
         "A value has no subject.";
     NoVersion => "no_version", Warning,
@@ -134,6 +134,10 @@ issue_codes! {
         "The quote does not occur in the block.";
     QuoteTooLong => "quote_too_long", Error,
         "A quote is longer than the maximum length of a quote.";
+    SkipNoteRequired => "skip_note_required", Error,
+        "A quote that the reader skips for the reason `other` has no note that tells the reason.";
+    SkipWithoutNumber => "skip_without_number", Error,
+        "A quote that the reader skips contains no number.";
     SignificanceShape => "significance_shape", Error,
         "A significance does not have a statement, a p-value, or both.";
     TextMismatch => "text_mismatch", Error,

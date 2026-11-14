@@ -694,6 +694,60 @@
       ],
       "type": "string"
     },
+    "SkipInput": {
+      "additionalProperties": false,
+      "description": "A quote with numbers that the reader does not report.",
+      "properties": {
+        "block": {
+          "description": "The key of a block, as `arity show` prints it.",
+          "type": "string"
+        },
+        "note": {
+          "description": "Required for the reason `other`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "occurrence": {
+          "description": "When the quote occurs more than once in the block: the occurrence to\nuse. 1 is the first.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "The exact text from the block. It contains the numbers that the reader\nskips.",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/SkipReason"
+        }
+      },
+      "required": [
+        "block",
+        "quote",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "SkipReason": {
+      "description": "Why a reader does not report a number of the text.",
+      "oneOf": [
+        {
+          "const": "cited",
+          "description": "The source states a value that another work reports. arity records\nthat value from its own source, so that the value does not count\ntwo times.",
+          "type": "string"
+        },
+        {
+          "const": "other",
+          "description": "Another reason. The note of the skipped quote tells it.",
+          "type": "string"
+        }
+      ]
+    },
     "Statistic": {
       "description": "The statistic that a value is.",
       "enum": [
@@ -958,6 +1012,13 @@
       "$ref": "#/$defs/Person",
       "description": "The person who is responsible for the submission."
     },
+    "skipped": {
+      "description": "The numbers of the text that the reader does not report, each with\nthe reason.",
+      "items": {
+        "$ref": "#/$defs/SkipInput"
+      },
+      "type": "array"
+    },
     "text": {
       "$ref": "#/$defs/Digest",
       "description": "The digest of the canonical text that `arity show` printed."
@@ -972,8 +1033,7 @@
     "work",
     "text",
     "reader",
-    "responsible",
-    "reports"
+    "responsible"
   ],
   "title": "Submission",
   "type": "object"

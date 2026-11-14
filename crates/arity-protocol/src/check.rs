@@ -1,9 +1,9 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ops::Range;
 
-use arity_core::vocabulary::{AgentKind, UncertaintyKind, ValueType};
+use arity_core::vocabulary::{AgentKind, SkipReason, UncertaintyKind, ValueType};
 use arity_core::{Decimal, Digest, EntityKind};
-use arity_text::{BlockKind, Document, contains_number, normalize};
+use arity_text::{BlockKind, Document, contains_number, find_numbers, normalize};
 use arity_units::Unit;
 
 use crate::cues;
@@ -11,8 +11,8 @@ use crate::issue::{Issue, IssueCode, Severity};
 use crate::properties::{Properties, PropertyDefinition};
 use crate::submission::{
     ConditionInput, EffectReportInput, EvidenceInput, FigureReadingInput, MagnitudeInput,
-    MethodInput, PropertyInput, ReportInput, SUBMISSION_FORMAT, Submission, UncertaintyInput,
-    ValueInput, ValueReportInput,
+    MethodInput, PropertyInput, ReportInput, SUBMISSION_FORMAT, SkipInput, Submission,
+    UncertaintyInput, ValueInput, ValueReportInput,
 };
 
 const LONG_QUOTE: usize = 400;
@@ -194,12 +194,15 @@ impl Checker<'_> {
             let path = format!("/entities/{index}");
             self.entity(&path, entity);
         }
-        if submission.reports.is_empty() {
+        if submission.reports.is_empty() && submission.skipped.is_empty() {
             self.raise(
                 "/reports",
                 IssueCode::NoReports,
-                "the submission has no reports",
+                "the submission has no reports and no skipped quotes",
             );
+        }
+        for (index, skip) in submission.skipped.iter().enumerate() {
+            self.skip(&format!("/skipped/{index}"), skip);
         }
         let mut ids = HashSet::new();
         for (index, report) in submission.reports.iter().enumerate() {
@@ -219,6 +222,35 @@ impl Checker<'_> {
                 ReportInput::Value(value) => self.value_report(&path, value),
                 ReportInput::Effect(effect) => self.effect_report(&path, effect),
             }
+        }
+    }
+
+    fn skip(&mut self, path: &str, skip: &SkipInput) {
+        let evidence = EvidenceInput {
+            block: skip.block.clone(),
+            quote: skip.quote.clone(),
+            occurrence: skip.occurrence,
+        };
+        if let Some(quote) = self.evidence(path, &evidence)
+            && find_numbers(normalize(&quote).as_str()).is_empty()
+        {
+            self.raise(
+                format!("{path}/quote"),
+                IssueCode::SkipWithoutNumber,
+                "the quote has no number to skip",
+            );
+        }
+        if skip.reason == SkipReason::Other
+            && skip
+                .note
+                .as_deref()
+                .is_none_or(|note| note.trim().is_empty())
+        {
+            self.raise(
+                format!("{path}/note"),
+                IssueCode::SkipNoteRequired,
+                "tell the reason in the note",
+            );
         }
     }
 

@@ -220,6 +220,18 @@ vocabulary! {
     }
 }
 
+vocabulary! {
+    /// Why a reader does not report a number of the text.
+    pub enum SkipReason {
+        /// The source states a value that another work reports. arity records
+        /// that value from its own source, so that the value does not count
+        /// two times.
+        Cited => "cited",
+        /// Another reason. The note of the skipped quote tells it.
+        Other => "other",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

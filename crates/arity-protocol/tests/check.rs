@@ -555,3 +555,46 @@ fn issues_have_a_severity_and_a_message() {
     );
     assert_eq!(rejected.to_string(), "the submission has 1 errors");
 }
+
+#[test]
+fn accepts_a_skipped_quote_with_a_number_and_records_its_place() {
+    let value = changed(|value| {
+        value["skipped"] = json!([
+            { "block": "abstract/p1", "quote": "from 0.24 μM to 0.012 μM", "reason": "cited" }
+        ]);
+    });
+    let checked = run(&value).unwrap();
+    assert!(checked.positions.contains_key("/skipped/0"));
+}
+
+#[test]
+fn refuses_a_skipped_quote_without_a_number_or_without_the_note_of_another_reason() {
+    let value = changed(|value| {
+        value["skipped"] = json!([
+            { "block": "s3/p1", "quote": "Hydralazine alone", "reason": "cited" },
+            { "block": "s2/p1", "quote": "treated for 48 h", "reason": "other" },
+            { "block": "s2/p1", "quote": "treated for 3 h", "reason": "cited" }
+        ]);
+    });
+    assert_eq!(
+        errors(&value),
+        [
+            ("/skipped/0/quote".to_owned(), "skip_without_number"),
+            ("/skipped/1/note".to_owned(), "skip_note_required"),
+            ("/skipped/2/quote".to_owned(), "quote_not_found"),
+        ]
+    );
+}
+
+#[test]
+fn accepts_a_submission_that_only_skips_quotes() {
+    let value = changed(|value| {
+        value["reports"] = json!([]);
+        value["skipped"] = json!([
+            { "block": "s2/p1", "quote": "48 h", "reason": "other", "note": "A test." }
+        ]);
+    });
+    assert!(run(&value).is_ok());
+    let empty = changed(|value| value["reports"] = json!([]));
+    assert_eq!(errors(&empty), one("/reports", "no_reports"));
+}

@@ -1,6 +1,6 @@
 use arity_core::vocabulary::{
     AgentKind, Bound, Comparison, Direction, EffectMeasure, Relation, Role, SignificanceStatement,
-    Statistic, UncertaintyKind, ValueType,
+    SkipReason, Statistic, UncertaintyKind, ValueType,
 };
 use arity_core::{Curie, Decimal, Digest, EntityKind, Orcid};
 use schemars::JsonSchema;
@@ -28,7 +28,31 @@ pub struct Submission {
     pub entities: Vec<EntityInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub properties: Vec<PropertyInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reports: Vec<ReportInput>,
+    /// The numbers of the text that the reader does not report, each with
+    /// the reason.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped: Vec<SkipInput>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+/// A quote with numbers that the reader does not report.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SkipInput {
+    /// The key of a block, as `arity show` prints it.
+    pub block: String,
+    /// The exact text from the block. It contains the numbers that the reader
+    /// skips.
+    pub quote: String,
+    /// When the quote occurs more than once in the block: the occurrence to
+    /// use. 1 is the first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub occurrence: Option<u32>,
+    pub reason: SkipReason,
+    /// Required for the reason `other`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }

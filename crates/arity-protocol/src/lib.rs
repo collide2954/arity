@@ -20,6 +20,6 @@ pub use properties::{Properties, PropertyDefinition};
 pub use submission::{
     AgentInput, ConditionInput, EffectReportInput, EntityInput, EvidenceInput, FigureReadingInput,
     MagnitudeInput, MethodInput, Person, PropertyInput, Reader, ReportInput, SUBMISSION_FORMAT,
-    SignificanceInput, Submission, TargetInput, UncertaintyInput, ValueInput, ValueReportInput,
-    schema,
+    SignificanceInput, SkipInput, Submission, TargetInput, UncertaintyInput, ValueInput,
+    ValueReportInput, schema,
 };

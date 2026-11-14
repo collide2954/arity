@@ -36,7 +36,7 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `no_agents` | error | An effect has no agent. |
 | `no_evidence` | error | A report has no quote from the source. |
 | `no_mention` | error | An entity has no quote of a place where the source names it. |
-| `no_reports` | error | The submission has no reports. |
+| `no_reports` | error | The submission has no reports and no skipped quotes. |
 | `no_subject` | error | A value has no subject. |
 | `no_version` | warning | The software that read the source has no version. |
 | `no_xref` | warning | The entity has no registry identifier, so arity cannot link it to other works. |
@@ -45,6 +45,8 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `property_conflict` | error | The definition of a property does not agree with the stored definition. |
 | `quote_not_found` | error | The quote does not occur in the block. |
 | `quote_too_long` | error | A quote is longer than the maximum length of a quote. |
+| `skip_note_required` | error | A quote that the reader skips for the reason `other` has no note that tells the reason. |
+| `skip_without_number` | error | A quote that the reader skips contains no number. |
 | `significance_shape` | error | A significance does not have a statement, a p-value, or both. |
 | `text_mismatch` | error | The submission names a text that is not the current text of the work. |
 | `text_not_in_evidence` | error | No quote contains a text that the report gives, for example the comparator. |

@@ -1,14 +1,17 @@
 <script lang="ts">
+  import { unquotedOf } from "../lib/coverage";
   import { reveal, segments, type Highlight } from "../lib/highlight";
-  import type { Block, TextDocument } from "../lib/types";
+  import type { Block, Coverage, TextDocument } from "../lib/types";
 
   let {
     document,
+    coverage = null,
     highlights,
     selected,
     onselect,
   }: {
     document: TextDocument;
+    coverage?: Coverage | null;
     highlights: readonly Highlight[];
     selected: number | null;
     onselect: (report: number) => void;
@@ -66,8 +69,10 @@
 </script>
 
 {#snippet content(block: Block)}
-  {#each segments(block.text, rangesOf(block)) as segment, index (index)}
-    {#if segment.reports.length > 0}
+  {#each segments(block.text, rangesOf(block), unquotedOf(coverage, block.key)) as segment, index (index)}
+    {#if segment.unquoted}
+      <span class="unquoted" title="No report quotes this number yet.">{segment.text}</span>
+    {:else if segment.reports.length > 0}
       <mark
         data-reports={segment.reports.join(" ")}
         class:selected={selected !== null && segment.reports.includes(selected)}
@@ -127,6 +132,11 @@
     box-shadow: 0 0 0 1px var(--ring);
     padding: 1rem 1.25rem;
     max-width: 80ch;
+  }
+
+  .unquoted {
+    text-decoration: underline dotted var(--muted);
+    text-underline-offset: 0.2em;
   }
 
   mark {

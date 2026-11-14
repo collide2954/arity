@@ -3,6 +3,7 @@
   import PdfViewer from "../components/PdfViewer.svelte";
   import ReportItem from "../components/ReportItem.svelte";
   import TextView from "../components/TextView.svelte";
+  import { coverageLine } from "../lib/coverage";
   import { dataUrl, loadIndex, loadReports, loadWork } from "../lib/data";
   import { names } from "../lib/describe";
   import { highlightsOf } from "../lib/highlight";
@@ -58,6 +59,14 @@
         <span class="chip">License not stated</span>
       {/if}
     </p>
+    {#if page.coverage}
+      <p
+        class="muted coverage"
+        title="arity counts the numbers in table cells, and the numbers in the text that have a unit or a sign. In the text view, a dotted line marks each number that no report quotes yet."
+      >
+        {coverageLine(page.coverage)}
+      </p>
+    {/if}
   </header>
 
   <Notices notices={page.work.notices} />
@@ -90,7 +99,13 @@
           }}
         />
       {:else if page.document}
-        <TextView document={page.document} {highlights} {selected} onselect={select} />
+        <TextView
+          document={page.document}
+          coverage={page.coverage}
+          {highlights}
+          {selected}
+          onselect={select}
+        />
       {:else}
         <p class="card">
           The license of this work does not let arity share its full text. The quote of each report
@@ -157,6 +172,11 @@
 <style>
   header h1 {
     max-width: 60ch;
+  }
+
+  .coverage {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
   }
 
   .layout {

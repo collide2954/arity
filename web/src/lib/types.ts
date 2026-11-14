@@ -274,10 +274,34 @@ export interface Attribution {
   doi_url: string | null;
 }
 
+export interface CoverageCount {
+  numbers: number;
+  quoted: number;
+  skipped: number;
+}
+
+/** A number of the text that no report quotes and no reader skipped. */
+export interface Unquoted {
+  block: string;
+  number: string;
+  /** The range in the text of the block, in Unicode code points. */
+  start: number;
+  end: number;
+}
+
+export interface Coverage {
+  /** The numbers in the cells of tables and data files, other than headers. */
+  cells: CoverageCount;
+  /** The numbers in the other blocks that have a unit or a sign. */
+  text: CoverageCount;
+  unquoted: Unquoted[];
+}
+
 export interface WorkPage {
   work: WorkView;
   attribution: Attribution;
   document: TextDocument | null;
+  coverage: Coverage | null;
   runs: Run[];
   reports: number[];
   pdf: string | null;

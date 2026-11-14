@@ -11,6 +11,22 @@ describe("segments", () => {
     ]);
   });
 
+  it("marks the numbers that no report quotes", () => {
+    expect(
+      segments(
+        "IC50 = 0.24 and 0.30 \u{3bc}M",
+        [{ start: 7, end: 11, report: 1 }],
+        [{ start: 16, end: 20 }],
+      ),
+    ).toEqual([
+      { text: "IC50 = ", reports: [] },
+      { text: "0.24", reports: [1] },
+      { text: " and ", reports: [] },
+      { text: "0.30", reports: [], unquoted: true },
+      { text: " \u{3bc}M", reports: [] },
+    ]);
+  });
+
   it("marks parts that more than one report quotes", () => {
     expect(
       segments("abcdef", [

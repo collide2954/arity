@@ -53,6 +53,8 @@ export interface Segment {
   readonly text: string;
   /** The reports whose quotes cover this segment. */
   readonly reports: readonly number[];
+  /** True for a number that no report quotes and no reader skipped. */
+  readonly unquoted?: true;
 }
 
 /**
@@ -62,10 +64,11 @@ export interface Segment {
 export function segments(
   text: string,
   ranges: readonly { start: number; end: number; report: number }[],
+  unquoted: readonly { start: number; end: number }[] = [],
 ): Segment[] {
   const points = Array.from(text);
   const edges = new Set<number>([0, points.length]);
-  for (const range of ranges) {
+  for (const range of [...ranges, ...unquoted]) {
     edges.add(Math.max(0, Math.min(points.length, range.start)));
     edges.add(Math.max(0, Math.min(points.length, range.end)));
   }
@@ -78,7 +81,10 @@ export function segments(
     const reports = ranges
       .filter((range) => range.start <= start && range.end >= end)
       .map((range) => range.report);
-    result.push({ text: points.slice(start, end).join(""), reports: [...new Set(reports)] });
+    const segment = { text: points.slice(start, end).join(""), reports: [...new Set(reports)] };
+    const isUnquoted =
+      reports.length === 0 && unquoted.some((range) => range.start <= start && range.end >= end);
+    result.push(isUnquoted ? { ...segment, unquoted: true } : segment);
   }
   return result;
 }

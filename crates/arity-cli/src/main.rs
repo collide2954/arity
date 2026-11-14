@@ -9,6 +9,7 @@ use arity_cli::submit::Outcome;
 use arity_cli::{CliError, Context, Result, archive, catalogue, fetch, notices, show, submit};
 use arity_core::vocabulary::CheckState;
 use arity_core::{EntityKind, License, NoticeKind, Orcid, PREFIXES, Scope};
+use arity_protocol::IssueCode;
 use arity_sources::{Client, USER_AGENT};
 use arity_store::{QueueState, ReportId, WorkId, WorkRecord};
 use clap::{Parser, Subcommand, ValueEnum};
@@ -123,6 +124,8 @@ enum VocabList {
     Units,
     Properties,
     Notices,
+    /// The problems that the checks find, with their severity.
+    Issues,
 }
 
 fn emit(out: &mut impl Write, text: impl Display) -> Result<()> {
@@ -538,6 +541,19 @@ fn vocab(list: VocabList, data: &Path, out: &mut impl Write) -> Result<ExitCode>
         VocabList::Notices => {
             for kind in NoticeKind::ALL {
                 emit(out, format!("{:<22} {}", kind.as_str(), kind.label()))?;
+            }
+        }
+        VocabList::Issues => {
+            for code in IssueCode::ALL {
+                emit(
+                    out,
+                    format!(
+                        "{:<26} {:<8} {}",
+                        code.as_str(),
+                        code.severity().as_str(),
+                        code.description()
+                    ),
+                )?;
             }
         }
     }

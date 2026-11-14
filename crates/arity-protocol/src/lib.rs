@@ -13,7 +13,7 @@ mod properties;
 mod submission;
 
 pub use check::{Checked, Rejected, check};
-pub use issue::{Issue, Severity};
+pub use issue::{Issue, IssueCode, Severity};
 pub use properties::{Properties, PropertyDefinition};
 pub use submission::{
     AgentInput, ConditionInput, EffectReportInput, EntityInput, EvidenceInput, FigureReadingInput,

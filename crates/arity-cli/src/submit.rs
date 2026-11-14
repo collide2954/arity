@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use arity_core::vocabulary::CheckState;
-use arity_protocol::{Issue, Submission, check};
+use arity_protocol::{Issue, IssueCode, Submission, check};
 use arity_store::{ReportId, RunId, WorkId};
 use jiff::Timestamp;
 
@@ -57,12 +57,11 @@ pub fn submit_bytes(
         Ok(submission) => submission,
         Err(error) => {
             return Ok(Outcome::Rejected {
-                issues: vec![Issue {
-                    severity: arity_protocol::Severity::Error,
-                    path: String::new(),
-                    code: "invalid_json",
-                    message: format!("the file is not a valid submission: {error}"),
-                }],
+                issues: vec![Issue::new(
+                    IssueCode::InvalidJson,
+                    "",
+                    format!("the file is not a valid submission: {error}"),
+                )],
             });
         }
     };

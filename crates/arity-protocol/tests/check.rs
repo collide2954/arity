@@ -131,7 +131,7 @@ fn errors(value: &Value) -> Vec<(String, &'static str)> {
         Ok(_) => Vec::new(),
         Err(rejected) => rejected
             .errors()
-            .map(|issue| (issue.path.clone(), issue.code))
+            .map(|issue| (issue.path.clone(), issue.code.as_str()))
             .collect(),
     }
 }
@@ -141,7 +141,7 @@ fn warnings(value: &Value) -> Vec<(String, &'static str)> {
         .unwrap_or_else(|rejected| panic!("{:#?}", rejected.issues))
         .warnings
         .into_iter()
-        .map(|issue| (issue.path, issue.code))
+        .map(|issue| (issue.path, issue.code.as_str()))
         .collect()
 }
 
@@ -170,7 +170,7 @@ fn accepts_a_correct_submission() {
 #[test]
 fn rejects_a_file_that_is_not_a_submission() {
     let result = check(b"{ not json", &document(), &HashMap::new());
-    assert_eq!(result.unwrap_err().issues[0].code, "invalid_json");
+    assert_eq!(result.unwrap_err().issues[0].code.as_str(), "invalid_json");
     let unknown_field = changed(|v| v["confidence"] = json!(0.9));
     assert_eq!(errors(&unknown_field), one("", "invalid_json"));
 }
@@ -342,7 +342,7 @@ fn checks_properties_against_the_database() {
     let codes: Vec<&str> = run_with(&conflict, &registry)
         .unwrap_err()
         .errors()
-        .map(|issue| issue.code)
+        .map(|issue| issue.code.as_str())
         .collect();
     assert_eq!(codes, ["property_conflict"]);
 

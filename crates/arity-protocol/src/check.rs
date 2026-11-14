@@ -7,7 +7,7 @@ use arity_text::{BlockKind, Document, contains_number, normalize};
 use arity_units::Unit;
 
 use crate::cues;
-use crate::issue::{Issue, Severity};
+use crate::issue::{Issue, IssueCode, Severity};
 use crate::properties::{Properties, PropertyDefinition};
 use crate::submission::{
     ConditionInput, EffectReportInput, EvidenceInput, FigureReadingInput, MagnitudeInput,
@@ -54,12 +54,11 @@ pub fn check(
     properties: &dyn Properties,
 ) -> Result<Checked, Rejected> {
     let submission: Submission = serde_json::from_slice(raw).map_err(|error| Rejected {
-        issues: vec![Issue {
-            severity: Severity::Error,
-            path: String::new(),
-            code: "invalid_json",
-            message: format!("the file is not a valid submission: {error}"),
-        }],
+        issues: vec![Issue::new(
+            IssueCode::InvalidJson,
+            "",
+            format!("the file is not a valid submission: {error}"),
+        )],
     })?;
     let mut checker = Checker {
         document,
@@ -143,57 +142,48 @@ fn is_key(text: &str) -> bool {
 }
 
 impl Checker<'_> {
-    fn error(&mut self, path: impl Into<String>, code: &'static str, message: impl Into<String>) {
-        self.issue(Severity::Error, path.into(), code, message.into());
-    }
-
-    fn warning(&mut self, path: impl Into<String>, code: &'static str, message: impl Into<String>) {
-        self.issue(Severity::Warning, path.into(), code, message.into());
-    }
-
-    fn issue(&mut self, severity: Severity, path: String, code: &'static str, message: String) {
-        self.issues.push(Issue {
-            severity,
-            path,
-            code,
-            message,
-        });
+    fn raise(&mut self, path: impl Into<String>, code: IssueCode, message: impl Into<String>) {
+        self.issues.push(Issue::new(code, path, message));
     }
 
     fn submission(&mut self, submission: &Submission) {
         if submission.format != SUBMISSION_FORMAT {
-            self.error(
+            self.raise(
                 "/format",
-                "unknown_format",
+                IssueCode::UnknownFormat,
                 format!("the format must be {SUBMISSION_FORMAT}"),
             );
         }
         match self.document.digest() {
             Ok(digest) if digest == submission.text => {}
-            Ok(digest) => self.error(
+            Ok(digest) => self.raise(
                 "/text",
-                "text_mismatch",
+                IssueCode::TextMismatch,
                 format!(
                     "the submission names the text {}, but the current text is {digest}; read the text again",
                     submission.text
                 ),
             ),
-            Err(error) => self.error("/text", "text_unreadable", error.to_string()),
+            Err(error) => self.raise("/text", IssueCode::TextUnreadable, error.to_string()),
         }
         if submission.reader.name.trim().is_empty() {
-            self.error("/reader/name", "empty_name", "give the name of the reader");
+            self.raise(
+                "/reader/name",
+                IssueCode::EmptyName,
+                "give the name of the reader",
+            );
         }
         if submission.reader.kind == AgentKind::Software && submission.reader.version.is_none() {
-            self.warning(
+            self.raise(
                 "/reader/version",
-                "no_version",
+                IssueCode::NoVersion,
                 "give the version of the software that read the source",
             );
         }
         if submission.responsible.name.trim().is_empty() {
-            self.error(
+            self.raise(
                 "/responsible/name",
-                "empty_name",
+                IssueCode::EmptyName,
                 "give the name of the responsible person",
             );
         }
@@ -205,7 +195,11 @@ impl Checker<'_> {
             self.entity(&path, entity);
         }
         if submission.reports.is_empty() {
-            self.error("/reports", "no_reports", "the submission has no reports");
+            self.raise(
+                "/reports",
+                IssueCode::NoReports,
+                "the submission has no reports",
+            );
         }
         let mut ids = HashSet::new();
         for (index, report) in submission.reports.iter().enumerate() {
@@ -215,9 +209,9 @@ impl Checker<'_> {
                 ReportInput::Effect(effect) => &effect.id,
             };
             if !ids.insert(id.clone()) {
-                self.error(
+                self.raise(
                     format!("{path}/id"),
-                    "duplicate_id",
+                    IssueCode::DuplicateId,
                     format!("more than one report has the id {id:?}"),
                 );
             }
@@ -230,17 +224,17 @@ impl Checker<'_> {
 
     fn property(&mut self, path: &str, input: &PropertyInput) {
         if !is_key(&input.id) {
-            self.error(
+            self.raise(
                 format!("{path}/id"),
-                "invalid_key",
+                IssueCode::InvalidKey,
                 "a property key has lower-case letters, digits, and underscores, and starts with a letter",
             );
             return;
         }
         if self.properties.contains_key(&input.id) {
-            self.error(
+            self.raise(
                 format!("{path}/id"),
-                "duplicate_id",
+                IssueCode::DuplicateId,
                 format!("the property {:?} has more than one definition", input.id),
             );
             return;
@@ -276,9 +270,9 @@ impl Checker<'_> {
             .value_type
             .is_some_and(|value_type| value_type != existing.value_type)
         {
-            self.error(
+            self.raise(
                 format!("{path}/value_type"),
-                "property_conflict",
+                IssueCode::PropertyConflict,
                 format!(
                     "the property {:?} takes the value type {}",
                     existing.key, existing.value_type
@@ -291,9 +285,9 @@ impl Checker<'_> {
                 .zip(Unit::parse(stored).ok())
                 .is_some_and(|(given, stored)| given.is_commensurable_with(&stored));
             if !commensurable {
-                self.error(
+                self.raise(
                     format!("{path}/unit"),
-                    "property_conflict",
+                    IssueCode::PropertyConflict,
                     format!(
                         "the property {:?} measures in units like {stored}",
                         existing.key
@@ -302,9 +296,9 @@ impl Checker<'_> {
             }
         }
         if !input.categories.is_empty() && input.categories != existing.categories {
-            self.error(
+            self.raise(
                 format!("{path}/categories"),
-                "property_conflict",
+                IssueCode::PropertyConflict,
                 format!(
                     "the property {:?} has the categories {:?}",
                     existing.key, existing.categories
@@ -316,9 +310,9 @@ impl Checker<'_> {
             .as_ref()
             .is_some_and(|label| *label != existing.label)
         {
-            self.warning(
+            self.raise(
                 format!("{path}/label"),
-                "label_differs",
+                IssueCode::LabelDiffers,
                 format!("arity keeps the stored label {:?}", existing.label),
             );
         }
@@ -327,38 +321,42 @@ impl Checker<'_> {
     fn new_property(&mut self, path: &str, input: &PropertyInput) -> Option<PropertyDefinition> {
         let label = input.label.as_deref().map_or_default(str::trim);
         if label.is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/label"),
-                "missing_definition",
+                IssueCode::MissingDefinition,
                 format!("the property {:?} is new; give a label", input.id),
             );
         }
         let Some(value_type) = input.value_type else {
-            self.error(
+            self.raise(
                 format!("{path}/value_type"),
-                "missing_definition",
+                IssueCode::MissingDefinition,
                 format!("the property {:?} is new; give a value type", input.id),
             );
             return None;
         };
         match value_type {
             ValueType::Quantity => match input.unit.as_deref().map(Unit::parse) {
-                None => self.error(
+                None => self.raise(
                     format!("{path}/unit"),
-                    "missing_definition",
+                    IssueCode::MissingDefinition,
                     "a quantity property needs a unit that sets its dimension",
                 ),
                 Some(Err(error)) => {
-                    self.error(format!("{path}/unit"), "invalid_unit", error.to_string());
+                    self.raise(
+                        format!("{path}/unit"),
+                        IssueCode::InvalidUnit,
+                        error.to_string(),
+                    );
                 }
                 Some(Ok(_)) => {}
             },
             ValueType::Category => {
                 let unique: HashSet<&String> = input.categories.iter().collect();
                 if input.categories.is_empty() || unique.len() != input.categories.len() {
-                    self.error(
+                    self.raise(
                         format!("{path}/categories"),
-                        "missing_definition",
+                        IssueCode::MissingDefinition,
                         "a category property needs a list of different categories",
                     );
                 }
@@ -366,9 +364,9 @@ impl Checker<'_> {
             ValueType::Boolean => {}
         }
         if value_type != ValueType::Quantity && input.unit.is_some() {
-            self.error(
+            self.raise(
                 format!("{path}/unit"),
-                "unexpected_field",
+                IssueCode::UnexpectedField,
                 "only a quantity property has a unit",
             );
         }
@@ -405,9 +403,9 @@ impl Checker<'_> {
             );
             return Some((definition, unit));
         }
-        self.error(
+        self.raise(
             path,
-            "unknown_property",
+            IssueCode::UnknownProperty,
             format!("the property {key:?} is not in the database; define it in /properties"),
         );
         None
@@ -415,9 +413,9 @@ impl Checker<'_> {
 
     fn entity(&mut self, path: &str, entity: &crate::submission::EntityInput) {
         if entity.id.trim().is_empty() || entity.id.contains(char::is_whitespace) {
-            self.error(
+            self.raise(
                 format!("{path}/id"),
-                "invalid_id",
+                IssueCode::InvalidId,
                 "an entity id is not empty and has no spaces",
             );
         } else if self
@@ -425,24 +423,24 @@ impl Checker<'_> {
             .insert(entity.id.clone(), entity.kind)
             .is_some()
         {
-            self.error(
+            self.raise(
                 format!("{path}/id"),
-                "duplicate_id",
+                IssueCode::DuplicateId,
                 format!("more than one entity has the id {:?}", entity.id),
             );
         }
         if entity.label.trim().is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/label"),
-                "empty_label",
+                IssueCode::EmptyLabel,
                 "give the name of the entity",
             );
         }
         for (index, xref) in entity.xrefs.iter().enumerate() {
             if !xref.fits_entity_kind(entity.kind) {
-                self.error(
+                self.raise(
                     format!("{path}/xrefs/{index}"),
-                    "xref_kind_mismatch",
+                    IssueCode::XrefKindMismatch,
                     format!(
                         "{} ({}) does not identify an entity of the kind {}",
                         xref,
@@ -453,16 +451,16 @@ impl Checker<'_> {
             }
         }
         if entity.xrefs.is_empty() && entity.kind != EntityKind::Other {
-            self.warning(
+            self.raise(
                 format!("{path}/xrefs"),
-                "no_xref",
+                IssueCode::NoXref,
                 "the entity has no registry identifier, so arity cannot link it to other works",
             );
         }
         if entity.mentions.is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/mentions"),
-                "no_mention",
+                IssueCode::NoMention,
                 "quote at least one place where the source names the entity",
             );
         }
@@ -473,38 +471,42 @@ impl Checker<'_> {
 
     fn evidence(&mut self, path: &str, evidence: &EvidenceInput) -> Option<String> {
         let Some(block) = self.document.block(&evidence.block) else {
-            self.error(
+            self.raise(
                 format!("{path}/block"),
-                "unknown_block",
+                IssueCode::UnknownBlock,
                 format!("the text has no block {:?}", evidence.block),
             );
             return None;
         };
         let length = normalize(&evidence.quote).as_str().chars().count();
         if length == 0 {
-            self.error(format!("{path}/quote"), "empty_quote", "the quote is empty");
+            self.raise(
+                format!("{path}/quote"),
+                IssueCode::EmptyQuote,
+                "the quote is empty",
+            );
             return None;
         }
         if length > MAX_QUOTE {
-            self.error(
+            self.raise(
                 format!("{path}/quote"),
-                "quote_too_long",
+                IssueCode::QuoteTooLong,
                 format!("a quote has at most {MAX_QUOTE} characters; quote only the part that supports the report"),
             );
             return None;
         }
         if length > LONG_QUOTE {
-            self.warning(
+            self.raise(
                 format!("{path}/quote"),
-                "long_quote",
+                IssueCode::LongQuote,
                 format!("the quote has more than {LONG_QUOTE} characters"),
             );
         }
         let matches = normalize(&block.text).find(&evidence.quote);
         if matches.is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/quote"),
-                "quote_not_found",
+                IssueCode::QuoteNotFound,
                 format!("the quote does not occur in the block {:?}", evidence.block),
             );
             return None;
@@ -515,17 +517,17 @@ impl Checker<'_> {
             .and_then(|occurrence| occurrence.checked_sub(1))
             .and_then(|index| matches.get(index))
         else {
-            self.error(
+            self.raise(
                 format!("{path}/occurrence"),
-                "occurrence_out_of_range",
+                IssueCode::OccurrenceOutOfRange,
                 format!("the quote occurs {} times in the block", matches.len()),
             );
             return None;
         };
         if matches.len() > 1 && evidence.occurrence.is_none() {
-            self.warning(
+            self.raise(
                 format!("{path}/quote"),
-                "ambiguous_quote",
+                IssueCode::AmbiguousQuote,
                 format!(
                     "the quote occurs {} times in the block; arity uses the first, so give `occurrence` to choose another",
                     matches.len()
@@ -538,9 +540,9 @@ impl Checker<'_> {
 
     fn report_evidence(&mut self, path: &str, items: &[EvidenceInput]) -> Evidence {
         if items.is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/evidence"),
-                "no_evidence",
+                IssueCode::NoEvidence,
                 "a report needs at least one quote from the source",
             );
         }
@@ -559,9 +561,9 @@ impl Checker<'_> {
 
     fn known_entity(&mut self, path: &str, id: &str) {
         if !self.entities.contains_key(id) {
-            self.error(
+            self.raise(
                 path,
-                "unknown_entity",
+                IssueCode::UnknownEntity,
                 format!("no entity in /entities has the id {id:?}"),
             );
         }
@@ -570,9 +572,9 @@ impl Checker<'_> {
     fn value_report(&mut self, path: &str, report: &ValueReportInput) {
         let evidence = self.report_evidence(path, &report.evidence);
         if report.subject.is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/subject"),
-                "no_subject",
+                IssueCode::NoSubject,
                 "name at least one entity",
             );
         }
@@ -597,9 +599,9 @@ impl Checker<'_> {
     fn effect_report(&mut self, path: &str, report: &EffectReportInput) {
         let evidence = self.report_evidence(path, &report.evidence);
         if report.agents.is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/agents"),
-                "no_agents",
+                IssueCode::NoAgents,
                 "name at least one agent",
             );
         }
@@ -615,9 +617,9 @@ impl Checker<'_> {
             self.resolve_property(&format!("{path}/target/property"), property);
         }
         if !cues::states_direction(report.direction, &evidence.quotes) {
-            self.warning(
+            self.raise(
                 format!("{path}/direction"),
-                "direction_cue_missing",
+                IssueCode::DirectionCueMissing,
                 format!(
                     "no quote has a word that states the direction {}; a person must check it",
                     report.direction
@@ -630,35 +632,35 @@ impl Checker<'_> {
         if let Some(comparator) = &report.comparator
             && !evidence.has_text(comparator, true)
         {
-            self.error(
+            self.raise(
                 format!("{path}/comparator"),
-                "text_not_in_evidence",
+                IssueCode::TextNotInEvidence,
                 format!("no quote contains the comparator {comparator:?}"),
             );
         }
         if let Some(significance) = &report.significance {
             let significance_path = format!("{path}/significance");
             if significance.statement.is_none() && significance.p.is_none() {
-                self.error(
+                self.raise(
                     &significance_path,
-                    "significance_shape",
+                    IssueCode::SignificanceShape,
                     "give a statement, a p-value, or both",
                 );
             }
             if let Some(p) = significance.p {
                 if p < Decimal::ZERO || p > Decimal::new(1, 0) {
-                    self.error(
+                    self.raise(
                         format!("{significance_path}/p"),
-                        "invalid_p",
+                        IssueCode::InvalidP,
                         "a p-value is from 0 to 1",
                     );
                 }
                 self.number_in_evidence(&format!("{significance_path}/p"), p, &evidence);
             }
             if significance.comparison.is_some() && significance.p.is_none() {
-                self.error(
+                self.raise(
                     format!("{significance_path}/comparison"),
-                    "significance_shape",
+                    IssueCode::SignificanceShape,
                     "a comparison needs a p-value",
                 );
             }
@@ -675,7 +677,11 @@ impl Checker<'_> {
         if let Some(code) = &magnitude.unit {
             match Unit::parse(code) {
                 Ok(unit) => self.unit_text(path, &unit, magnitude.unit_text.as_deref(), evidence),
-                Err(error) => self.error(format!("{path}/unit"), "invalid_unit", error.to_string()),
+                Err(error) => self.raise(
+                    format!("{path}/unit"),
+                    IssueCode::InvalidUnit,
+                    error.to_string(),
+                ),
             }
         }
         if let Some(interval) = &magnitude.interval {
@@ -706,9 +712,9 @@ impl Checker<'_> {
                 value: None,
             } => {
                 if !evidence.has_text(text, true) {
-                    self.error(
+                    self.raise(
                         format!("{path}/text"),
-                        "text_not_in_evidence",
+                        IssueCode::TextNotInEvidence,
                         format!("no quote contains {text:?}"),
                     );
                 }
@@ -732,9 +738,9 @@ impl Checker<'_> {
                     );
                 }
             }
-            _ => self.error(
+            _ => self.raise(
                 path,
-                "condition_shape",
+                IssueCode::ConditionShape,
                 "give `role` with `entity` or `text`, or give `property` with `value`",
             ),
         }
@@ -745,15 +751,15 @@ impl Checker<'_> {
             return;
         };
         if method.label.trim().is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/method/label"),
-                "empty_label",
+                IssueCode::EmptyLabel,
                 "give the name of the method",
             );
         } else if !evidence.has_text(&method.label, true) {
-            self.warning(
+            self.raise(
                 format!("{path}/method/label"),
-                "method_not_in_evidence",
+                IssueCode::MethodNotInEvidence,
                 "no quote names the method; add the quote that describes it",
             );
         }
@@ -774,9 +780,9 @@ impl Checker<'_> {
             value.category.is_some(),
         ];
         if shapes.iter().filter(|shape| **shape).count() != 1 {
-            self.error(
+            self.raise(
                 path,
-                "value_shape",
+                IssueCode::ValueShape,
                 "give exactly one of: `number`, `low` with `high`, `boolean`, or `category`",
             );
             return;
@@ -799,9 +805,9 @@ impl Checker<'_> {
                 if value.boolean.is_none() {
                     self.type_mismatch(path, definition);
                 } else if quantity_fields {
-                    self.error(
+                    self.raise(
                         path,
-                        "unexpected_field",
+                        IssueCode::UnexpectedField,
                         "a boolean value has no unit, bound, or uncertainty",
                     );
                 }
@@ -809,26 +815,26 @@ impl Checker<'_> {
             ValueType::Category => match &value.category {
                 None => self.type_mismatch(path, definition),
                 Some(_) if quantity_fields => {
-                    self.error(
+                    self.raise(
                         path,
-                        "unexpected_field",
+                        IssueCode::UnexpectedField,
                         "a category value has no unit, bound, or uncertainty",
                     );
                 }
                 Some(category) => {
                     if !definition.categories.contains(category) {
-                        self.error(
+                        self.raise(
                             format!("{path}/category"),
-                            "unknown_category",
+                            IssueCode::UnknownCategory,
                             format!(
                                 "the property {:?} has the categories {:?}",
                                 definition.key, definition.categories
                             ),
                         );
                     } else if !evidence.has_text(category, true) {
-                        self.warning(
+                        self.raise(
                             format!("{path}/category"),
-                            "category_not_in_evidence",
+                            IssueCode::CategoryNotInEvidence,
                             format!("no quote contains {category:?}; a person must check it"),
                         );
                     }
@@ -841,9 +847,9 @@ impl Checker<'_> {
     }
 
     fn type_mismatch(&mut self, path: &str, definition: &PropertyDefinition) {
-        self.error(
+        self.raise(
             path,
-            "value_type_mismatch",
+            IssueCode::ValueTypeMismatch,
             format!(
                 "the property {:?} takes a value of the type {}",
                 definition.key, definition.value_type
@@ -859,9 +865,9 @@ impl Checker<'_> {
         evidence: &Evidence,
     ) {
         let Some(code) = &value.unit else {
-            self.error(
+            self.raise(
                 format!("{path}/unit"),
-                "unit_required",
+                IssueCode::UnitRequired,
                 "a quantity needs a UCUM unit; use \"1\" for a pure number",
             );
             return;
@@ -869,16 +875,20 @@ impl Checker<'_> {
         let unit = match Unit::parse(code) {
             Ok(unit) => unit,
             Err(error) => {
-                self.error(format!("{path}/unit"), "invalid_unit", error.to_string());
+                self.raise(
+                    format!("{path}/unit"),
+                    IssueCode::InvalidUnit,
+                    error.to_string(),
+                );
                 return;
             }
         };
         if let Some(expected) = expected
             && !unit.is_commensurable_with(expected)
         {
-            self.error(
+            self.raise(
                 format!("{path}/unit"),
-                "dimension_mismatch",
+                IssueCode::DimensionMismatch,
                 format!(
                     "the unit {code} measures the dimension {}, but the property measures {}",
                     unit.dimension(),
@@ -903,7 +913,11 @@ impl Checker<'_> {
         match (value.low, value.high) {
             (Some(low), Some(high)) => {
                 if low > high {
-                    self.error(path, "invalid_interval", "`low` is greater than `high`");
+                    self.raise(
+                        path,
+                        IssueCode::InvalidInterval,
+                        "`low` is greater than `high`",
+                    );
                 }
                 if stated {
                     self.number_in_evidence(&format!("{path}/low"), low, evidence);
@@ -911,14 +925,18 @@ impl Checker<'_> {
                 }
             }
             (None, None) => {}
-            _ => self.error(path, "value_shape", "a range needs both `low` and `high`"),
+            _ => self.raise(
+                path,
+                IssueCode::ValueShape,
+                "a range needs both `low` and `high`",
+            ),
         }
         if let Some(bound) = value.bound
             && !cues::states_bound(bound, &evidence.quotes)
         {
-            self.warning(
+            self.raise(
                 format!("{path}/bound"),
-                "bound_cue_missing",
+                IssueCode::BoundCueMissing,
                 format!(
                     "no quote has a sign or a word for the bound {bound}; a person must check it"
                 ),
@@ -937,25 +955,25 @@ impl Checker<'_> {
     fn unit_text(&mut self, path: &str, unit: &Unit, text: Option<&str>, evidence: &Evidence) {
         let Some(text) = text else {
             if !unit.dimension().is_none() || unit.is_arbitrary() {
-                self.error(
+                self.raise(
                     format!("{path}/unit_text"),
-                    "unit_text_required",
+                    IssueCode::UnitTextRequired,
                     "give the unit exactly as the source writes it",
                 );
             }
             return;
         };
         if !evidence.has_text(text, false) {
-            self.error(
+            self.raise(
                 format!("{path}/unit_text"),
-                "unit_text_not_in_evidence",
+                IssueCode::UnitTextNotInEvidence,
                 format!("no quote contains the unit text {text:?}"),
             );
         }
         match Unit::parse_reported(text) {
-            Ok(reported) if !reported.is_equivalent_to(unit) => self.error(
+            Ok(reported) if !reported.is_equivalent_to(unit) => self.raise(
                 format!("{path}/unit_text"),
-                "unit_text_mismatch",
+                IssueCode::UnitTextMismatch,
                 format!(
                     "the source writes {text:?}, which arity reads as {}, but the unit is {}",
                     reported.code(),
@@ -963,9 +981,9 @@ impl Checker<'_> {
                 ),
             ),
             Ok(_) => {}
-            Err(_) => self.warning(
+            Err(_) => self.raise(
                 format!("{path}/unit_text"),
-                "unit_text_unreadable",
+                IssueCode::UnitTextUnreadable,
                 format!("arity cannot read the unit text {text:?}; a person must check the unit"),
             ),
         }
@@ -997,38 +1015,42 @@ impl Checker<'_> {
             } else {
                 "give `number`, or give `low` with `high`"
             };
-            self.error(path, "uncertainty_shape", message);
+            self.raise(path, IssueCode::UncertaintyShape, message);
             return;
         }
         if let Some(number) = uncertainty.number
             && number < Decimal::ZERO
         {
-            self.error(
+            self.raise(
                 format!("{path}/number"),
-                "negative_uncertainty",
+                IssueCode::NegativeUncertainty,
                 "the uncertainty is less than zero",
             );
         }
         if let (Some(low), Some(high)) = (uncertainty.low, uncertainty.high)
             && low > high
         {
-            self.error(path, "invalid_interval", "`low` is greater than `high`");
+            self.raise(
+                path,
+                IssueCode::InvalidInterval,
+                "`low` is greater than `high`",
+            );
         }
         match (uncertainty.kind, uncertainty.level) {
             (UncertaintyKind::ConfidenceInterval, Some(level)) => {
                 if level <= Decimal::ZERO || level >= Decimal::new(100, 0) {
-                    self.error(
+                    self.raise(
                         format!("{path}/level"),
-                        "invalid_level",
+                        IssueCode::InvalidLevel,
                         "the level is a percent from 0 to 100",
                     );
                 } else if stated {
                     self.number_in_evidence(&format!("{path}/level"), level, evidence);
                 }
             }
-            (_, Some(_)) => self.error(
+            (_, Some(_)) => self.raise(
                 format!("{path}/level"),
-                "unexpected_field",
+                IssueCode::UnexpectedField,
                 "only a confidence interval has a level",
             ),
             _ => {}
@@ -1052,29 +1074,29 @@ impl Checker<'_> {
             .block(&reading.figure)
             .is_some_and(|block| block.kind == BlockKind::FigureCaption);
         if !is_figure {
-            self.error(
+            self.raise(
                 format!("{path}/figure"),
-                "figure_not_found",
+                IssueCode::FigureNotFound,
                 format!("the text has no figure caption {:?}", reading.figure),
             );
         } else if !evidence.blocks.contains(&reading.figure) {
-            self.error(
+            self.raise(
                 format!("{path}/figure"),
-                "figure_not_in_evidence",
+                IssueCode::FigureNotInEvidence,
                 "quote the caption of the figure in the evidence of the report",
             );
         }
         if reading.method.trim().is_empty() {
-            self.error(
+            self.raise(
                 format!("{path}/method"),
-                "empty_method",
+                IssueCode::EmptyMethod,
                 "tell how the reader read the value",
             );
         }
         if reading.resolution <= Decimal::ZERO {
-            self.error(
+            self.raise(
                 format!("{path}/resolution"),
-                "invalid_resolution",
+                IssueCode::InvalidResolution,
                 "the resolution is more than zero",
             );
         }
@@ -1082,9 +1104,9 @@ impl Checker<'_> {
 
     fn sample_size(&mut self, path: &str, n: u32, evidence: &Evidence) {
         if n == 0 {
-            self.error(
+            self.raise(
                 path,
-                "invalid_sample_size",
+                IssueCode::InvalidSampleSize,
                 "the number of samples is at least 1",
             );
         } else {
@@ -1094,9 +1116,9 @@ impl Checker<'_> {
 
     fn number_in_evidence(&mut self, path: &str, number: Decimal, evidence: &Evidence) {
         if !evidence.has_number(number) {
-            self.error(
+            self.raise(
                 path,
-                "number_not_in_evidence",
+                IssueCode::NumberNotInEvidence,
                 format!("no quote of the report contains the number {number}"),
             );
         }

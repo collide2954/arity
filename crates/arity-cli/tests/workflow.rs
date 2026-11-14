@@ -230,7 +230,7 @@ fn rejects_a_submission_with_a_number_that_the_source_does_not_state() {
     else {
         panic!("the submission was not rejected");
     };
-    let codes: Vec<&str> = issues.iter().map(|issue| issue.code).collect();
+    let codes: Vec<&str> = issues.iter().map(|issue| issue.code.as_str()).collect();
     assert!(codes.contains(&"number_not_in_evidence"), "{codes:?}");
 }
 

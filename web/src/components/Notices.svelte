@@ -1,34 +1,8 @@
 <script lang="ts">
+  import { isSerious, noticeLabel, noticeSign, sourceLabel } from "../lib/notices";
   import type { Notice } from "../lib/types";
 
   let { notices }: { notices: Notice[] } = $props();
-
-  const kinds: Record<string, string> = {
-    retraction: "Retraction",
-    partial_retraction: "Partial retraction",
-    withdrawal: "Withdrawal",
-    removal: "Removal",
-    expression_of_concern: "Expression of concern",
-    correction: "Correction",
-    erratum: "Erratum",
-    corrigendum: "Corrigendum",
-    addendum: "Addendum",
-    clarification: "Clarification",
-    new_version: "New version",
-    new_edition: "New edition",
-    reinstatement: "Reinstatement",
-    other: "Other notice",
-  };
-
-  const sources: Record<string, string> = {
-    crossref: "Crossref",
-    europe_pmc: "Europe PMC",
-    pmc: "PubMed Central",
-    retraction_watch: "Retraction Watch",
-    publisher: "the publisher",
-  };
-
-  const serious = new Set(["retraction", "partial_retraction", "withdrawal", "removal"]);
 </script>
 
 {#if notices.length > 0}
@@ -40,14 +14,12 @@
     </p>
     <ul>
       {#each notices as notice, index (index)}
-        <li class:serious={serious.has(notice.kind)}>
-          <span class="icon" aria-hidden="true"
-            >{serious.has(notice.kind) ? "\u{26a0}" : "\u{2139}"}</span
-          >
-          <strong>{kinds[notice.kind] ?? notice.kind}</strong>
+        <li class:serious={isSerious(notice.kind)}>
+          <span class="icon" aria-hidden="true">{noticeSign(notice.kind)}</span>
+          <strong>{noticeLabel(notice.kind)}</strong>
           {#if notice.date}<span> · {notice.date}</span>{/if}
           <span class="secondary">
-            · reported by {sources[notice.source] ?? notice.source} as "{notice.reported_type}"</span
+            · reported by {sourceLabel(notice.source)} as "{notice.reported_type}"</span
           >
           {#if notice.notice_doi}
             · <a href="https://doi.org/{notice.notice_doi}">the notice</a>

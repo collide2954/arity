@@ -1,18 +1,9 @@
 <script lang="ts">
+  import NoticeChips from "../components/NoticeChips.svelte";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex } from "../lib/data";
   import { link } from "../lib/route";
   import type { WorkSummary } from "../lib/types";
-
-  const notices: Record<string, string> = {
-    retraction: "Retraction",
-    partial_retraction: "Partial retraction",
-    expression_of_concern: "Expression of concern",
-    correction: "Correction",
-    erratum: "Erratum",
-    corrigendum: "Corrigendum",
-    withdrawal: "Withdrawal",
-  };
 
   function save(works: WorkSummary[]): void {
     download(
@@ -85,13 +76,7 @@
             </td>
             <td>{work.year ?? ""}</td>
             <td>{work.license ?? "not stated"}</td>
-            <td>
-              <div class="chips">
-                {#each work.notices as notice (notice)}
-                  <span class="chip notice">{notices[notice] ?? notice}</span>
-                {/each}
-              </div>
-            </td>
+            <td><NoticeChips kinds={work.notices} /></td>
             <td>{work.reports}</td>
           </tr>
         {/each}
@@ -101,9 +86,3 @@
 {:catch error}
   <p>arity cannot load the works: {error instanceof Error ? error.message : String(error)}</p>
 {/await}
-
-<style>
-  .notice {
-    color: var(--critical-ink);
-  }
-</style>

@@ -7,12 +7,14 @@
 //! property. A submission with an error does not go into the database.
 
 mod check;
+mod coverage;
 mod cues;
 mod issue;
 mod properties;
 mod submission;
 
 pub use check::{Checked, Rejected, check};
+pub use coverage::{Count, Coverage, Unquoted, coverage};
 pub use issue::{Issue, IssueCode, Severity};
 pub use properties::{Properties, PropertyDefinition};
 pub use submission::{

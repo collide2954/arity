@@ -22,3 +22,18 @@ on 2026-11-14. The tests use it as a real example of an article with tables.
 - Copyright: © 2016 by the authors.
 - License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). We did
   not change the file.
+
+## `sources/`
+
+Responses of the services that arity reads, as they were on 2026-11-14. The
+tests use them so that no test needs the network.
+
+- `europepmc-search.json`: a Europe PMC search for two works: PMC10538757,
+  and PubMed 9500320, a retracted article with retraction and concern links.
+  We removed the fields that arity does not read, the abstracts, all authors
+  after the third, and all "Comment in" links after the first.
+- `crossref-work.json`: the Crossref record of
+  `10.1016/S0140-6736(97)11096-0`, with only the fields that arity reads.
+  Crossref metadata is open under CC0.
+- `pmc-record.json` and `pmc-list.xml`: the record of PMC10538757 in the PMC
+  open-access store of NCBI, and the listing of its versions.

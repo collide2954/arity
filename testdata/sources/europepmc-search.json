@@ -1,0 +1,175 @@
+{
+    "version":  "6.9",
+    "hitCount":  2,
+    "nextCursorMark":  null,
+    "request":  {
+                    "queryString":  "(EXT_ID:9500320 AND SRC:MED) OR (PMCID:PMC10538757)",
+                    "resultType":  "core",
+                    "cursorMark":  "*",
+                    "pageSize":  5,
+                    "sort":  "",
+                    "synonym":  false
+                },
+    "resultList":  {
+                       "result":  [
+                                      {
+                                          "id":  "37768997",
+                                          "source":  "MED",
+                                          "pmid":  "37768997",
+                                          "pmcid":  "PMC10538757",
+                                          "doi":  "10.1371/journal.pone.0291981",
+                                          "title":  "Synergistic combination of doxorubicin with hydralazine, and disulfiram against MCF-7 breast cancer cell line.",
+                                          "authorList":  {
+                                                             "author":  [
+                                                                            {
+                                                                                "fullName":  "Lafi Z",
+                                                                                "firstName":  "Zainab",
+                                                                                "lastName":  "Lafi",
+                                                                                "authorId":  null
+                                                                            },
+                                                                            {
+                                                                                "fullName":  "Alshaer W",
+                                                                                "firstName":  "Walhan",
+                                                                                "lastName":  "Alshaer",
+                                                                                "authorId":  {
+                                                                                                 "type":  "ORCID",
+                                                                                                 "value":  "0000-0003-2946-7328"
+                                                                                             }
+                                                                            },
+                                                                            {
+                                                                                "fullName":  "Gharaibeh L",
+                                                                                "firstName":  "Lobna",
+                                                                                "lastName":  "Gharaibeh",
+                                                                                "authorId":  null
+                                                                            }
+                                                                        ]
+                                                         },
+                                          "journalInfo":  {
+                                                              "issue":  "9",
+                                                              "volume":  "18",
+                                                              "journalIssueId":  3624858,
+                                                              "dateOfPublication":  "2023 ",
+                                                              "monthOfPublication":  0,
+                                                              "yearOfPublication":  2023,
+                                                              "journal":  {
+                                                                              "medlineAbbreviation":  "PLoS One",
+                                                                              "title":  "PloS one",
+                                                                              "essn":  "1932-6203",
+                                                                              "issn":  "1932-6203",
+                                                                              "nlmid":  "101285081",
+                                                                              "isoabbreviation":  "PLoS One"
+                                                                          },
+                                                              "printPublicationDate":  "2023-01-01"
+                                                          },
+                                          "pubYear":  "2023",
+                                          "firstPublicationDate":  "2023-09-28",
+                                          "pubTypeList":  {
+                                                              "pubType":  [
+                                                                              "research-article",
+                                                                              "Journal Article"
+                                                                          ]
+                                                          },
+                                          "isOpenAccess":  "Y",
+                                          "inEPMC":  "Y",
+                                          "inPMC":  "Y",
+                                          "hasPDF":  "Y",
+                                          "hasSuppl":  "N",
+                                          "license":  "cc by",
+                                          "pubModel":  "Electronic-eCollection"
+                                      },
+                                      {
+                                          "id":  "9500320",
+                                          "source":  "MED",
+                                          "pmid":  "9500320",
+                                          "doi":  "10.1016/s0140-6736(97)11096-0",
+                                          "title":  "Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children.",
+                                          "authorList":  {
+                                                             "author":  [
+                                                                            {
+                                                                                "fullName":  "Wakefield AJ",
+                                                                                "firstName":  "A J",
+                                                                                "lastName":  "Wakefield",
+                                                                                "authorId":  null
+                                                                            },
+                                                                            {
+                                                                                "fullName":  "Murch SH",
+                                                                                "firstName":  "S H",
+                                                                                "lastName":  "Murch",
+                                                                                "authorId":  null
+                                                                            },
+                                                                            {
+                                                                                "fullName":  "Anthony A",
+                                                                                "firstName":  "A",
+                                                                                "lastName":  "Anthony",
+                                                                                "authorId":  null
+                                                                            }
+                                                                        ]
+                                                         },
+                                          "journalInfo":  {
+                                                              "issue":  "9103",
+                                                              "volume":  "351",
+                                                              "journalIssueId":  1194087,
+                                                              "dateOfPublication":  "1998 Feb",
+                                                              "monthOfPublication":  2,
+                                                              "yearOfPublication":  1998,
+                                                              "journal":  {
+                                                                              "medlineAbbreviation":  "Lancet",
+                                                                              "title":  "Lancet (London, England)",
+                                                                              "essn":  "1474-547X",
+                                                                              "issn":  "0140-6736",
+                                                                              "nlmid":  "2985213R",
+                                                                              "isoabbreviation":  "Lancet"
+                                                                          },
+                                                              "printPublicationDate":  "1998-02-01"
+                                                          },
+                                          "pubYear":  "1998",
+                                          "firstPublicationDate":  "1998-02-01",
+                                          "pubTypeList":  {
+                                                              "pubType":  [
+                                                                              "Retracted Publication",
+                                                                              "Research Support, Non-U.S. Gov\u0027t",
+                                                                              "Journal Article"
+                                                                          ]
+                                                          },
+                                          "commentCorrectionList":  {
+                                                                        "commentCorrection":  [
+                                                                                                  {
+                                                                                                      "source":  "MED",
+                                                                                                      "id":  "15016483",
+                                                                                                      "reference":  "Lancet. 2004 Mar 6;363(9411):750. doi: 10.1016/S0140-6736(04)15715-2",
+                                                                                                      "type":  "Retraction in",
+                                                                                                      "orderIn":  23
+                                                                                                  },
+                                                                                                  {
+                                                                                                      "source":  "MED",
+                                                                                                      "id":  "20137807",
+                                                                                                      "reference":  "Lancet. 2010 Feb 6;375(9713):445. doi: 10.1016/S0140-6736(10)60175-4",
+                                                                                                      "type":  "Retraction in",
+                                                                                                      "orderIn":  28
+                                                                                                  },
+                                                                                                  {
+                                                                                                      "source":  "MED",
+                                                                                                      "id":  "21971344",
+                                                                                                      "reference":  "Eur J Gastroenterol Hepatol. 2011 Nov;23(11):1082. doi: 10.1097/MEG.0b013e328349d184",
+                                                                                                      "type":  "Expression of concern in",
+                                                                                                      "orderIn":  29
+                                                                                                  },
+                                                                                                  {
+                                                                                                      "source":  "MED",
+                                                                                                      "id":  "9500313",
+                                                                                                      "reference":  "Lancet. 1998 Feb 28;351(9103):611-2. doi: 10.1016/S0140-6736(05)78423-3",
+                                                                                                      "type":  "Comment in",
+                                                                                                      "orderIn":  1
+                                                                                                  }
+                                                                                              ]
+                                                                    },
+                                          "isOpenAccess":  "N",
+                                          "inEPMC":  "N",
+                                          "inPMC":  "N",
+                                          "hasPDF":  "N",
+                                          "hasSuppl":  "N",
+                                          "pubModel":  "Print"
+                                      }
+                                  ]
+                   }
+}

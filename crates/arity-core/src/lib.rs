@@ -7,6 +7,7 @@ mod entity;
 mod id;
 mod license;
 mod notice;
+mod schema;
 pub mod vocabulary;
 mod work;
 

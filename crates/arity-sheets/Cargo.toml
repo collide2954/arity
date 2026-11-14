@@ -1,0 +1,21 @@
+[package]
+name = "arity-sheets"
+description = "Reads supplementary spreadsheets and CSV files into arity text blocks."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[dependencies]
+arity-text.workspace = true
+calamine.workspace = true
+csv.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+rust_xlsxwriter.workspace = true
+
+[lints]
+workspace = true

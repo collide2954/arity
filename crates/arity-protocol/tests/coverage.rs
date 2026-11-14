@@ -69,7 +69,7 @@ fn counts_the_numbers_of_data_cells_and_not_of_header_cells_or_names() {
 #[test]
 fn counts_the_numbers_of_the_text_that_have_a_unit_or_a_sign() {
     let paragraph = "The IC50 was 0.24 \u{00B5}M (Fig. 3), 46.9% of the dye broke down \
-                     (p = 0.02), and in 3 wells the cells died at 37 \u{00B0}C in 2 a [12].";
+                     (p = 0.02), and in 3 rows the cells died at 37 \u{00B0}C in 2 a [12].";
     let text = document(vec![Block::new("s1/p1", BlockKind::Paragraph, paragraph)]);
     let start = paragraph[..paragraph.find("0.24").unwrap()].chars().count();
     let result = coverage(

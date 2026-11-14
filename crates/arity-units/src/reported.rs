@@ -70,6 +70,10 @@ const ALIASES: &[(&[&str], &str)] = &[
 const COUNT_NOUNS: &[&str] = &[
     "cell",
     "cells",
+    "well",
+    "wells",
+    "plate",
+    "plates",
     "copy",
     "copies",
     "particle",
@@ -132,7 +136,8 @@ pub fn to_ucum(text: &str) -> Result<String, UnitError> {
         return Ok((*code).to_owned());
     }
 
-    let replaced = replace_symbols(&collapsed);
+    let divided = collapsed.replace(" per ", "/");
+    let replaced = replace_symbols(&divided);
     let powers = POWER_OF_TEN
         .replace_all(&replaced, "$1*$2")
         .replace('^', "");
@@ -261,6 +266,8 @@ mod tests {
     #[test]
     fn reads_units_as_articles_write_them() {
         let cases = [
+            ("cells/well", "{cells}/{well}"),
+            ("colonies per plate", "{colonies}/{plate}"),
             ("µM", "umol/L"),
             ("μM", "umol/L"),
             ("nM", "nmol/L"),

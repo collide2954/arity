@@ -115,6 +115,17 @@ pub enum NoticeSource {
     Publisher,
 }
 
+impl NoticeSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Crossref => "crossref",
+            Self::EuropePmc => "europe_pmc",
+            Self::RetractionWatch => "retraction_watch",
+            Self::Publisher => "publisher",
+        }
+    }
+}
+
 /// A notice about a work, exactly as one source reports it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

@@ -349,7 +349,7 @@ impl Checker<'_> {
                     "a quantity property needs a unit that sets its dimension",
                 ),
                 Some(Err(error)) => {
-                    self.error(format!("{path}/unit"), "invalid_unit", error.to_string())
+                    self.error(format!("{path}/unit"), "invalid_unit", error.to_string());
                 }
                 Some(Ok(_)) => {}
             },

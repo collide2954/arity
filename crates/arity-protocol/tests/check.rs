@@ -544,7 +544,7 @@ fn rejects_empty_and_duplicate_reports() {
 #[test]
 fn issues_have_a_severity_and_a_message() {
     let rejected = run(&changed(|v| {
-        v["reports"][0]["value"]["number"] = json!("0.25")
+        v["reports"][0]["value"]["number"] = json!("0.25");
     }))
     .unwrap_err();
     let issue = rejected.errors().next().unwrap();

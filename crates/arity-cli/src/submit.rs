@@ -3,7 +3,7 @@ use std::path::Path;
 
 use arity_core::vocabulary::CheckState;
 use arity_protocol::{Issue, Submission, check};
-use arity_store::{ReportId, RunId};
+use arity_store::{ReportId, RunId, WorkId};
 use jiff::Timestamp;
 
 use crate::context::Context;
@@ -13,6 +13,7 @@ use crate::error::{CliError, Result, io};
 pub enum Outcome {
     /// The submission passed the checks and is in the database.
     Stored {
+        work: WorkId,
         run: RunId,
         reports: Vec<(ReportId, String)>,
         warnings: Vec<Issue>,
@@ -27,10 +28,32 @@ pub enum Outcome {
 }
 
 /// Checks a submission file against the text that it names, and stores it
-/// when it passes and the run is not a dry run.
+/// when it passes and the run is not a dry run. The work is then read.
 pub fn submit(context: &Context, path: &Path, dry_run: bool, now: Timestamp) -> Result<Outcome> {
     let raw = fs::read(path).map_err(io(path))?;
-    let header: Submission = match serde_json::from_slice(&raw) {
+    let outcome = submit_bytes(context, &raw, dry_run, now)?;
+    if let Outcome::Stored { work, .. } = &outcome {
+        context
+            .store
+            .set_state(*work, arity_store::QueueState::Read, None, now)
+            .or_else(|error| match error {
+                arity_store::StoreError::NotFound(_) => Ok(()),
+                other => Err(other),
+            })?;
+    }
+    Ok(outcome)
+}
+
+/// Checks the bytes of a submission against the text that it names, and
+/// stores them when they pass and the run is not a dry run. The queue does
+/// not change.
+pub fn submit_bytes(
+    context: &Context,
+    raw: &[u8],
+    dry_run: bool,
+    now: Timestamp,
+) -> Result<Outcome> {
+    let header: Submission = match serde_json::from_slice(raw) {
         Ok(submission) => submission,
         Err(error) => {
             return Ok(Outcome::Rejected {
@@ -65,7 +88,7 @@ pub fn submit(context: &Context, path: &Path, dry_run: bool, now: Timestamp) -> 
         })?,
     };
     let properties = context.store.properties()?;
-    let checked = match check(&raw, &document, &properties) {
+    let checked = match check(raw, &document, &properties) {
         Ok(checked) => checked,
         Err(rejected) => {
             return Ok(Outcome::Rejected {
@@ -80,15 +103,9 @@ pub fn submit(context: &Context, path: &Path, dry_run: bool, now: Timestamp) -> 
     }
     let run = context
         .store
-        .store_submission(work, text, &raw, &checked, now)?;
-    context
-        .store
-        .set_state(work, arity_store::QueueState::Read, None, now)
-        .or_else(|error| match error {
-            arity_store::StoreError::NotFound(_) => Ok(()),
-            other => Err(other),
-        })?;
+        .store_submission(work, text, raw, &checked, now)?;
     Ok(Outcome::Stored {
+        work,
         run,
         reports: context.store.reports_of_run(run)?,
         warnings: checked.warnings,

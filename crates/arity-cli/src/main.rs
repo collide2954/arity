@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use arity_cli::config::{CONFIG_FILE, Config, PersonConfig};
 use arity_cli::submit::Outcome;
-use arity_cli::{CliError, Context, Result, catalogue, fetch, notices, show, submit};
+use arity_cli::{CliError, Context, Result, archive, catalogue, fetch, notices, show, submit};
 use arity_core::vocabulary::CheckState;
 use arity_core::{EntityKind, License, NoticeKind, Orcid, PREFIXES, Scope};
 use arity_sources::{Client, USER_AGENT};
@@ -86,6 +86,19 @@ enum Command {
         /// The folder for the website data, for example `web/static/data`.
         out: PathBuf,
     },
+    /// Write the archive of the database into a folder: the records, the
+    /// submissions, and the checks, with the address and the digest of each
+    /// downloaded file.
+    Archive {
+        /// The folder of the archive, for example a clone of arity-data.
+        folder: PathBuf,
+    },
+    /// Make the database again from an archive. The data folder must have no
+    /// works.
+    Rebuild {
+        /// The folder of the archive.
+        folder: PathBuf,
+    },
     /// List the terms of a vocabulary.
     Vocab {
         #[arg(value_enum)]
@@ -156,6 +169,8 @@ fn run(cli: Cli, out: &mut impl Write) -> Result<ExitCode> {
         } => check(data, report, verdict, note.as_deref(), now, out),
         Command::Notices { identifiers } => refresh_notices(data, &identifiers, now, out),
         Command::Export { out: folder } => export(data, &folder, now, out),
+        Command::Archive { folder } => write_archive(data, &folder, out),
+        Command::Rebuild { folder } => rebuild(data, &folder, out),
         Command::Vocab { list } => vocab(list, data, out),
         Command::Schema => {
             emit(out, json_text(&arity_protocol::schema())?)?;
@@ -320,6 +335,7 @@ fn submit_file(
             run,
             reports,
             warnings,
+            ..
         } => {
             for warning in &warnings {
                 emit(out, warning)?;
@@ -422,6 +438,38 @@ fn export(data: &Path, folder: &Path, now: Timestamp, out: &mut impl Write) -> R
             exported.works,
             exported.reports,
             exported.pdfs,
+            folder.display()
+        ),
+    )?;
+    Ok(ExitCode::SUCCESS)
+}
+
+fn write_archive(data: &Path, folder: &Path, out: &mut impl Write) -> Result<ExitCode> {
+    let context = open(data)?;
+    let written = archive::write(&context, folder)?;
+    emit(
+        out,
+        format!(
+            "Wrote {} works and {} runs to {}.",
+            written.works,
+            written.runs,
+            folder.display()
+        ),
+    )?;
+    Ok(ExitCode::SUCCESS)
+}
+
+fn rebuild(data: &Path, folder: &Path, out: &mut impl Write) -> Result<ExitCode> {
+    let context = open(data)?;
+    let rebuilt = archive::rebuild(&context, folder)?;
+    emit(
+        out,
+        format!(
+            "Rebuilt {} works, {} files, {} runs, and {} checks from {}.",
+            rebuilt.works,
+            rebuilt.files,
+            rebuilt.runs,
+            rebuilt.checks,
             folder.display()
         ),
     )?;

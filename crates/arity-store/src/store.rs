@@ -3,6 +3,7 @@ use std::path::Path;
 use arity_core::{Digest, Doi, Notice, Pmcid, Pmid, WorkMetadata};
 use jiff::Timestamp;
 use rusqlite::{Connection, OptionalExtension, params};
+use serde::{Deserialize, Serialize};
 
 /// The name and version that each stored record names as its software.
 pub const SOFTWARE: &str = concat!("arity ", env!("CARGO_PKG_VERSION"));
@@ -44,7 +45,8 @@ pub enum StoreError {
 pub type Result<T> = std::result::Result<T, StoreError>;
 
 /// The state of a work in the reading queue.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum QueueState {
     Queued,
     Fetched,
@@ -79,7 +81,8 @@ impl QueueState {
 }
 
 /// What a downloaded file is for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum RetrievalRole {
     Metadata,
     FullText,

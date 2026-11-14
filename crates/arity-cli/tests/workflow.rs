@@ -1,14 +1,14 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
 
 use arity_cli::config::{Config, PersonConfig};
 use arity_cli::submit::Outcome;
-use arity_cli::{Context, catalogue, fetch, show, submit};
+use arity_cli::{Context, archive, catalogue, fetch, show, submit};
 use arity_core::vocabulary::CheckState;
-use arity_core::{CcElements, License};
+use arity_core::{CcElements, License, Notice, NoticeKind, NoticeSource};
 use arity_sources::{Http, Response, SourceError, europepmc, pmc};
 use jiff::Timestamp;
 use serde_json::json;
@@ -281,6 +281,149 @@ fn adds_the_cells_of_supplementary_data_files_to_the_text() {
     assert_eq!(document.block("supp1/s1/r2c2").unwrap().text, "0.24");
     assert_eq!(document.attachments.len(), 1);
     assert_eq!(document.attachments[0].name, "values.csv");
+}
+
+fn files_in(root: &Path) -> BTreeMap<String, Vec<u8>> {
+    let mut files = BTreeMap::new();
+    let mut folders = vec![root.to_path_buf()];
+    while let Some(folder) = folders.pop() {
+        for entry in fs::read_dir(&folder).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                folders.push(path);
+            } else {
+                let name = path
+                    .strip_prefix(root)
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                files.insert(name, fs::read(&path).unwrap());
+            }
+        }
+    }
+    files
+}
+
+/// A database with one work, a notice, one run, and one check, and the
+/// archive of that database.
+fn archived() -> (tempfile::TempDir, tempfile::TempDir) {
+    let data = tempfile::tempdir().unwrap();
+    let context = context(data.path());
+    let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
+    fetch::fetch(&context, work, now()).unwrap();
+    let notice = Notice {
+        kind: NoticeKind::Correction,
+        reported_type: "correction".to_owned(),
+        source: NoticeSource::Crossref,
+        notice_doi: Some("10.1000/notice.1".parse().unwrap()),
+        notice_pmid: None,
+        notice_citation: None,
+        date: Some(jiff::civil::date(2026, 1, 5)),
+        source_record: Some(r#"{"type":"correction"}"#.to_owned()),
+        retrieved_at: now(),
+    };
+    context.store.add_notice(work, &notice).unwrap();
+    let path = data.path().join("submission.json");
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&submission(&context, "7.30")).unwrap(),
+    )
+    .unwrap();
+    let Outcome::Stored { reports, .. } = submit::submit(&context, &path, false, now()).unwrap()
+    else {
+        panic!("the submission was not stored");
+    };
+    let later = "2026-11-14T11:00:00Z".parse().unwrap();
+    submit::record_check(
+        &context,
+        reports[0].0,
+        CheckState::Confirmed,
+        Some("The value agrees with Table 1."),
+        later,
+    )
+    .unwrap();
+    let folder = tempfile::tempdir().unwrap();
+    let written = archive::write(&context, folder.path()).unwrap();
+    assert_eq!((written.works, written.runs), (1, 1));
+    (data, folder)
+}
+
+#[test]
+fn rebuilds_the_same_database_from_its_archive() {
+    let (data, folder) = archived();
+    let files = files_in(folder.path());
+    assert!(
+        files.contains_key("works/PMC6274071/work.json"),
+        "{:?}",
+        files.keys()
+    );
+    assert!(files.contains_key("works/PMC6274071/run-1.json"));
+    assert_eq!(
+        files["works/PMC6274071/run-1.json"],
+        fs::read(data.path().join("submission.json")).unwrap()
+    );
+
+    let rebuilt_data = tempfile::tempdir().unwrap();
+    let rebuilt = Context::open(rebuilt_data.path(), Box::new(fake())).unwrap();
+    assert_eq!(
+        archive::rebuild(&rebuilt, folder.path()).unwrap(),
+        archive::Rebuilt {
+            works: 1,
+            files: 3,
+            runs: 1,
+            checks: 1
+        }
+    );
+    let work = rebuilt.work("PMC6274071").unwrap();
+    assert_eq!(
+        rebuilt.store.work(work).unwrap().state,
+        Some(arity_store::QueueState::Read)
+    );
+    let run = rebuilt.store.runs().unwrap()[0].id;
+    let report = rebuilt.store.reports_of_run(run).unwrap()[0].0;
+    assert_eq!(
+        rebuilt.store.check_state(report).unwrap(),
+        CheckState::Confirmed
+    );
+
+    let again = tempfile::tempdir().unwrap();
+    archive::write(&rebuilt, again.path()).unwrap();
+    assert_eq!(files_in(again.path()), files);
+}
+
+#[test]
+fn refuses_a_file_that_is_not_the_archived_file() {
+    let (_data, folder) = archived();
+    let mut changed = fake();
+    changed.0.insert(
+        format!("{}/PMC6274071.1/PMC6274071.1.pdf", pmc::BUCKET),
+        b"%PDF-1.4 another article".to_vec(),
+    );
+    let rebuilt_data = tempfile::tempdir().unwrap();
+    let rebuilt = Context::open(rebuilt_data.path(), Box::new(changed)).unwrap();
+    let error = archive::rebuild(&rebuilt, folder.path()).unwrap_err();
+    assert!(error.to_string().contains("PMC6274071.1.pdf"), "{error}");
+}
+
+#[test]
+fn refuses_a_submission_that_is_not_the_archived_submission() {
+    let (_data, folder) = archived();
+    let run = folder.path().join("works/PMC6274071/run-1.json");
+    let mut bytes = fs::read(&run).unwrap();
+    bytes.push(b'\n');
+    fs::write(&run, bytes).unwrap();
+    let rebuilt_data = tempfile::tempdir().unwrap();
+    let rebuilt = Context::open(rebuilt_data.path(), Box::new(fake())).unwrap();
+    let error = archive::rebuild(&rebuilt, folder.path()).unwrap_err();
+    assert!(error.to_string().contains("run-1.json"), "{error}");
+}
+
+#[test]
+fn rebuilds_only_into_an_empty_database() {
+    let (data, folder) = archived();
+    let context = Context::open(data.path(), Box::new(fake())).unwrap();
+    let error = archive::rebuild(&context, folder.path()).unwrap_err();
+    assert!(error.to_string().contains("empty"), "{error}");
 }
 
 #[test]

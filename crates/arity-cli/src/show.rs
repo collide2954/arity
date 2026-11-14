@@ -90,6 +90,22 @@ fn render_cells(out: &mut String, cells: &[Block]) {
     out.push('\n');
 }
 
+/// The entities that earlier runs of a work name. A submission that gives an
+/// entity the same id names the same entity.
+pub fn entities(entities: &[arity_store::WorkEntity]) -> String {
+    let mut out = String::from(
+        "\nEntities that earlier runs name. Give an entity the same id to name the same entity:\n",
+    );
+    for entity in entities {
+        let _ = writeln!(
+            out,
+            "  {}  {}  {}",
+            entity.local_id, entity.kind, entity.label
+        );
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

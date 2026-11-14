@@ -202,6 +202,8 @@ fn catalogues_fetches_reads_submits_and_checks_a_work() {
         panic!("the submission was not stored");
     };
     assert_eq!(reports.len(), 1);
+    let named = show::entities(&context.store.entities_of_work(work).unwrap());
+    assert!(named.contains("  dox  chemical  doxorubicin"), "{named}");
     assert_eq!(
         context.store.work(work).unwrap().state,
         Some(arity_store::QueueState::Read)

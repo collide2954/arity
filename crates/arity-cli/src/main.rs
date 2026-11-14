@@ -331,6 +331,10 @@ fn show_work(data: &Path, identifier: &str, json: bool, out: &mut impl Write) ->
             .digest()
             .map_err(|error| CliError::Usage(error.to_string()))?;
         emit(out, show::render(&metadata, &digest, &document))?;
+        let entities = context.store.entities_of_work(work)?;
+        if !entities.is_empty() {
+            emit(out, show::entities(&entities))?;
+        }
     }
     Ok(ExitCode::SUCCESS)
 }

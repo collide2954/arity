@@ -5,10 +5,12 @@
   import { finder, type Match } from "../lib/anchor";
   import {
     labelsOf,
+    lines,
     mainMark,
     place,
     quotedParts,
     reveal,
+    type Box,
     type Highlight,
     type Mark,
   } from "../lib/highlight";
@@ -94,19 +96,36 @@
 
   const labels = $derived(labelsOf(highlights));
 
-  function rectangles(divs: readonly HTMLElement[], match: Match, origin: DOMRect): DOMRect[] {
-    const first = divs[match.start.item]?.firstChild;
-    const last = divs[match.end.item]?.firstChild;
-    if (!(first instanceof Text) || !(last instanceof Text)) return [];
-    const range = document.createRange();
-    range.setStart(first, Math.min(match.start.offset, first.length));
-    range.setEnd(last, Math.min(match.end.offset, last.length));
-    return Array.from(range.getClientRects())
-      .filter((rect) => rect.width > 0.5 && rect.height > 0.5)
-      .map(
-        (rect) =>
-          new DOMRect(rect.left - origin.left, rect.top - origin.top, rect.width, rect.height),
+  /**
+   * The boxes of the text of a match, one for each line. It measures only the
+   * text, because the box of a span is larger than the box of its text.
+   */
+  function boxes(divs: readonly HTMLElement[], match: Match, origin: DOMRect): Box[] {
+    const found: Box[] = [];
+    for (let item = match.start.item; item <= match.end.item; item += 1) {
+      const text = divs[item]?.firstChild;
+      if (!(text instanceof Text)) continue;
+      const range = document.createRange();
+      range.setStart(
+        text,
+        item === match.start.item ? Math.min(match.start.offset, text.length) : 0,
       );
+      range.setEnd(
+        text,
+        item === match.end.item ? Math.min(match.end.offset, text.length) : text.length,
+      );
+      for (const rect of range.getClientRects()) {
+        if (rect.width > 0.5 && rect.height > 0.5) {
+          found.push({
+            x: rect.left - origin.left,
+            y: rect.top - origin.top,
+            width: rect.width,
+            height: rect.height,
+          });
+        }
+      }
+    }
+    return lines(found);
   }
 
   function describe(reports: readonly number[]): string {
@@ -114,7 +133,7 @@
     return reports.length > 1 ? `${first} (and ${String(reports.length - 1)} more)` : first;
   }
 
-  function button(box: DOMRect, mark: Mark): HTMLButtonElement {
+  function button(box: Box, mark: Mark): HTMLButtonElement {
     const element = document.createElement("button");
     element.type = "button";
     element.className = "mark";
@@ -149,7 +168,7 @@
     const origin = entry.wrapper.getBoundingClientRect();
     layer.append(
       ...marks.flatMap((mark) =>
-        rectangles(textLayer.textDivs, mark.match, origin).map((box) => button(box, mark)),
+        boxes(textLayer.textDivs, mark.match, origin).map((box) => button(box, mark)),
       ),
     );
   }

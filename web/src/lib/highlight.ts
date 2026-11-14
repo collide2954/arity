@@ -179,6 +179,43 @@ export function byBlock(highlights: readonly Highlight[]): Map<string, Highlight
   return blocks;
 }
 
+export interface Box {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+function sameLine(a: Box, b: Box): boolean {
+  const overlap = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+  const gap = Math.max(a.x, b.x) - Math.min(a.x + a.width, b.x + b.width);
+  return overlap >= Math.min(a.height, b.height) / 2 && gap <= Math.max(a.height, b.height);
+}
+
+/**
+ * Joins the boxes of the text of a mark, in the order of the text, into one
+ * box for each line.
+ */
+export function lines(boxes: readonly Box[]): Box[] {
+  const result: Box[] = [];
+  for (const box of boxes) {
+    const last = result.at(-1);
+    if (!last || !sameLine(last, box)) {
+      result.push(box);
+      continue;
+    }
+    const x = Math.min(last.x, box.x);
+    const y = Math.min(last.y, box.y);
+    result[result.length - 1] = {
+      x,
+      y,
+      width: Math.max(last.x + last.width, box.x + box.width) - x,
+      height: Math.max(last.y + last.height, box.y + box.height) - y,
+    };
+  }
+  return result;
+}
+
 /** The mark of the main quote of a report, or else its first mark. */
 export function mainMark(container: HTMLElement, report: number): HTMLElement | null {
   const id = String(report);

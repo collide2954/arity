@@ -4,10 +4,12 @@ import type { Match } from "./anchor";
 import {
   byBlock,
   labelsOf,
+  lines,
   mainMark,
   place,
   quotedParts,
   segments,
+  type Box,
   type Highlight,
   type Quoted,
 } from "./highlight";
@@ -199,6 +201,39 @@ describe("place", () => {
         [3, 0],
       ]),
     );
+  });
+});
+
+describe("lines", () => {
+  const box = (x: number, y: number, width: number, height: number): Box => ({
+    x,
+    y,
+    width,
+    height,
+  });
+
+  it("joins the boxes of one line, also a box that is lower, as a subscript is", () => {
+    expect(lines([box(10, 100, 30, 16), box(43, 100, 20, 16), box(63, 108, 8, 10)])).toEqual([
+      box(10, 100, 61, 18),
+    ]);
+  });
+
+  it("joins a box with a box at the same place", () => {
+    expect(lines([box(10, 100, 30, 16), box(10, 99, 30, 18)])).toEqual([box(10, 99, 30, 18)]);
+  });
+
+  it("starts a new box on the next line", () => {
+    expect(lines([box(300, 100, 50, 16), box(40, 120, 60, 16)])).toEqual([
+      box(300, 100, 50, 16),
+      box(40, 120, 60, 16),
+    ]);
+  });
+
+  it("starts a new box after a gap that is wider than the height of the text", () => {
+    expect(lines([box(10, 100, 30, 16), box(80, 100, 20, 16)])).toEqual([
+      box(10, 100, 30, 16),
+      box(80, 100, 20, 16),
+    ]);
   });
 });
 

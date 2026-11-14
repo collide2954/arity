@@ -39,6 +39,40 @@ checks look for cue words in the quotes:
 When a quote has no cue word, the checks give a warning, and a person must
 check the report.
 
+## Coverage
+
+The checks make sure that each report is correct. Coverage shows what is left
+to read. `arity coverage PMC6274071` lists each number of the text that no
+report quotes:
+
+```text
+Table cells: 340 numbers. Reports quote 6, readers skipped 0, and 334 are left.
+Text with a unit or a sign: 127 numbers. Reports quote 6, readers skipped 0, and 121 are left.
+
+[t1/r3c5] 19.53 ± 1.05  (19.53, 1.05)
+```
+
+arity counts these numbers:
+
+- each number in a table cell or a cell of a data file, other than a header
+  cell,
+- each number in the other blocks that has a unit, a percent sign, or an
+  uncertainty after it, or a sign such as `=`, `<`, or `~` before it.
+
+arity does not count a number that is a part of a name or a code, for example
+`IC50`, `CO2`, `5o`, or `MCF-7`. A number is quoted when the quote of a report
+that no person rejected contains it. The page of each work on the website shows
+the same counts, and the text view marks each number that is left with a dotted
+line.
+
+A complete reading leaves no number. Record each value that the work measured,
+with the settings of its method as conditions, for example a temperature or a
+time of incubation. When the work states the same value two times, for example
+in the abstract and in a table, give both quotes as the evidence of one report.
+A value that the work cites from another work is not a report of this work:
+skip it, so that it does not count two times. See
+[Skipped quotes](submissions.md#skipped-quotes).
+
 ## After the checks
 
 A submission that passes is stored as a run, with its warnings. Its reports

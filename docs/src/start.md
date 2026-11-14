@@ -75,6 +75,13 @@ arity submit submission.json
 
 A dry run does the checks and stores nothing.
 
+```sh
+arity coverage PMC6274071
+```
+
+`coverage` lists each number of the text that no report quotes yet. See
+[Coverage](checks.md#coverage).
+
 ## Check a report
 
 ```sh

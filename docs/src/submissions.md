@@ -22,6 +22,7 @@ cannot add a judgement.
 | `entities` | The entities that the reports are about. |
 | `properties` | The properties that the reports use. |
 | `reports` | The value reports and the effect reports. |
+| `skipped` | The quotes with numbers that the reader does not report, each with the reason. |
 
 ## Entities
 
@@ -80,6 +81,27 @@ A condition has a `role` with an `entity` or a `text`, or a `property` with a
 
 Each item of evidence is a `block` key and a `quote`. When the quote occurs more
 than one time in the block, give `occurrence` (1 is the first).
+
+## Skipped quotes
+
+A submission can list quotes with numbers that the reader does not report, in
+`skipped`. Each item has a `block`, a `quote`, an optional `occurrence`, a
+`reason`, and a `note`:
+
+| Reason | Meaning |
+| --- | --- |
+| `cited` | The source states a value that another work reports. arity records that value from its own source, so that the value does not count two times. |
+| `other` | Another reason. The `note` must tell it. |
+
+```json
+"skipped": [
+  { "block": "s1/p2", "quote": "Ki = 4.5 and 45 nM, respectively) [15]", "reason": "cited" }
+]
+```
+
+The checks find each skipped quote in its block, like the quote of a report,
+and the quote must contain a number. Coverage counts skipped numbers apart
+from quoted numbers. A submission can hold only skipped quotes and no reports.
 
 ## An example
 

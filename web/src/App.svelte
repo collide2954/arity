@@ -26,7 +26,6 @@
     { page: "entities", label: "Entities" },
     { page: "effects", label: "Effects" },
     { page: "compare", label: "Compare" },
-    { page: "about", label: "About" },
   ] as const;
 
   function active(page: string): boolean {
@@ -40,37 +39,49 @@
   }
 </script>
 
-<header>
-  <nav aria-label="Main">
-    <a class="brand" href={link({ page: "home" })}>arity</a>
-    {#each sections as section (section.page)}
-      <a
-        href={link({ page: section.page })}
-        aria-current={active(section.page) ? "page" : undefined}>{section.label}</a
-      >
-    {/each}
-    <a href={docsLink()}>Docs</a>
-    <span class="checking">
+<header class="site">
+  <div class="bar">
+    <a class="brand" href={link({ page: "home" })} aria-label="arity, start page">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+        <rect width="24" height="24" rx="6" />
+        <circle cx="7" cy="15" r="2.2" />
+        <circle cx="12" cy="9" r="2.2" />
+        <circle cx="17" cy="12.5" r="2.2" />
+      </svg>
+      <span>arity</span>
+    </a>
+    <nav aria-label="Main">
+      {#each sections as section (section.page)}
+        <a
+          href={link({ page: section.page })}
+          aria-current={active(section.page) ? "page" : undefined}>{section.label}</a
+        >
+      {/each}
+    </nav>
+    <div class="tools">
       <QuickJump />
       {#if checking.on || checking.draft.marks.length > 0}
         <a
+          class="checks"
           href={link({ page: "checks" })}
           aria-current={route.page === "checks" ? "page" : undefined}
-          >Your checks ({checking.draft.marks.length})</a
+          >Your checks <span class="count">{checking.draft.marks.length}</span></a
         >
       {/if}
       <button
         type="button"
-        aria-pressed={checking.on}
+        class="switch"
+        role="switch"
+        aria-checked={checking.on}
         title="In check mode, you can confirm or reject reports."
         onclick={() => {
           setCheckMode(!checking.on);
-        }}>Check mode</button
+        }}><span class="track" aria-hidden="true"></span>Check mode</button
       >
-    </span>
-  </nav>
+      <a class="docs" href={docsLink()}>Docs</a>
+    </div>
+  </div>
 </header>
-
 <main>
   {#if route.page === "home"}
     <Home />
@@ -113,68 +124,233 @@
   {/if}
 </main>
 
-<footer>
-  <p>
-    arity reports what each source states. It does not rate, combine, or correct the data. Code
-    under the Apache License 2.0. Data under CC0 1.0. Each source keeps its own license.
-    <a href={docsLink()}>Read the documentation</a>.
-  </p>
+<footer class="site">
+  <div class="bar">
+    <p>
+      <strong>arity</strong> reports what each source states. It does not rate, combine, or correct the
+      data.
+    </p>
+    <nav aria-label="More">
+      <a href={docsLink()}>Documentation</a>
+      <a href={link({ page: "about" })}>About</a>
+      <a href="https://github.com/collide2954/arity">Source code</a>
+      <a href="https://github.com/collide2954/arity-data">Data</a>
+    </nav>
+    <p class="muted">
+      Code under the Apache License 2.0. Data under CC0 1.0. Each source keeps its own license.
+    </p>
+  </div>
 </footer>
 
 <style>
-  header {
-    background: var(--surface);
-    box-shadow: 0 1px 0 var(--line);
+  header.site {
     position: sticky;
     top: 0;
     z-index: 10;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: 1px solid var(--line);
   }
 
-  nav {
-    max-width: 1280px;
+  .bar {
+    max-width: var(--content);
     margin: 0 auto;
-    padding: 0.6rem 1rem;
+    padding: 0 var(--space-5);
+  }
+
+  header .bar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-    align-items: baseline;
-  }
-
-  nav a {
-    color: var(--secondary);
-    text-decoration: none;
-  }
-
-  nav a[aria-current="page"] {
-    color: var(--ink);
-    text-decoration: underline;
-    text-underline-offset: 0.3em;
+    align-items: center;
+    gap: var(--space-5);
+    min-height: var(--header);
   }
 
   .brand {
-    color: var(--ink);
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-right: 0.5rem;
-  }
-
-  .checking {
-    margin-left: auto;
     display: inline-flex;
-    gap: 1rem;
-    align-items: baseline;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ink);
+    font-weight: 750;
+    font-size: 1.15rem;
+    letter-spacing: -0.03em;
+    text-decoration: none;
   }
 
-  .checking button {
-    padding: 0.15rem 0.6rem;
-    font-size: 0.9rem;
+  .logo {
+    width: 1.5rem;
+    height: 1.5rem;
   }
 
-  footer {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 1rem 2rem;
-    color: var(--muted);
-    font-size: 0.85rem;
+  .logo rect {
+    fill: var(--accent);
+  }
+
+  .logo circle {
+    fill: var(--on-accent);
+  }
+
+  nav[aria-label="Main"] {
+    display: flex;
+    align-self: stretch;
+    gap: var(--space-1);
+  }
+
+  nav[aria-label="Main"] a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.7rem;
+    font-size: var(--text-sm);
+    font-weight: 550;
+    color: var(--secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  nav[aria-label="Main"] a:hover {
+    color: var(--ink);
+  }
+
+  nav[aria-label="Main"] a[aria-current="page"] {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+  }
+
+  .tools {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .checks,
+  .docs {
+    font-size: var(--text-sm);
+    font-weight: 550;
+    color: var(--secondary);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .checks:hover,
+  .docs:hover,
+  .checks[aria-current="page"] {
+    color: var(--ink);
+  }
+
+  .count {
+    display: inline-block;
+    min-width: 1.25rem;
+    padding: 0 0.35rem;
+    margin-left: 0.2rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: var(--text-xs);
+    text-align: center;
+  }
+
+  .switch {
+    gap: 0.5rem;
+    border: 0;
+    background: transparent;
+    padding: 0 0.25rem;
+    color: var(--secondary);
+    white-space: nowrap;
+  }
+
+  .switch:hover:not(:disabled) {
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .track {
+    position: relative;
+    width: 1.9rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
+    transition: background 150ms ease;
+  }
+
+  .track::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    transition: transform 150ms ease;
+  }
+
+  .switch[aria-checked="true"] .track {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .switch[aria-checked="true"] .track::after {
+    transform: translateX(0.8rem);
+  }
+
+  footer.site {
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    margin-top: var(--space-6);
+  }
+
+  footer .bar {
+    display: grid;
+    gap: var(--space-2);
+    padding-top: var(--space-5);
+    padding-bottom: var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--secondary);
+  }
+
+  footer p {
+    margin: 0;
+  }
+
+  footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  footer nav a {
+    color: var(--secondary);
+  }
+
+  @media (max-width: 1100px) {
+    header .bar {
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-4);
+      padding-top: var(--space-2);
+    }
+
+    nav[aria-label="Main"] {
+      order: 3;
+      width: 100%;
+      overflow-x: auto;
+      min-height: 2.5rem;
+    }
+
+    .tools {
+      margin-left: auto;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .bar {
+      padding: 0 16px;
+    }
+
+    .switch {
+      font-size: 0;
+    }
   }
 </style>

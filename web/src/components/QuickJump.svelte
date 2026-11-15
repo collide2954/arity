@@ -84,8 +84,15 @@
   type="button"
   class="opener"
   title="Find and open a work, a property, an entity, a report, or a page"
-  onclick={open}>Jump <kbd>Ctrl K</kbd></button
+  onclick={open}
 >
+  <svg class="icon" viewBox="0 0 20 20" aria-hidden="true">
+    <circle cx="8.5" cy="8.5" r="5.5" />
+    <path d="m12.8 12.8 4 4" />
+  </svg>
+  <span>Search or jump</span>
+  <kbd>Ctrl K</kbd>
+</button>
 
 <dialog bind:this={dialog} aria-label="Jump to a page">
   <input
@@ -128,16 +135,44 @@
 
 <style>
   .opener {
-    padding: 0.15rem 0.6rem;
-    font-size: 0.9rem;
-  }
-
-  kbd {
-    font-family: var(--mono);
-    font-size: 0.75rem;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    min-width: 15rem;
+    min-height: 2.1rem;
+    padding: 0 0.4rem 0 0.65rem;
+    background: var(--surface-2);
+    border-color: var(--line);
     color: var(--muted);
+    font-weight: 450;
   }
 
+  .opener:hover:not(:disabled) {
+    background: var(--surface-3);
+  }
+
+  .opener kbd {
+    margin-left: auto;
+  }
+
+  .icon {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  @media (max-width: 760px) {
+    .opener {
+      min-width: 0;
+    }
+
+    .opener span,
+    .opener kbd {
+      display: none;
+    }
+  }
   dialog {
     width: min(40rem, calc(100vw - 2rem));
     margin-top: 10vh;

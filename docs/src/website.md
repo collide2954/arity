@@ -41,6 +41,12 @@ number next to a value is the number of reports that you see when you also
 select that value. When you select one property, you can also give a range for
 the converted value.
 
+Select the triangle at the start of a row to see the quotes of the report, its
+conditions, its method, and the note of the reader, without leaving the page.
+The page of a report also lists the reports of other works about the same
+thing: for a value, the same property and a subject in common; for an effect,
+the same target and an agent in common.
+
 The search on the start page uses the same rules. It finds works, properties,
 entities, and reports, and it can open the Reports page with the same words.
 The page of a work has a box that filters its list of reports.

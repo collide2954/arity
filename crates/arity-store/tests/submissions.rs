@@ -467,6 +467,40 @@ fn shows_reports_with_their_evidence_checks_and_provenance() {
 }
 
 #[test]
+fn gives_each_report_only_the_entities_that_its_body_uses() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(
+        &store,
+        "PMC1",
+        "The IC50 of doxorubicin was 0.24 μM in MCF-7 cells. Doxorubicin decreased the growth of MCF-7 cells.",
+    );
+    let mut value = submission(&document, "0.24", "chemical");
+    value["entities"].as_array_mut().unwrap().push(json!({
+        "id": "mcf7", "kind": "cell_line", "label": "MCF-7",
+        "mentions": [{ "block": "s1/p1", "quote": "MCF-7" }]
+    }));
+    let reports = value["reports"].as_array_mut().unwrap();
+    reports.push(json!({
+        "type": "value", "id": "r2", "subject": ["dox"], "property": "ic50",
+        "value": { "number": "0.24", "unit": "umol/L", "unit_text": "μM" },
+        "conditions": [{ "role": "cell_line", "entity": "mcf7" }],
+        "evidence": [{ "block": "s1/p1", "quote": "IC50 of doxorubicin was 0.24 μM in MCF-7 cells" }]
+    }));
+    reports.push(json!({
+        "type": "effect", "id": "e1", "agents": [{ "entity": "dox" }],
+        "target": { "entity": "mcf7" }, "direction": "decrease",
+        "evidence": [{ "block": "s1/p1", "quote": "Doxorubicin decreased the growth of MCF-7 cells" }]
+    }));
+    store_one(&store, work, text, &document, &value).unwrap();
+
+    let views = store.report_views().unwrap();
+    let used = |index: usize| views[index].entities.keys().cloned().collect::<Vec<_>>();
+    assert_eq!(used(0), ["dox"]);
+    assert_eq!(used(1), ["dox", "mcf7"]);
+    assert_eq!(used(2), ["dox", "mcf7"]);
+}
+
+#[test]
 fn refuses_a_file_that_the_checks_did_not_read() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");

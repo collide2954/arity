@@ -1,14 +1,37 @@
 //! Read-only views of the database, in the form that the website shows.
 
 use std::collections::hash_map::Entry;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use arity_core::vocabulary::Direction;
 use arity_core::{Notice, WorkMetadata};
 use rusqlite::params;
 use serde::Serialize;
+use serde_json::Value;
 
 use crate::store::{Result, Store, StoreError, WorkId};
+
+/// The entity ids that a report body uses: its subjects, its agents, its
+/// target, and the entities of its conditions.
+fn used_entities(body: &Value) -> BTreeSet<&str> {
+    let mut used: BTreeSet<&str> = body["subject"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect();
+    for list in ["agents", "conditions"] {
+        used.extend(
+            body[list]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|item| item["entity"].as_str()),
+        );
+    }
+    used.extend(body["target"]["entity"].as_str());
+    used
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct EntityView {
@@ -66,7 +89,7 @@ pub struct ReportView {
     pub local_id: String,
     pub kind: String,
     /// The report exactly as the reader submitted it.
-    pub body: serde_json::Value,
+    pub body: Value,
     /// The stored entity for each entity id that the body uses.
     pub entities: BTreeMap<String, i64>,
     pub property: Option<String>,
@@ -97,7 +120,7 @@ pub struct RunView {
     pub submission_sha256: String,
     pub text_sha256: String,
     pub parser: String,
-    pub warnings: serde_json::Value,
+    pub warnings: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -349,10 +372,17 @@ impl Store {
         rows.into_iter()
             .map(
                 |(id, work, run, local_id, kind, body, property, coherent, direction, check)| {
-                    let entities = match entities_by_run.entry(run) {
-                        Entry::Occupied(entry) => entry.get().clone(),
-                        Entry::Vacant(entry) => entry.insert(self.run_entities(run)?).clone(),
+                    let body: Value = serde_json::from_str(&body)?;
+                    let of_run = match entities_by_run.entry(run) {
+                        Entry::Occupied(entry) => entry.into_mut(),
+                        Entry::Vacant(entry) => entry.insert(self.run_entities(run)?),
                     };
+                    let used = used_entities(&body);
+                    let entities = of_run
+                        .iter()
+                        .filter(|(local, _)| used.contains(local.as_str()))
+                        .map(|(local, entity)| (local.clone(), *entity))
+                        .collect();
                     let score = direction
                         .as_deref()
                         .map(str::parse::<Direction>)
@@ -365,7 +395,7 @@ impl Store {
                         run,
                         local_id,
                         kind,
-                        body: serde_json::from_str(&body)?,
+                        body,
                         entities,
                         property,
                         coherent,

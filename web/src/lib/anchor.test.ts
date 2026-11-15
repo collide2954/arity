@@ -86,4 +86,28 @@ describe("finder", () => {
   it("finds no place for a short quote that occurs more than one time when the text around it does not agree", () => {
     expect(finder([["H, F, and H"]])(quote("H", "R1 = ", " in 5c"))).toBeNull();
   });
+
+  it("prefers the place whose text does not lie on top of other text, such as a hidden copy", () => {
+    const texts = [["The result was clear.", "5a 12.3", "The result was clear."]];
+    const boxes = [
+      [
+        { x: 0, y: 100, width: 200, height: 10 },
+        { x: 10, y: 101, width: 60, height: 10 },
+        { x: 0, y: 50, width: 200, height: 10 },
+      ],
+    ];
+    expect(finder(texts)(quote("The result was clear."))?.start.item).toBe(0);
+    expect(finder(texts, boxes)(quote("The result was clear."))?.start.item).toBe(2);
+  });
+
+  it("takes the text that the PDF paints later as the text on top", () => {
+    const texts = [["The result was clear.", "The result was clear."]];
+    const boxes = [
+      [
+        { x: 0, y: 50, width: 200, height: 10 },
+        { x: 1, y: 52, width: 200, height: 10 },
+      ],
+    ];
+    expect(finder(texts, boxes)(quote("The result was clear."))?.start.item).toBe(1);
+  });
 });

@@ -2,7 +2,7 @@
   import * as pdfjs from "pdfjs-dist";
   import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-  import { finder, type Match } from "../lib/anchor";
+  import { finder, type Area, type Match } from "../lib/anchor";
   import {
     labelsOf,
     lines,
@@ -178,6 +178,15 @@
     return content.items.flatMap((item) => ("str" in item ? [item.str] : []));
   }
 
+  /** The box of each item, in the units of the PDF, in the order of `itemsOf`. */
+  function areasOf(content: TextContent): Area[] {
+    return content.items.flatMap((item) => {
+      if (!("str" in item)) return [];
+      const [, , c = 0, d = 0, x = 0, y = 0] = item.transform as number[];
+      return [{ x, y, width: item.width, height: item.height || Math.hypot(c, d) }];
+    });
+  }
+
   $effect(() => {
     const target = pages;
     const scroller = viewer;
@@ -219,7 +228,7 @@
       for (const entry of laid) observer.observe(entry.wrapper);
       const contents = await Promise.all(laid.map((entry) => entry.page.getTextContent()));
       if (cancelled) return;
-      const placed = place(parts, finder(contents.map(itemsOf)));
+      const placed = place(parts, finder(contents.map(itemsOf), contents.map(areasOf)));
       const show = (index: number): Promise<HTMLElement | null> => {
         const entry = laid[index];
         const content = contents[index];
@@ -395,7 +404,7 @@
     border: 0;
     padding: 0;
     border-radius: 2px;
-    background: var(--mark);
+    background: rgb(255 214 0 / 0.3);
     mix-blend-mode: multiply;
     cursor: pointer;
   }
@@ -403,8 +412,9 @@
   .pages :global(.mark:hover),
   .pages :global(.mark:focus-visible),
   .pages :global(.mark.selected) {
-    background: var(--mark-strong);
-    outline: 2px solid var(--accent);
+    background: rgb(255 176 0 / 0.42);
+    outline: 2px solid #2a78d6;
+    outline-offset: 1px;
   }
 
   .tip {

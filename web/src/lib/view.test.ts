@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   arrange,
   DEFAULT_VIEW,
+  ordered,
   readView,
   shownColumns,
   sortedBy,
@@ -78,6 +79,16 @@ describe("arrange", () => {
     const page = arrange(rows, COLUMNS, { ...DEFAULT_VIEW, sort: "size", size: 25 });
     expect(page.rows.map((row) => row.name)).toEqual(["c", "b", "a"]);
     expect(arrange(rows, COLUMNS, DEFAULT_VIEW).rows).toEqual(rows);
+  });
+});
+
+describe("ordered", () => {
+  it("gives all rows in the order of the view, without pages", () => {
+    const many = Array.from({ length: 60 }, (_, position) => ({ name: "x", size: position }));
+    const view: TableView = { ...DEFAULT_VIEW, sort: "size", order: "descending", page: 2 };
+    const sorted = ordered(many, COLUMNS, view);
+    expect(sorted).toHaveLength(60);
+    expect(sorted[0]?.size).toBe(59);
   });
 });
 

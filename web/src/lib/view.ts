@@ -66,14 +66,23 @@ export function sortedBy(view: TableView, column: string): TableView {
   return { ...view, sort: column, order: "ascending", page: 1 };
 }
 
+/** All rows, in the order of the view. */
+export function ordered<T>(
+  rows: readonly T[],
+  columns: readonly Column<T>[],
+  view: TableView,
+): readonly T[] {
+  const column = columns.find((candidate) => candidate.id === view.sort);
+  return column ? sortBy(rows, column.value, view.order) : rows;
+}
+
 /** The rows of the page of the view, in the order of the view. */
 export function arrange<T>(
   rows: readonly T[],
   columns: readonly Column<T>[],
   view: TableView,
 ): Page<T> {
-  const column = columns.find((candidate) => candidate.id === view.sort);
-  return pageOf(column ? sortBy(rows, column.value, view.order) : rows, view.page, view.size);
+  return pageOf(ordered(rows, columns, view), view.page, view.size);
 }
 
 /** The columns that the table shows: those of the view, or the default columns. */

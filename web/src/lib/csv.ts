@@ -11,9 +11,9 @@ export function toCsv(header: readonly string[], rows: readonly (readonly unknow
   return [header, ...rows].map((row) => row.map(field).join(",")).join("\r\n") + "\r\n";
 }
 
-/** Gives the browser a CSV file to save. */
-export function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+/** Gives the browser a file to save: a CSV file, or a file of the type that the caller gives. */
+export function download(name: string, text: string, type = "text/csv;charset=utf-8"): void {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = name;

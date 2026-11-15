@@ -123,6 +123,8 @@ pub struct RunView {
     pub text_sha256: String,
     pub parser: String,
     pub warnings: Value,
+    /// The note of the reader on the whole run, for example what it corrects.
+    pub note: Option<String>,
     /// The earlier run that this run corrects.
     pub replaces: Option<i64>,
     /// The later run that corrects this run.
@@ -248,7 +250,7 @@ impl Store {
         let mut statement = self.connection.prepare(
             "SELECT run.id, run.work_id, run.reader_id, run.responsible_id, run.software,
              run.submitted_at, run.submission_sha256, text.sha256, text.parser, run.warnings,
-             run.replaces, newer.id
+             json_extract(run.submission, '$.note'), run.replaces, newer.id
              FROM run JOIN text ON text.id = run.text_id
              LEFT JOIN run AS newer ON newer.replaces = run.id
              ORDER BY run.id",
@@ -266,8 +268,9 @@ impl Store {
                     row.get::<_, String>(7)?,
                     row.get::<_, String>(8)?,
                     row.get::<_, String>(9)?,
-                    row.get::<_, Option<i64>>(10)?,
+                    row.get::<_, Option<String>>(10)?,
                     row.get::<_, Option<i64>>(11)?,
+                    row.get::<_, Option<i64>>(12)?,
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -284,6 +287,7 @@ impl Store {
                     text,
                     parser,
                     warnings,
+                    note,
                     replaces,
                     replaced_by,
                 )| {
@@ -298,6 +302,7 @@ impl Store {
                         text_sha256: text,
                         parser,
                         warnings: serde_json::from_str(&warnings)?,
+                        note,
                         replaces,
                         replaced_by,
                     })

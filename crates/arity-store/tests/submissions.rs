@@ -496,6 +496,10 @@ fn stores_a_correction_that_replaces_an_earlier_run() {
     let new = runs.iter().find(|run| run.id == second.0).unwrap();
     assert_eq!((old.replaces, old.replaced_by), (None, Some(second.0)));
     assert_eq!((new.replaces, new.replaced_by), (Some(first.0), None));
+    assert_eq!(
+        (old.note.as_deref(), new.note.as_deref()),
+        (None, Some("The reader corrected the conditions."))
+    );
 
     let reports = store.report_views().unwrap();
     let replaced: Vec<_> = reports

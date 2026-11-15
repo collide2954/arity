@@ -192,11 +192,14 @@ fn push_markup(node: Node<'_, '_>, out: &mut String) -> bool {
     true
 }
 
-/// Writes a MathML `mfenced` with its brackets and its separators.
+/// Writes a MathML `mfenced` with its brackets, and with its separators when
+/// it names them. Sources often put each part of one expression in an
+/// `mfenced` that names no separators, so arity does not add the default
+/// comma.
 fn fenced(node: Node<'_, '_>) -> String {
     let separators: Vec<char> = node
         .attribute("separators")
-        .unwrap_or(",")
+        .unwrap_or_default()
         .chars()
         .filter(|c| !c.is_whitespace())
         .collect();
@@ -281,9 +284,15 @@ mod tests {
         );
         assert_eq!(
             math(
-                "<mml:msqrt><mml:mn>2</mml:mn></mml:msqrt><mml:mfenced open=\"[\" close=\"]\"><mml:mi>a</mml:mi><mml:mi>b</mml:mi></mml:mfenced>"
+                "<mml:msqrt><mml:mn>2</mml:mn></mml:msqrt><mml:mfenced open=\"[\" close=\"]\" separators=\",\"><mml:mi>a</mml:mi><mml:mi>b</mml:mi></mml:mfenced>"
             ),
             "√2[a,b]"
+        );
+        assert_eq!(
+            math(
+                "<mml:mfenced><mml:mi>n</mml:mi><mml:mo>+</mml:mo><mml:mi>k</mml:mi></mml:mfenced>"
+            ),
+            "(n+k)"
         );
         assert_eq!(
             math(

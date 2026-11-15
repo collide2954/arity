@@ -66,7 +66,7 @@ impl Reader<'_> {
                 '_' => out.push_str(&write(&self.argument(), Script::Subscript)),
                 '\\' => out.push_str(&self.command()),
                 '~' => out.push(' '),
-                '$' => {}
+                '$' | '&' => {}
                 c if c.is_whitespace() => {
                     if in_text {
                         out.push(' ');
@@ -162,7 +162,7 @@ impl Reader<'_> {
             };
             self.index += 1;
             return match c {
-                ',' | ';' | ':' | ' ' => " ".to_owned(),
+                ',' | ';' | ':' | ' ' | '\\' => " ".to_owned(),
                 '!' => String::new(),
                 other => other.to_string(),
             };
@@ -186,7 +186,15 @@ impl Reader<'_> {
             | "emph" => self.text_argument(),
             "left" | "right" | "big" | "Big" | "bigg" | "Bigg" | "bigl" | "bigr" | "Bigl"
             | "Bigr" => self.delimiter(),
-            "quad" | "qquad" => " ".to_owned(),
+            "begin" | "end" | "label" | "tag" | "hspace" | "vspace" | "phantom" | "hphantom"
+            | "vphantom" => {
+                self.argument();
+                String::new()
+            }
+            "hfill" | "nonumber" | "notag" | "displaystyle" | "textstyle" | "scriptstyle"
+            | "scriptscriptstyle" | "limits" | "nolimits" | "mathstrut" | "strut"
+            | "allowbreak" => String::new(),
+            "quad" | "qquad" | "newline" | "linebreak" | "enspace" | "thinspace" => " ".to_owned(),
             _ => symbol(&name).map_or(name, str::to_owned),
         }
     }
@@ -200,8 +208,8 @@ fn symbol(name: &str) -> Option<&'static str> {
 
 fn named(name: &str) -> Option<&'static str> {
     Some(match name {
-        "times" => "×",
-        "pm" => "±",
+        "times" | "texttimes" => "×",
+        "pm" | "textpm" => "±",
         "mp" => "∓",
         "cdot" => "·",
         "div" => "÷",
@@ -225,7 +233,10 @@ fn named(name: &str) -> Option<&'static str> {
         "leftrightarrow" => "↔",
         "rightleftharpoons" => "⇌",
         "ldots" | "cdots" | "dots" => "…",
-        "degree" => "°",
+        "degree" | "textdegree" => "°",
+        "celsius" => "°C",
+        "textmu" | "micro" => "μ",
+        "ohm" => "Ω",
         "circ" => "∘",
         "prime" => "′",
         "bullet" => "•",
@@ -314,6 +325,18 @@ mod tests {
         assert_eq!(formula("37\\,^{\\circ}\\text{C}"), "37 °C");
         assert_eq!(formula("\\Delta G \\leq 0"), "ΔG≤0");
         assert_eq!(formula("\\sin\\beta"), "sinβ");
+        assert_eq!(formula("37\\,\\textdegree C"), "37 °C");
+    }
+
+    #[test]
+    fn leaves_out_environments_alignment_and_layout() {
+        assert_eq!(
+            formula(
+                "\\begin{aligned} & = {\\text{ [mean}}\\;{\\text{ O}}.{\\mathrm{D}} \\hfill \\\\ & \\quad - {\\text{Mean}} \\hfill \\\\ \\end{aligned}"
+            ),
+            "= [mean O.D -Mean"
+        );
+        assert_eq!(formula("x = 1 \\label{eq1} \\nonumber"), "x=1");
     }
 
     #[test]

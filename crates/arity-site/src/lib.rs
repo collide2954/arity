@@ -16,7 +16,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use arity_core::License;
+use arity_core::{Digest, License};
 use arity_protocol::Coverage;
 use arity_store::views::{EntityView, PropertyView, ReportView, RunView, WorkView};
 use arity_store::{BlobError, Blobs, RetrievalRole, Store, StoreError, TextId, WorkId};
@@ -297,6 +297,30 @@ fn copy_pdf(store: &Store, blobs: &Blobs, out: &Path, work: &WorkView) -> Result
     Ok(Some(name))
 }
 
+/// The text that the newest current run of a work reads, so that the quotes
+/// of the current reports mark that text. A work without a current run shows
+/// its newest text.
+fn shown_text(
+    store: &Store,
+    work: &WorkView,
+    runs: &[RunView],
+) -> Result<Option<(TextId, Document)>> {
+    let newest = runs
+        .iter()
+        .filter(|run| run.work == work.id && run.replaced_by.is_none())
+        .max_by_key(|run| run.id);
+    if let Some(run) = newest {
+        let digest: Digest = run
+            .text_sha256
+            .parse()
+            .map_err(|_| StoreError::Corrupt(format!("digest {:?}", run.text_sha256)))?;
+        if let Some(text) = store.text_by_digest(&digest)? {
+            return Ok(Some((text, store.text(text)?.1)));
+        }
+    }
+    Ok(store.latest_text(WorkId(work.id))?)
+}
+
 fn write_work_pages(
     store: &Store,
     blobs: &Blobs,
@@ -307,13 +331,13 @@ fn write_work_pages(
 ) -> Result<usize> {
     let mut pdfs = 0;
     for work in works {
-        let latest = store.latest_text(WorkId(work.id))?;
-        let mut coverage = latest
+        let shown = shown_text(store, work, runs)?;
+        let mut coverage = shown
             .as_ref()
             .map(|(text, document)| coverage_of(store, *text, document))
             .transpose()?;
         let document = if shareable(work) {
-            latest.map(|(_, document)| document)
+            shown.map(|(_, document)| document)
         } else {
             if let Some(coverage) = coverage.as_mut() {
                 coverage.unquoted.clear();

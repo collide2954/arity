@@ -220,6 +220,34 @@ fn writes_the_current_reports_and_keeps_the_replaced_reports_apart() {
 }
 
 #[test]
+fn shows_the_text_that_the_current_runs_read() {
+    let folder = tempfile::tempdir().unwrap();
+    let blobs = Blobs::new(folder.path().join("blobs"));
+    let out = folder.path().join("site");
+    let store = Store::open_in_memory().unwrap();
+    let open = License::CreativeCommons {
+        elements: arity_core::CcElements::By,
+        version: Some("4.0".to_owned()),
+    };
+    let text = "The IC50 of doxorubicin was 240 ± 20 nM.";
+    let (work_id, _) = work(&store, &blobs, "PMC1", open, text);
+    let (retrieval, _) = store.retrievals(work_id).unwrap()[0].clone();
+    let newer = Document::new(
+        Digest::of(b"a newer file"),
+        "test 2",
+        vec![Block::new("s1/p1", BlockKind::Paragraph, "A newer text.")],
+    )
+    .unwrap();
+    store.add_text(work_id, retrieval, &newer, at()).unwrap();
+
+    export(&store, &blobs, &out, at()).unwrap();
+
+    let page = read(&out.join(format!("works/{}.json", work_id.0)));
+    assert_eq!(page["document"]["blocks"][0]["text"], text);
+    assert_eq!(page["coverage"]["text"]["quoted"], 2);
+}
+
+#[test]
 fn writes_the_entities_that_only_replaced_runs_name_apart() {
     let folder = tempfile::tempdir().unwrap();
     let blobs = Blobs::new(folder.path().join("blobs"));

@@ -1,160 +1,153 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Submission",
+  "description": "The reports that a reader takes from one source, with the evidence for\neach report. arity checks each submission against the canonical text of\nthe source before it stores the reports.",
+  "type": "object",
+  "properties": {
+    "format": {
+      "description": "Always \"arity-submission/1\".",
+      "type": "string"
+    },
+    "work": {
+      "description": "The work that the reader read: a PMCID, a DOI, or a PMID.",
+      "type": "string"
+    },
+    "text": {
+      "description": "The digest of the canonical text that `arity show` printed.",
+      "$ref": "#/$defs/Digest"
+    },
+    "reader": {
+      "description": "The person or software that read the source.",
+      "$ref": "#/$defs/Reader"
+    },
+    "responsible": {
+      "description": "The person who is responsible for the submission.",
+      "$ref": "#/$defs/Person"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EntityInput"
+      }
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PropertyInput"
+      }
+    },
+    "reports": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ReportInput"
+      }
+    },
+    "skipped": {
+      "description": "The numbers of the text that the reader does not report, each with\nthe reason.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SkipInput"
+      }
+    },
+    "note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "replaces": {
+      "description": "The sequence number of an earlier run of the same work that this\nsubmission corrects. arity keeps the earlier run, and shows only this\none.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "int64"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "work",
+    "text",
+    "reader",
+    "responsible"
+  ],
   "$defs": {
-    "AgentInput": {
-      "additionalProperties": false,
-      "properties": {
-        "dose": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ValueInput"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "entity": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "entity"
-      ],
-      "type": "object"
-    },
-    "AgentKind": {
-      "description": "The kind of the agent that reads a source.",
-      "enum": [
-        "person",
-        "software"
-      ],
-      "type": "string"
-    },
-    "Bound": {
-      "description": "A limit that a source states instead of an exact value, for example\n\"less than 0.1\".",
-      "enum": [
-        "lt",
-        "le",
-        "gt",
-        "ge",
-        "approx"
-      ],
-      "type": "string"
-    },
-    "Comparison": {
-      "description": "The comparison in a stated p-value, for example `p < 0.05`.",
-      "enum": [
-        "eq",
-        "lt",
-        "le",
-        "gt",
-        "ge"
-      ],
-      "type": "string"
-    },
-    "ConditionInput": {
-      "additionalProperties": false,
-      "description": "A condition of a report. Give `role` with `entity` or `text`, or give\n`property` with `value`.",
-      "properties": {
-        "entity": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "property": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "role": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Role"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "text": {
-          "description": "A condition that no entity describes, exactly as the source writes it.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "value": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ValueInput"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "type": "object"
-    },
-    "Curie": {
-      "description": "A compact identifier in a public registry, for example \"CHEBI:28748\".",
-      "type": "string"
-    },
-    "Decimal": {
-      "description": "A decimal number as text, exactly as the source writes it, for example \"3.20\" or \"1.5e-3\".",
-      "type": "string"
-    },
     "Digest": {
       "description": "A SHA-256 digest as 64 hexadecimal digits.",
       "type": "string"
     },
-    "Direction": {
-      "description": "The direction of a change, as the source states it.",
-      "oneOf": [
-        {
-          "enum": [
-            "increase",
-            "decrease"
-          ],
+    "Reader": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/AgentKind"
+        },
+        "name": {
+          "description": "The name of the person, or the name of the software.",
           "type": "string"
         },
-        {
-          "const": "no_change",
-          "description": "The source states that there is no change or no effect.",
-          "type": "string"
+        "version": {
+          "description": "The version of the software.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
-        {
-          "const": "mixed",
-          "description": "The source states that the change is not the same in all cases.",
-          "type": "string"
+        "orcid": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Orcid"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name"
       ]
     },
-    "EffectMeasure": {
-      "description": "The measure of the size of an effect.",
+    "AgentKind": {
+      "description": "The kind of the agent that reads a source.",
+      "type": "string",
       "enum": [
-        "fold_change",
-        "log2_fold_change",
-        "percent_change",
-        "difference",
-        "ratio",
-        "odds_ratio",
-        "risk_ratio",
-        "hazard_ratio",
-        "standardized_mean_difference",
-        "correlation",
-        "rank_correlation",
-        "coefficient_of_determination",
-        "regression_coefficient",
-        "other"
-      ],
+        "person",
+        "software"
+      ]
+    },
+    "Orcid": {
+      "description": "An ORCID identifier, for example \"0000-0002-1825-0097\".",
       "type": "string"
     },
-    "EntityInput": {
+    "Person": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "orcid": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Orcid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
       "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "EntityInput": {
       "description": "A thing that the reports are about.",
+      "type": "object",
       "properties": {
         "id": {
           "description": "An identifier for the entity in this submission, for example \"dox\".",
@@ -167,37 +160,38 @@
           "description": "The name of the entity.",
           "type": "string"
         },
+        "xrefs": {
+          "description": "Identifiers in public registries. arity links entities across works\nthrough these identifiers.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Curie"
+          }
+        },
         "mentions": {
           "description": "Places where the source names the entity.",
+          "type": "array",
           "items": {
             "$ref": "#/$defs/EvidenceInput"
-          },
-          "type": "array"
+          }
         },
         "note": {
           "type": [
             "string",
             "null"
           ]
-        },
-        "xrefs": {
-          "description": "Identifiers in public registries. arity links entities across works\nthrough these identifiers.",
-          "items": {
-            "$ref": "#/$defs/Curie"
-          },
-          "type": "array"
         }
       },
+      "additionalProperties": false,
       "required": [
         "id",
         "kind",
         "label",
         "mentions"
-      ],
-      "type": "object"
+      ]
     },
     "EntityKind": {
       "description": "The kind of a thing that a report is about.",
+      "type": "string",
       "enum": [
         "chemical",
         "material",
@@ -217,40 +211,487 @@
         "population",
         "procedure",
         "other"
-      ],
+      ]
+    },
+    "Curie": {
+      "description": "A compact identifier in a public registry, for example \"CHEBI:28748\".",
       "type": "string"
     },
     "EvidenceInput": {
-      "additionalProperties": false,
       "description": "A place in the canonical text that supports a report.",
+      "type": "object",
       "properties": {
         "block": {
           "description": "The key of a block, as `arity show` prints it, for example \"t1/r3c5\".",
           "type": "string"
         },
-        "occurrence": {
-          "description": "When the quote occurs more than once in the block: the occurrence to\nuse. 1 is the first.",
-          "format": "uint32",
-          "minimum": 0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
         "quote": {
           "description": "The exact text from the block.",
           "type": "string"
+        },
+        "occurrence": {
+          "description": "When the quote occurs more than once in the block: the occurrence to\nuse. 1 is the first.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
         }
       },
+      "additionalProperties": false,
       "required": [
         "block",
         "quote"
-      ],
-      "type": "object"
+      ]
+    },
+    "PropertyInput": {
+      "description": "A property that values report, for example the half maximal inhibitory\nconcentration. arity keeps one definition for each key.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The key: lower-case letters, digits, and underscores, for example\n\"ic50\".",
+          "type": "string"
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValueType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "description": "For a quantity: a UCUM unit that sets the dimension. arity shows the\nvalues in this unit.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "categories": {
+          "description": "For a category: the values that the property can take.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "xrefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Curie"
+          }
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ]
+    },
+    "ValueType": {
+      "description": "The kind of value that a property takes.",
+      "type": "string",
+      "enum": [
+        "quantity",
+        "boolean",
+        "category"
+      ]
+    },
+    "ReportInput": {
+      "description": "One report: a value or an effect that the source states.",
+      "oneOf": [
+        {
+          "description": "The value of a property of one entity, or of a combination of entities.",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "value"
+            },
+            "id": {
+              "type": "string"
+            },
+            "subject": {
+              "description": "The entity, or the entities of a combination.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "property": {
+              "description": "The key of the property.",
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/ValueInput"
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ConditionInput"
+              }
+            },
+            "method": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MethodInput"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EvidenceInput"
+              }
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "subject",
+            "property",
+            "value",
+            "evidence"
+          ]
+        },
+        {
+          "description": "An effect of one or more agents on a target, or an association between\nthem, as the source states it. A statement of no effect has the\ndirection \"`no_change`\".",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "effect"
+            },
+            "id": {
+              "type": "string"
+            },
+            "agents": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/AgentInput"
+              }
+            },
+            "target": {
+              "$ref": "#/$defs/TargetInput"
+            },
+            "direction": {
+              "$ref": "#/$defs/Direction"
+            },
+            "relation": {
+              "$ref": "#/$defs/Relation"
+            },
+            "magnitude": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MagnitudeInput"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "comparator": {
+              "description": "What the source compares with, exactly as it writes it, for example\n\"untreated cells\".",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "significance": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SignificanceInput"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "n": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0
+            },
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ConditionInput"
+              }
+            },
+            "method": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MethodInput"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EvidenceInput"
+              }
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "id",
+            "agents",
+            "target",
+            "direction",
+            "evidence"
+          ]
+        }
+      ]
+    },
+    "ValueInput": {
+      "description": "A value as the source states it. Give one of: `number`, `low` with\n`high`, `boolean`, or `category`.",
+      "type": "object",
+      "properties": {
+        "number": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "low": {
+          "description": "The lower end of a value that the source states as a range.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "high": {
+          "description": "The upper end of a value that the source states as a range.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unit": {
+          "description": "The UCUM code of the unit, for example \"umol/L\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unit_text": {
+          "description": "The unit exactly as the source writes it, for example \"μM\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bound": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bound"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uncertainty": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UncertaintyInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "statistic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Statistic"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "n": {
+          "description": "The number of samples, as the source states it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "boolean": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "category": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "read_from_figure": {
+          "description": "Give this only when the reader reads the value from a plot.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FigureReadingInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Decimal": {
+      "description": "A decimal number as text, exactly as the source writes it, for example \"3.20\" or \"1.5e-3\".",
+      "type": "string"
+    },
+    "Bound": {
+      "description": "A limit that a source states instead of an exact value, for example\n\"less than 0.1\".",
+      "type": "string",
+      "enum": [
+        "lt",
+        "le",
+        "gt",
+        "ge",
+        "approx"
+      ]
+    },
+    "UncertaintyInput": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/UncertaintyKind"
+        },
+        "number": {
+          "description": "The half width, for example 0.4 in \"3.2 ± 0.4\".",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "low": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "high": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "level": {
+          "description": "For a confidence interval: the level in percent, for example 95.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ]
+    },
+    "UncertaintyKind": {
+      "description": "The kind of uncertainty that a source gives with a value.",
+      "type": "string",
+      "enum": [
+        "sd",
+        "sem",
+        "ci",
+        "range",
+        "iqr",
+        "other"
+      ]
+    },
+    "Statistic": {
+      "description": "The statistic that a value is.",
+      "type": "string",
+      "enum": [
+        "mean",
+        "median",
+        "geometric_mean",
+        "mode",
+        "single",
+        "minimum",
+        "maximum",
+        "other"
+      ]
     },
     "FigureReadingInput": {
-      "additionalProperties": false,
       "description": "How the reader read a value from a plot. The value is the reader's\nmeasurement, and the website shows it with a \"read from figure\" label.",
+      "type": "object",
       "properties": {
         "figure": {
           "description": "The key of the caption block of the figure, for example \"f3/caption\".",
@@ -261,30 +702,176 @@
           "type": "string"
         },
         "resolution": {
-          "$ref": "#/$defs/Decimal",
-          "description": "The smallest difference that the reading can show, in the unit of\nthe value."
+          "description": "The smallest difference that the reading can show, in the unit of\nthe value.",
+          "$ref": "#/$defs/Decimal"
         }
       },
+      "additionalProperties": false,
       "required": [
         "figure",
         "method",
         "resolution"
-      ],
-      "type": "object"
+      ]
     },
-    "MagnitudeInput": {
-      "additionalProperties": false,
+    "ConditionInput": {
+      "description": "A condition of a report. Give `role` with `entity` or `text`, or give\n`property` with `value`.",
+      "type": "object",
       "properties": {
-        "interval": {
+        "role": {
           "anyOf": [
             {
-              "$ref": "#/$defs/UncertaintyInput"
+              "$ref": "#/$defs/Role"
             },
             {
               "type": "null"
             }
           ]
         },
+        "entity": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "description": "A condition that no entity describes, exactly as the source writes it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "property": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValueInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Role": {
+      "description": "The part that an entity has in the conditions of a report.",
+      "type": "string",
+      "enum": [
+        "organism",
+        "cell_line",
+        "cell_type",
+        "anatomical_site",
+        "sample",
+        "target",
+        "solvent",
+        "medium",
+        "co_treatment",
+        "comparator",
+        "population",
+        "device",
+        "environment",
+        "other"
+      ]
+    },
+    "MethodInput": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "The name of the method, for example \"MTT assay\".",
+          "type": "string"
+        },
+        "xrefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Curie"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "label"
+      ]
+    },
+    "AgentInput": {
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string"
+        },
+        "dose": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ValueInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "entity"
+      ]
+    },
+    "TargetInput": {
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string"
+        },
+        "property": {
+          "description": "The key of the property of the target that changes.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "entity"
+      ]
+    },
+    "Direction": {
+      "description": "The direction of a change, as the source states it.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "increase",
+            "decrease"
+          ]
+        },
+        {
+          "description": "The source states that there is no change or no effect.",
+          "type": "string",
+          "const": "no_change"
+        },
+        {
+          "description": "The source states that the change is not the same in all cases.",
+          "type": "string",
+          "const": "mixed"
+        }
+      ]
+    },
+    "Relation": {
+      "description": "What a source says about two things: that one changes the other, or\nthat the two vary together.",
+      "type": "string",
+      "enum": [
+        "effect",
+        "association"
+      ]
+    },
+    "MagnitudeInput": {
+      "type": "object",
+      "properties": {
         "measure": {
           "$ref": "#/$defs/EffectMeasure"
         },
@@ -303,349 +890,57 @@
             "string",
             "null"
           ]
+        },
+        "interval": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UncertaintyInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
+      "additionalProperties": false,
       "required": [
         "measure",
         "number"
-      ],
-      "type": "object"
-    },
-    "MethodInput": {
-      "additionalProperties": false,
-      "properties": {
-        "label": {
-          "description": "The name of the method, for example \"MTT assay\".",
-          "type": "string"
-        },
-        "xrefs": {
-          "items": {
-            "$ref": "#/$defs/Curie"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "label"
-      ],
-      "type": "object"
-    },
-    "Orcid": {
-      "description": "An ORCID identifier, for example \"0000-0002-1825-0097\".",
-      "type": "string"
-    },
-    "Person": {
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "orcid": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Orcid"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "type": "object"
-    },
-    "PropertyInput": {
-      "additionalProperties": false,
-      "description": "A property that values report, for example the half maximal inhibitory\nconcentration. arity keeps one definition for each key.",
-      "properties": {
-        "categories": {
-          "description": "For a category: the values that the property can take.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "description": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "id": {
-          "description": "The key: lower-case letters, digits, and underscores, for example\n\"ic50\".",
-          "type": "string"
-        },
-        "label": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "unit": {
-          "description": "For a quantity: a UCUM unit that sets the dimension. arity shows the\nvalues in this unit.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "value_type": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ValueType"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "xrefs": {
-          "items": {
-            "$ref": "#/$defs/Curie"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "Reader": {
-      "additionalProperties": false,
-      "properties": {
-        "kind": {
-          "$ref": "#/$defs/AgentKind"
-        },
-        "name": {
-          "description": "The name of the person, or the name of the software.",
-          "type": "string"
-        },
-        "orcid": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Orcid"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "version": {
-          "description": "The version of the software.",
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "kind",
-        "name"
-      ],
-      "type": "object"
-    },
-    "Relation": {
-      "description": "What a source says about two things: that one changes the other, or\nthat the two vary together.",
-      "enum": [
-        "effect",
-        "association"
-      ],
-      "type": "string"
-    },
-    "ReportInput": {
-      "description": "One report: a value or an effect that the source states.",
-      "oneOf": [
-        {
-          "additionalProperties": false,
-          "description": "The value of a property of one entity, or of a combination of entities.",
-          "properties": {
-            "conditions": {
-              "items": {
-                "$ref": "#/$defs/ConditionInput"
-              },
-              "type": "array"
-            },
-            "evidence": {
-              "items": {
-                "$ref": "#/$defs/EvidenceInput"
-              },
-              "type": "array"
-            },
-            "id": {
-              "type": "string"
-            },
-            "method": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/MethodInput"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "note": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "property": {
-              "description": "The key of the property.",
-              "type": "string"
-            },
-            "subject": {
-              "description": "The entity, or the entities of a combination.",
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "type": {
-              "const": "value",
-              "type": "string"
-            },
-            "value": {
-              "$ref": "#/$defs/ValueInput"
-            }
-          },
-          "required": [
-            "type",
-            "id",
-            "subject",
-            "property",
-            "value",
-            "evidence"
-          ],
-          "type": "object"
-        },
-        {
-          "additionalProperties": false,
-          "description": "An effect of one or more agents on a target, or an association between\nthem, as the source states it. A statement of no effect has the\ndirection \"`no_change`\".",
-          "properties": {
-            "agents": {
-              "items": {
-                "$ref": "#/$defs/AgentInput"
-              },
-              "type": "array"
-            },
-            "comparator": {
-              "description": "What the source compares with, exactly as it writes it, for example\n\"untreated cells\".",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "conditions": {
-              "items": {
-                "$ref": "#/$defs/ConditionInput"
-              },
-              "type": "array"
-            },
-            "direction": {
-              "$ref": "#/$defs/Direction"
-            },
-            "evidence": {
-              "items": {
-                "$ref": "#/$defs/EvidenceInput"
-              },
-              "type": "array"
-            },
-            "id": {
-              "type": "string"
-            },
-            "magnitude": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/MagnitudeInput"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "method": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/MethodInput"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "n": {
-              "format": "uint32",
-              "minimum": 0,
-              "type": [
-                "integer",
-                "null"
-              ]
-            },
-            "note": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "relation": {
-              "$ref": "#/$defs/Relation"
-            },
-            "significance": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/SignificanceInput"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "target": {
-              "$ref": "#/$defs/TargetInput"
-            },
-            "type": {
-              "const": "effect",
-              "type": "string"
-            }
-          },
-          "required": [
-            "type",
-            "id",
-            "agents",
-            "target",
-            "direction",
-            "evidence"
-          ],
-          "type": "object"
-        }
       ]
     },
-    "Role": {
-      "description": "The part that an entity has in the conditions of a report.",
+    "EffectMeasure": {
+      "description": "The measure of the size of an effect.",
+      "type": "string",
       "enum": [
-        "organism",
-        "cell_line",
-        "cell_type",
-        "anatomical_site",
-        "sample",
-        "target",
-        "solvent",
-        "medium",
-        "co_treatment",
-        "comparator",
-        "population",
-        "device",
-        "environment",
+        "fold_change",
+        "log2_fold_change",
+        "percent_change",
+        "difference",
+        "ratio",
+        "odds_ratio",
+        "risk_ratio",
+        "hazard_ratio",
+        "standardized_mean_difference",
+        "correlation",
+        "rank_correlation",
+        "coefficient_of_determination",
+        "regression_coefficient",
         "other"
-      ],
-      "type": "string"
+      ]
     },
     "SignificanceInput": {
-      "additionalProperties": false,
+      "type": "object",
       "properties": {
+        "statement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SignificanceStatement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "comparison": {
           "anyOf": [
             {
@@ -666,16 +961,6 @@
             }
           ]
         },
-        "statement": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SignificanceStatement"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "test": {
           "description": "The name of the statistical test, as the source writes it.",
           "type": [
@@ -684,23 +969,50 @@
           ]
         }
       },
-      "type": "object"
+      "additionalProperties": false
     },
     "SignificanceStatement": {
       "description": "A statement of statistical significance, as the source makes it.",
+      "type": "string",
       "enum": [
         "significant",
         "not_significant"
-      ],
-      "type": "string"
+      ]
+    },
+    "Comparison": {
+      "description": "The comparison in a stated p-value, for example `p < 0.05`.",
+      "type": "string",
+      "enum": [
+        "eq",
+        "lt",
+        "le",
+        "gt",
+        "ge"
+      ]
     },
     "SkipInput": {
-      "additionalProperties": false,
       "description": "A quote with numbers that the reader does not report.",
+      "type": "object",
       "properties": {
         "block": {
           "description": "The key of a block, as `arity show` prints it.",
           "type": "string"
+        },
+        "quote": {
+          "description": "The exact text from the block. It contains the numbers that the reader\nskips.",
+          "type": "string"
+        },
+        "occurrence": {
+          "description": "When the quote occurs more than once in the block: the occurrence to\nuse. 1 is the first.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "reason": {
+          "$ref": "#/$defs/SkipReason"
         },
         "note": {
           "description": "Required for the reason `other`.",
@@ -708,346 +1020,34 @@
             "string",
             "null"
           ]
-        },
-        "occurrence": {
-          "description": "When the quote occurs more than once in the block: the occurrence to\nuse. 1 is the first.",
-          "format": "uint32",
-          "minimum": 0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "quote": {
-          "description": "The exact text from the block. It contains the numbers that the reader\nskips.",
-          "type": "string"
-        },
-        "reason": {
-          "$ref": "#/$defs/SkipReason"
         }
       },
+      "additionalProperties": false,
       "required": [
         "block",
         "quote",
         "reason"
-      ],
-      "type": "object"
+      ]
     },
     "SkipReason": {
       "description": "Why a reader does not report a number of the text.",
       "oneOf": [
         {
-          "const": "cited",
           "description": "The source states a value that another work reports. arity records\nthat value from its own source, so that the value does not count\ntwo times.",
-          "type": "string"
+          "type": "string",
+          "const": "cited"
         },
         {
-          "const": "restated",
           "description": "The source states again a value that it states in another place,\nfor example in the abstract, and a report quotes that place.",
-          "type": "string"
+          "type": "string",
+          "const": "restated"
         },
         {
-          "const": "other",
           "description": "Another reason. The note of the skipped quote tells it.",
-          "type": "string"
+          "type": "string",
+          "const": "other"
         }
       ]
-    },
-    "Statistic": {
-      "description": "The statistic that a value is.",
-      "enum": [
-        "mean",
-        "median",
-        "geometric_mean",
-        "mode",
-        "single",
-        "minimum",
-        "maximum",
-        "other"
-      ],
-      "type": "string"
-    },
-    "TargetInput": {
-      "additionalProperties": false,
-      "properties": {
-        "entity": {
-          "type": "string"
-        },
-        "property": {
-          "description": "The key of the property of the target that changes.",
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "entity"
-      ],
-      "type": "object"
-    },
-    "UncertaintyInput": {
-      "additionalProperties": false,
-      "properties": {
-        "high": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "kind": {
-          "$ref": "#/$defs/UncertaintyKind"
-        },
-        "level": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "For a confidence interval: the level in percent, for example 95."
-        },
-        "low": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "number": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The half width, for example 0.4 in \"3.2 ± 0.4\"."
-        }
-      },
-      "required": [
-        "kind"
-      ],
-      "type": "object"
-    },
-    "UncertaintyKind": {
-      "description": "The kind of uncertainty that a source gives with a value.",
-      "enum": [
-        "sd",
-        "sem",
-        "ci",
-        "range",
-        "iqr",
-        "other"
-      ],
-      "type": "string"
-    },
-    "ValueInput": {
-      "additionalProperties": false,
-      "description": "A value as the source states it. Give one of: `number`, `low` with\n`high`, `boolean`, or `category`.",
-      "properties": {
-        "boolean": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "bound": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Bound"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "category": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "high": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The upper end of a value that the source states as a range."
-        },
-        "low": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "The lower end of a value that the source states as a range."
-        },
-        "n": {
-          "description": "The number of samples, as the source states it.",
-          "format": "uint32",
-          "minimum": 0,
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "number": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Decimal"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "read_from_figure": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/FigureReadingInput"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "Give this only when the reader reads the value from a plot."
-        },
-        "statistic": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Statistic"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "uncertainty": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/UncertaintyInput"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "unit": {
-          "description": "The UCUM code of the unit, for example \"umol/L\".",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "unit_text": {
-          "description": "The unit exactly as the source writes it, for example \"μM\".",
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "type": "object"
-    },
-    "ValueType": {
-      "description": "The kind of value that a property takes.",
-      "enum": [
-        "quantity",
-        "boolean",
-        "category"
-      ],
-      "type": "string"
     }
-  },
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "additionalProperties": false,
-  "description": "The reports that a reader takes from one source, with the evidence for\neach report. arity checks each submission against the canonical text of\nthe source before it stores the reports.",
-  "properties": {
-    "entities": {
-      "items": {
-        "$ref": "#/$defs/EntityInput"
-      },
-      "type": "array"
-    },
-    "format": {
-      "description": "Always \"arity-submission/1\".",
-      "type": "string"
-    },
-    "note": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "properties": {
-      "items": {
-        "$ref": "#/$defs/PropertyInput"
-      },
-      "type": "array"
-    },
-    "reader": {
-      "$ref": "#/$defs/Reader",
-      "description": "The person or software that read the source."
-    },
-    "replaces": {
-      "description": "The sequence number of an earlier run of the same work that this\nsubmission corrects. arity keeps the earlier run, and shows only this\none.",
-      "format": "int64",
-      "type": [
-        "integer",
-        "null"
-      ]
-    },
-    "reports": {
-      "items": {
-        "$ref": "#/$defs/ReportInput"
-      },
-      "type": "array"
-    },
-    "responsible": {
-      "$ref": "#/$defs/Person",
-      "description": "The person who is responsible for the submission."
-    },
-    "skipped": {
-      "description": "The numbers of the text that the reader does not report, each with\nthe reason.",
-      "items": {
-        "$ref": "#/$defs/SkipInput"
-      },
-      "type": "array"
-    },
-    "text": {
-      "$ref": "#/$defs/Digest",
-      "description": "The digest of the canonical text that `arity show` printed."
-    },
-    "work": {
-      "description": "The work that the reader read: a PMCID, a DOI, or a PMID.",
-      "type": "string"
-    }
-  },
-  "required": [
-    "format",
-    "work",
-    "text",
-    "reader",
-    "responsible"
-  ],
-  "title": "Submission",
-  "type": "object"
+  }
 }

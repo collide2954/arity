@@ -1,11 +1,13 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import CheckBadge from "../components/CheckBadge.svelte";
   import CheckControls from "../components/CheckControls.svelte";
+  import ConditionList from "../components/ConditionList.svelte";
   import Notices from "../components/Notices.svelte";
   import ReportCell from "../components/ReportCell.svelte";
   import { checking } from "../lib/checking.svelte";
   import { loadIndex, loadReports, loadWork } from "../lib/data";
-  import { conditions, entityName, headline, names, propertyName } from "../lib/describe";
+  import { conditionParts, entityName, headline, names, propertyName } from "../lib/describe";
   import {
     directionLabel,
     formatNumber,
@@ -140,9 +142,9 @@
           {#if body.n !== undefined}<dt>Number of samples</dt>
             <dd>{body.n}</dd>{/if}
         {/if}
-        {#if conditions(report, lookup).length > 0}
+        {#if conditionParts(report, lookup).length > 0}
           <dt>Conditions</dt>
-          <dd>{conditions(report, lookup).join(" · ")}</dd>
+          <dd><ConditionList parts={conditionParts(report, lookup)} /></dd>
         {/if}
         {#if body.method}<dt>Method</dt>
           <dd>{body.method.label}</dd>{/if}
@@ -154,7 +156,9 @@
     <section>
       <h2>Evidence</h2>
       <p class="secondary">
-        The checks of arity found each quote at this place in the canonical text of the source.
+        The checks of arity found each quote at this place in the canonical text of the source. <a
+          href={docsLink("checks")}>What arity checks</a
+        >.
       </p>
       <ol class="evidence">
         {#each report.evidence as evidence, position (position)}
@@ -230,6 +234,9 @@
       <Notices notices={page.work.notices} />
       <section>
         <h2>Provenance</h2>
+        <p class="secondary">
+          <a href={docsLink("provenance")}>What arity records about each step</a>.
+        </p>
         <dl class="card">
           <dt>Source</dt>
           <dd>
@@ -273,7 +280,7 @@
           {/if}
         </dl>
       </section>
-      <details>
+      <details class="submitted">
         <summary>The report as the reader submitted it</summary>
         <pre class="mono">{JSON.stringify(report.body, null, 2)}</pre>
       </details>
@@ -307,6 +314,15 @@
 
   .evidence li {
     margin-bottom: 0.75rem;
+  }
+
+  .submitted {
+    margin-top: 1.75rem;
+  }
+
+  .submitted summary {
+    cursor: pointer;
+    font-weight: 600;
   }
 
   pre {

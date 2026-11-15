@@ -1,5 +1,5 @@
 import { DIRECTIONS } from "./charts";
-import { conditions, entityName, headline, names, propertyName, type Names } from "./describe";
+import { conditions, entityName, names, propertyName, type Names } from "./describe";
 import type { Item } from "./filter";
 import { directionLabel, reportedValue, scoreLabel, unitLabel } from "./format";
 import { noticeLabel } from "./notices";
@@ -83,7 +83,27 @@ function effectStatement(report: Report, body: EffectBody, lookup: Names): State
   };
 }
 
-function reportRow(report: Report, lookup: Names, work: WorkSummary | undefined): ReportRow {
+/** Gives the search form of a text, and keeps it for the next request of the same text. */
+type SearchForms = (text: string) => string;
+
+function searchForms(): SearchForms {
+  const known = new Map<string, string>();
+  return (text) => {
+    let form = known.get(text);
+    if (form === undefined) {
+      form = searchForm(text);
+      known.set(text, form);
+    }
+    return form;
+  };
+}
+
+function reportRow(
+  report: Report,
+  lookup: Names,
+  work: WorkSummary | undefined,
+  formOf: SearchForms,
+): ReportRow {
   const body = report.body;
   const statement =
     body.type === "value"
@@ -96,25 +116,24 @@ function reportRow(report: Report, lookup: Names, work: WorkSummary | undefined)
   const citation = work?.citation ?? `work ${String(report.work)}`;
   const quotes = report.evidence.map((evidence) => evidence.quote);
   const converted = report.display?.value ?? null;
-  const text = searchForm(
-    [
-      headline(report, lookup),
-      report.property ?? "",
-      statement.about,
-      statement.subject,
-      statement.reported,
-      ...entities.flatMap((entity) => [entity.label, ...entity.names, ...entity.xrefs]),
-      ...context,
-      body.method?.label ?? "",
-      body.note ?? "",
-      citation,
-      work?.title ?? "",
-      work?.pmcid ?? "",
-      work?.doi ?? "",
-      report.local_id,
-      ...quotes,
-    ].join(" "),
-  );
+  const text = [
+    report.property,
+    statement.about,
+    statement.subject,
+    statement.reported,
+    ...entities.flatMap((entity) => [entity.label, ...entity.names, ...entity.xrefs]),
+    ...context,
+    body.method?.label,
+    body.note,
+    citation,
+    work?.title,
+    work?.pmcid,
+    work?.doi,
+    report.local_id,
+    ...quotes,
+  ]
+    .flatMap((part) => (part ? [formOf(part)] : []))
+    .join(" ");
   return {
     report,
     ...statement,
@@ -147,7 +166,8 @@ function reportRow(report: Report, lookup: Names, work: WorkSummary | undefined)
 export function reportRows(index: Index, reports: readonly Report[]): ReportRow[] {
   const lookup = names(index);
   const works = new Map(index.works.map((work) => [work.id, work]));
-  return reports.map((report) => reportRow(report, lookup, works.get(report.work)));
+  const formOf = searchForms();
+  return reports.map((report) => reportRow(report, lookup, works.get(report.work), formOf));
 }
 
 const KINDS: Readonly<Record<string, string>> = { value: "Value", effect: "Effect" };

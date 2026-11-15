@@ -2,6 +2,7 @@
   import CheckBadge from "../components/CheckBadge.svelte";
   import CheckControls from "../components/CheckControls.svelte";
   import Notices from "../components/Notices.svelte";
+  import ReportCell from "../components/ReportCell.svelte";
   import { checking } from "../lib/checking.svelte";
   import { loadIndex, loadReports, loadWork } from "../lib/data";
   import { conditions, entityName, headline, names, propertyName } from "../lib/describe";
@@ -15,9 +16,15 @@
     uncertaintyLabel,
     unitLabel,
   } from "../lib/format";
+  import { relatedReports } from "../lib/related";
+  import { REPORT_COLUMNS, reportRows } from "../lib/reports";
   import { link } from "../lib/route";
 
   let { id }: { id: number } = $props();
+
+  const RELATED = ["subject", "reported", "converted", "conditions", "source", "check"].flatMap(
+    (key) => REPORT_COLUMNS.filter((column) => column.id === key),
+  );
 
   const data = Promise.all([loadIndex(), loadReports()]);
 </script>
@@ -160,6 +167,43 @@
           </li>
         {/each}
       </ol>
+    </section>
+
+    {@const related = reportRows(index, relatedReports(report, reports))}
+    <section>
+      <h2>The same in other works ({related.length})</h2>
+      {#if related.length === 0}
+        <p class="muted">
+          No other work reports {body.type === "value"
+            ? "this property for this subject"
+            : "an effect of these agents on this target"}.
+        </p>
+      {:else}
+        <p class="secondary">
+          {body.type === "value"
+            ? "Reports of other works with the same property and a subject in common."
+            : "Effects that other works report, with the same target and an agent in common."}
+          arity does not combine them.
+        </p>
+        <div class="table-wrap card">
+          <table>
+            <thead>
+              <tr>
+                {#each RELATED as column (column.id)}<th scope="col">{column.label}</th>{/each}
+              </tr>
+            </thead>
+            <tbody>
+              {#each related as row (row.report.id)}
+                <tr>
+                  {#each RELATED as column (column.id)}
+                    <td><ReportCell {row} {column} /></td>
+                  {/each}
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
     </section>
 
     <section>

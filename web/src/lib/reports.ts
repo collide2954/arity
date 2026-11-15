@@ -1,4 +1,5 @@
 import { DIRECTIONS } from "./charts";
+import { toCsv } from "./csv";
 import { conditions, entityName, names, propertyName, type Names } from "./describe";
 import type { Item } from "./filter";
 import { directionLabel, reportedValue, scoreLabel, unitLabel } from "./format";
@@ -222,6 +223,18 @@ export const REPORT_COLUMNS: readonly Column<ReportRow>[] = [
   { id: "subject", label: "Subject", value: (row) => row.subject },
   { id: "reported", label: "As reported", value: (row) => row.reported },
   { id: "converted", label: "Converted", value: (row) => row.converted, numeric: true },
+  {
+    id: "low",
+    label: "Interval low",
+    value: (row) => row.report.display?.interval_low ?? null,
+    numeric: true,
+  },
+  {
+    id: "high",
+    label: "Interval high",
+    value: (row) => row.report.display?.interval_high ?? null,
+    numeric: true,
+  },
   { id: "unit", label: "Unit", value: (row) => row.unit },
   { id: "conditions", label: "Conditions", value: (row) => row.conditions.join("; ") },
   { id: "method", label: "Method", value: (row) => row.method },
@@ -244,3 +257,20 @@ export const DEFAULT_REPORT_COLUMNS: readonly string[] = [
   "check",
   "notices",
 ];
+
+/** The rows as CSV text, with all columns. */
+export function reportsCsv(rows: readonly ReportRow[]): string {
+  return toCsv(
+    REPORT_COLUMNS.map((column) => column.label),
+    rows.map((row) => REPORT_COLUMNS.map((column) => column.value(row))),
+  );
+}
+
+/** The reports of the rows as JSON text, each report as arity exports it. */
+export function reportsJson(rows: readonly ReportRow[]): string {
+  return `${JSON.stringify(
+    rows.map((row) => row.report),
+    null,
+    2,
+  )}\n`;
+}

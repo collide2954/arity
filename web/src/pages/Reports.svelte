@@ -1,15 +1,15 @@
 <script lang="ts">
-  import CheckBadge from "../components/CheckBadge.svelte";
   import ColumnChooser from "../components/ColumnChooser.svelte";
+  import CopyLink from "../components/CopyLink.svelte";
   import DataTable from "../components/DataTable.svelte";
   import FilterPanel from "../components/FilterPanel.svelte";
-  import NoticeChips from "../components/NoticeChips.svelte";
   import RangeFields from "../components/RangeFields.svelte";
+  import ReportCell from "../components/ReportCell.svelte";
   import SelectionChips from "../components/SelectionChips.svelte";
-  import { download, toCsv } from "../lib/csv";
+  import { download } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
   import { filter, readSelection, writeSelection, type Selection } from "../lib/filter";
-  import { formatNumber, imageReading, unitLabel } from "../lib/format";
+  import { unitLabel } from "../lib/format";
   import {
     DEFAULT_REPORT_COLUMNS,
     FACET_TITLES,
@@ -17,10 +17,11 @@
     REPORT_COLUMNS,
     REPORT_FACETS,
     reportRows,
+    reportsCsv,
+    reportsJson,
     type ReportFacet,
     type ReportRow,
   } from "../lib/reports";
-  import { link } from "../lib/route";
   import { replaceRoute } from "../lib/state.svelte";
   import type { Index } from "../lib/types";
   import {
@@ -45,7 +46,6 @@
 
   let loaded = $state.raw<Loaded | null>(null);
   let failure = $state<string | null>(null);
-  let copied = $state(false);
 
   Promise.all([loadIndex(), loadReports()])
     .then(([index, reports]) => {
@@ -73,77 +73,10 @@
     writeView(out, nextView);
     replaceRoute({ page: "reports", params: out.toString() });
   }
-
-  function saveCsv(rows: readonly ReportRow[]): void {
-    download(
-      "arity-reports.csv",
-      toCsv(
-        REPORT_COLUMNS.map((column) => column.label),
-        rows.map((row) => REPORT_COLUMNS.map((column) => column.value(row))),
-      ),
-    );
-  }
-
-  function saveJson(rows: readonly ReportRow[]): void {
-    download(
-      "arity-reports.json",
-      `${JSON.stringify(
-        rows.map((row) => row.report),
-        null,
-        2,
-      )}\n`,
-      "application/json",
-    );
-  }
-
-  function copyLink(): void {
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => {
-        copied = true;
-        setTimeout(() => {
-          copied = false;
-        }, 2000);
-      })
-      .catch(() => {
-        copied = false;
-      });
-  }
 </script>
 
 {#snippet cell(row: ReportRow, column: Column<ReportRow>)}
-  {#if column.id === "about"}
-    <span class="about">
-      {#if row.report.kind === "value" && row.report.property}
-        <a href={link({ page: "property", key: row.report.property })}>{row.about}</a>
-      {:else}
-        {row.about}
-      {/if}
-    </span>
-  {:else if column.id === "reported"}
-    {@const reading = row.report.body.type === "value" ? imageReading(row.report.body.value) : null}
-    <a href={link({ page: "report", id: row.report.id })}>{row.reported}</a>
-    {#if reading}<span class="chip" title={reading.explanation}>{reading.label}</span>{/if}
-  {:else if column.id === "converted"}
-    {row.converted === null ? "" : `${formatNumber(row.converted)} ${row.unit}`}
-  {:else if column.id === "conditions"}
-    {@const text = row.conditions.join(" \u{b7} ")}
-    <span class="clamp" title={text}>{text}</span>
-  {:else if column.id === "source"}
-    <a href={link({ page: "work", id: row.report.work, report: row.report.id })}>{row.citation}</a>
-  {:else if column.id === "identifier"}
-    <span class="mono">{row.identifier}</span>
-  {:else if column.id === "check"}
-    <CheckBadge state={row.report.check} />
-  {:else if column.id === "notices"}
-    <NoticeChips kinds={row.notices} />
-  {:else if column.id === "quote"}
-    <span class="clamp" title={row.quote}>{row.quote}</span>
-  {:else if column.id === "id"}
-    <a href={link({ page: "report", id: row.report.id })}>{row.report.id}</a>
-  {:else}
-    {column.value(row) ?? ""}
-  {/if}
+  <ReportCell {row} {column} />
 {/snippet}
 
 <h1>Reports</h1>
@@ -217,16 +150,23 @@
           <button
             type="button"
             onclick={() => {
-              saveCsv(ordered(filtered.items, REPORT_COLUMNS, view));
+              download(
+                "arity-reports.csv",
+                reportsCsv(ordered(filtered.items, REPORT_COLUMNS, view)),
+              );
             }}>Download CSV</button
           >
           <button
             type="button"
             onclick={() => {
-              saveJson(ordered(filtered.items, REPORT_COLUMNS, view));
+              download(
+                "arity-reports.json",
+                reportsJson(ordered(filtered.items, REPORT_COLUMNS, view)),
+                "application/json",
+              );
             }}>Download JSON</button
           >
-          <button type="button" onclick={copyLink}>{copied ? "Copied" : "Copy link"}</button>
+          <CopyLink />
         </span>
       </div>
       {#if filtered.items.length === 0}
@@ -267,21 +207,6 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     margin-left: auto;
-  }
-
-  .about {
-    display: block;
-    min-width: 12ch;
-  }
-
-  .clamp {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-width: 20ch;
-    max-width: 40ch;
   }
 
   @media (max-width: 960px) {

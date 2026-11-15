@@ -1,4 +1,4 @@
-<script lang="ts" generics="T">
+<script lang="ts" generics="T extends object">
   import type { Snippet } from "svelte";
 
   import type { Page } from "../lib/paging";
@@ -12,6 +12,7 @@
     cell,
     key,
     label,
+    onhover,
   }: {
     page: Page<T>;
     columns: readonly Column<T>[];
@@ -20,6 +21,8 @@
     cell: Snippet<[T, Column<T>]>;
     key: (row: T) => string | number;
     label: string;
+    /** Gets the row under the pointer, or null when the pointer leaves the rows. */
+    onhover?: (row: T | null) => void;
   } = $props();
 
   function sign(column: Column<T>): string {
@@ -49,9 +52,17 @@
         {/each}
       </tr>
     </thead>
-    <tbody>
+    <tbody
+      onpointerleave={() => {
+        onhover?.(null);
+      }}
+    >
       {#each page.rows as row (key(row))}
-        <tr>
+        <tr
+          onpointerenter={() => {
+            onhover?.(row);
+          }}
+        >
           {#each columns as column (column.id)}
             <td class:numeric={column.numeric}>{@render cell(row, column)}</td>
           {/each}

@@ -6,6 +6,7 @@ import {
   isEmpty,
   options,
   readSelection,
+  selectionQuery,
   toggle,
   writeSelection,
   type Item,
@@ -59,6 +60,16 @@ describe("readSelection and writeSelection", () => {
     expect(written(emptySelection())).toBe("");
     expect(isEmpty(emptySelection())).toBe(true);
     expect(isEmpty(selection({ min: 0 }))).toBe(false);
+  });
+});
+
+describe("selectionQuery", () => {
+  it("writes the selection after the parameters that it gets first", () => {
+    expect(
+      selectionQuery(selection({ text: "apple", facets: { size: ["small"] } }), FACETS, [
+        ["page", "fruit"],
+      ]),
+    ).toBe("page=fruit&q=apple&size=small");
   });
 });
 

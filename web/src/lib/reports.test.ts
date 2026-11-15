@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { filter, emptySelection } from "./filter";
-import { facetLabels, REPORT_FACETS, reportRows } from "./reports";
+import { facetLabels, REPORT_FACETS, reportRows, reportsCsv, reportsJson } from "./reports";
 import type { Index, Report } from "./types";
 
 const index: Index = {
@@ -184,6 +184,26 @@ describe("reportRows", () => {
     expect(found("dox was 0.24")).toEqual([10]);
     expect(found("chebi:28748 mcf-7")).toEqual([10, 11]);
     expect(found("PMC10538757")).toEqual([10]);
+  });
+});
+
+describe("reportsCsv and reportsJson", () => {
+  it("write each row with all columns, and each report as arity exports it", () => {
+    const rows = reportRows(index, [value]);
+    const [header, line] = reportsCsv(rows).split("\r\n");
+    expect(header?.split(",").slice(0, 4)).toEqual([
+      "Property or effect",
+      "Subject",
+      "As reported",
+      "Converted",
+    ]);
+    expect(line?.split(",").slice(0, 4)).toEqual([
+      "half maximal inhibitory concentration",
+      "doxorubicin",
+      "0.24 \u{3bc}M",
+      "0.24",
+    ]);
+    expect(JSON.parse(reportsJson(rows))).toEqual([value]);
   });
 });
 

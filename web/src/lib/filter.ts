@@ -82,6 +82,17 @@ export function writeSelection<F extends string>(
   if (selection.max !== null) params.set("max", String(selection.max));
 }
 
+/** The query of an address with the selection, after the parameters that come first. */
+export function selectionQuery<F extends string>(
+  selection: Selection<F>,
+  facets: readonly F[],
+  first: readonly (readonly [string, string])[] = [],
+): string {
+  const params = new URLSearchParams(first.map(([name, value]) => [name, value]));
+  writeSelection(params, selection, facets);
+  return params.toString();
+}
+
 /** The selection with these values for the facet. No values remove the facet. */
 export function withValues<F extends string>(
   selection: Selection<F>,

@@ -1,4 +1,4 @@
-import type { EffectBody, ValueInput } from "./types";
+import type { EffectBody, Group, Significance, ValueInput } from "./types";
 
 const SUPERSCRIPTS: Record<string, string> = {
   "0": "\u{2070}",
@@ -144,7 +144,35 @@ export function scoreLabel(score: number | null): string {
   return "0";
 }
 
-export function significanceLabel(significance: EffectBody["significance"]): string | null {
+const STATISTICS: Readonly<Record<string, string>> = {
+  t: "t",
+  f: "F",
+  chi_squared: "χ²",
+  u: "U",
+  w: "W",
+  h: "H",
+  z: "z",
+  r: "r",
+};
+
+const CORRECTIONS: Readonly<Record<string, string>> = {
+  bonferroni: "Bonferroni correction",
+  holm: "Holm correction",
+  sidak: "Šidák correction",
+  tukey: "Tukey correction",
+  dunnett: "Dunnett correction",
+  scheffe: "Scheffé correction",
+  benjamini_hochberg: "Benjamini–Hochberg correction",
+};
+
+/** The statistic of a test, for example "t(12) = 2.31" or "F(2, 27) = 4.1". */
+function statisticLabel(statistic: NonNullable<Significance["statistic"]>): string {
+  const symbol = STATISTICS[statistic.kind] ?? "statistic";
+  const df = statistic.df && statistic.df.length > 0 ? `(${statistic.df.join(", ")})` : "";
+  return `${symbol}${df} = ${statistic.number}`;
+}
+
+export function significanceLabel(significance: Significance | undefined): string | null {
   if (!significance) return null;
   const comparisons: Record<string, string> = {
     eq: "=",
@@ -154,11 +182,21 @@ export function significanceLabel(significance: EffectBody["significance"]): str
     ge: "\u{2265}",
   };
   const parts: string[] = [];
+  if (significance.statistic) parts.push(statisticLabel(significance.statistic));
   if (significance.p !== undefined)
     parts.push(`p ${comparisons[significance.comparison ?? "eq"] ?? "="} ${significance.p}`);
+  if (significance.q !== undefined) parts.push(`q = ${significance.q}`);
   if (significance.statement === "not_significant") parts.push("not significant");
   if (significance.statement === "significant") parts.push("significant");
+  if (significance.correction)
+    parts.push(CORRECTIONS[significance.correction] ?? "a correction for multiple tests");
   return parts.join(", ");
+}
+
+/** Each group that an effect compares, with its number of samples. */
+export function groupsLabel(groups: readonly Group[] | undefined): string | null {
+  if (!groups || groups.length === 0) return null;
+  return groups.map((group) => `${group.label} (n = ${String(group.n)})`).join(", ");
 }
 
 /** The label and the explanation of a value that the reader read from an image. */

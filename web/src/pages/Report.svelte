@@ -11,6 +11,7 @@
   import {
     directionLabel,
     formatNumber,
+    groupsLabel,
     imageReading,
     reportedValue,
     scoreLabel,
@@ -175,12 +176,14 @@
         {#if significanceLabel(body.significance)}
           <dt>Significance</dt>
           <dd>
-            {significanceLabel(body.significance)}{#if body.significance?.test}
-              ({body.significance.test}){/if}
+            {significanceLabel(body.significance)}{#if body.significance?.test}&nbsp;({body
+                .significance.test}){/if}
           </dd>
         {/if}
         {#if body.n !== undefined}<dt>Number of samples</dt>
           <dd>{body.n}</dd>{/if}
+        {#if groupsLabel(body.groups)}<dt>Groups</dt>
+          <dd>{groupsLabel(body.groups)}</dd>{/if}
       {/if}
       {#if conditionParts(report, lookup).length > 0}
         <dt>Conditions</dt>

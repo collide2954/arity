@@ -5,6 +5,7 @@ import {
   imageReading,
   reportedValue,
   scoreLabel,
+  groupsLabel,
   significanceLabel,
   uncertaintyLabel,
   unitLabel,
@@ -94,6 +95,44 @@ describe("labels", () => {
       "p = 0.34, not significant",
     );
     expect(significanceLabel(undefined)).toBeNull();
+  });
+
+  it("gives the statistic of the test, the q-value, and the correction", () => {
+    expect(
+      significanceLabel({
+        statement: "significant",
+        comparison: "eq",
+        p: "0.04",
+        statistic: { kind: "t", number: "2.31", df: ["12"] },
+        correction: "bonferroni",
+        q: "0.08",
+      }),
+    ).toBe("t(12) = 2.31, p = 0.04, q = 0.08, significant, Bonferroni correction");
+    expect(
+      significanceLabel({ statistic: { kind: "f", number: "4.1", df: ["2", "27"] }, q: "0.01" }),
+    ).toBe("F(2, 27) = 4.1, q = 0.01");
+    expect(
+      significanceLabel({
+        statistic: { kind: "chi_squared", number: "7.2", df: ["1"] },
+        p: "0.007",
+      }),
+    ).toBe("χ²(1) = 7.2, p = 0.007");
+    expect(significanceLabel({ statistic: { kind: "u", number: "12" }, p: "0.02" })).toBe(
+      "U = 12, p = 0.02",
+    );
+  });
+});
+
+describe("groupsLabel", () => {
+  it("names each group with its number of samples", () => {
+    expect(
+      groupsLabel([
+        { label: "treated cells", n: 8 },
+        { label: "control cells", n: 6 },
+      ]),
+    ).toBe("treated cells (n = 8), control cells (n = 6)");
+    expect(groupsLabel(undefined)).toBeNull();
+    expect(groupsLabel([])).toBeNull();
   });
 });
 

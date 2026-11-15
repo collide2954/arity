@@ -154,6 +154,25 @@ export interface ValueBody {
   note?: string;
 }
 
+export interface Significance {
+  statement?: string;
+  comparison?: string;
+  p?: string;
+  test?: string;
+  /** The statistic of the test, for example t(12) = 2.31. */
+  statistic?: { kind: string; number: string; df?: string[] };
+  /** The correction for multiple tests that the source names. */
+  correction?: string;
+  /** A p-value that the source corrects for the false discovery rate. */
+  q?: string;
+}
+
+/** A group that an effect compares, with its number of samples. */
+export interface Group {
+  label: string;
+  n: number;
+}
+
 export interface EffectBody {
   type: "effect";
   id: string;
@@ -163,8 +182,9 @@ export interface EffectBody {
   relation?: "effect" | "association";
   magnitude?: { measure: string; number: string; unit?: string; unit_text?: string };
   comparator?: string;
-  significance?: { statement?: string; comparison?: string; p?: string; test?: string };
+  significance?: Significance;
   n?: number;
+  groups?: Group[];
   conditions?: Condition[];
   method?: { label: string; xrefs?: string[] };
   note?: string;

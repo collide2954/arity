@@ -37,6 +37,10 @@ number next to a value is the number of reports that you see when you also
 select that value. When you select one property, you can also give a range for
 the converted value.
 
+The search on the start page uses the same rules. It finds works, properties,
+entities, and reports, and it can open the Reports page with the same words.
+The page of a work has a box that filters its list of reports.
+
 Select the head of a column to sort the table by that column. Select it again
 to sort in the opposite direction. The address of the page keeps the words, the
 filters, the sort, the page, and the columns, so you can share a selection as a

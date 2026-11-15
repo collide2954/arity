@@ -63,27 +63,40 @@
 <style>
   .facet {
     border: 0;
-    margin: 0 0 1rem;
-    padding: 0;
+    margin: 0;
+    padding: var(--space-3) 0;
     min-width: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   legend {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--secondary);
+    float: left;
+    width: 100%;
     padding: 0;
-    margin-bottom: 0.25rem;
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
   }
 
   label {
+    clear: both;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.4rem;
+    gap: 0.5rem;
     align-items: baseline;
-    padding: 0.1rem 0;
-    font-size: 0.9rem;
+    padding: 0.22rem 0.35rem;
+    margin: 0 -0.35rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    line-height: 1.35;
     cursor: pointer;
+  }
+
+  label:hover {
+    background: var(--surface-2);
   }
 
   .name {
@@ -93,7 +106,7 @@
   .count {
     color: var(--muted);
     font-variant-numeric: tabular-nums;
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
   }
 
   .empty .name {
@@ -101,15 +114,26 @@
   }
 
   input[type="search"] {
-    margin-bottom: 0.35rem;
-    font-size: 0.85rem;
+    clear: both;
+    display: block;
+    width: 100%;
+    margin-bottom: var(--space-2);
+    min-height: 2rem;
   }
 
   .more {
+    clear: both;
+    min-height: 0;
     border: 0;
     background: none;
-    padding: 0.15rem 0;
+    padding: var(--space-1) 0 0;
     color: var(--accent-ink);
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
+    font-weight: 550;
+  }
+
+  .more:hover:not(:disabled) {
+    background: none;
+    text-decoration: underline;
   }
 </style>

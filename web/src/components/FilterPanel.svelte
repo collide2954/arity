@@ -49,15 +49,22 @@
 <style>
   aside {
     position: sticky;
-    top: 4rem;
-    max-height: calc(100vh - 5rem);
+    top: calc(var(--header) + var(--space-3));
+    max-height: calc(100vh - var(--header) - var(--space-5));
     overflow: auto;
-    padding-right: 0.25rem;
+    padding-right: var(--space-2);
+  }
+
+  details {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: var(--space-2) var(--space-4);
   }
 
   summary {
     font-weight: 600;
     cursor: pointer;
-    margin-bottom: 0.5rem;
+    padding: var(--space-1) 0;
   }
 </style>

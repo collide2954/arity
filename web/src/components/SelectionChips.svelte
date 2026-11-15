@@ -68,21 +68,38 @@
 
 <style>
   .chips {
-    margin: 0.5rem 0;
+    margin: var(--space-3) 0 0;
+    align-items: center;
   }
 
   button.chip {
     cursor: pointer;
-    border: 0;
     white-space: normal;
     text-align: left;
+    min-height: 1.6rem;
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent-ink);
+    font-weight: 550;
+  }
+
+  button.chip:hover:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
   }
 
   .clear {
+    min-height: 0;
     border: 0;
     background: none;
-    padding: 0.05rem 0.25rem;
-    color: var(--accent-ink);
-    font-size: 0.85rem;
+    padding: 0 var(--space-2);
+    color: var(--secondary);
+    font-size: var(--text-sm);
+  }
+
+  .clear:hover:not(:disabled) {
+    background: none;
+    color: var(--ink);
+    text-decoration: underline;
   }
 </style>

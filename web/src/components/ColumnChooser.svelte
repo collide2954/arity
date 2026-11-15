@@ -49,12 +49,21 @@
   }
 
   summary {
-    cursor: pointer;
-    border: 1px solid var(--axis);
-    border-radius: 6px;
-    padding: 0.3rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0 0.8rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
     background: var(--surface);
+    font-size: var(--text-sm);
+    font-weight: 550;
+    cursor: pointer;
     list-style: none;
+  }
+
+  summary:hover {
+    background: var(--surface-2);
   }
 
   summary::-webkit-details-marker {
@@ -63,21 +72,31 @@
 
   .panel {
     position: absolute;
+    right: 0;
     z-index: 5;
-    margin-top: 0.25rem;
+    margin-top: var(--space-1);
     display: grid;
-    gap: 0.25rem;
-    min-width: 14rem;
+    gap: 0.15rem;
+    min-width: 15rem;
+    box-shadow: var(--shadow-2);
   }
 
   label {
     display: flex;
-    gap: 0.4rem;
-    align-items: baseline;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.2rem 0.3rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
     white-space: nowrap;
+    cursor: pointer;
+  }
+
+  label:hover {
+    background: var(--surface-2);
   }
 
   button {
-    margin-top: 0.35rem;
+    margin-top: var(--space-2);
   }
 </style>

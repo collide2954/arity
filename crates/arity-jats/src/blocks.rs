@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use arity_text::{Block, BlockKind};
 use roxmltree::Node;
 
-use crate::Supplement;
 use crate::flatten::{child, children, href, is, name, non_empty, text};
 use crate::table;
+use crate::{Supplement, Version};
 
 pub(crate) struct Built {
     pub(crate) blocks: Vec<Block>,
@@ -20,9 +20,9 @@ struct Counters {
     sections: u32,
 }
 
-#[derive(Default)]
 struct Builder {
     blocks: Vec<Block>,
+    version: Version,
 }
 
 impl Builder {
@@ -47,7 +47,7 @@ impl Builder {
         for element in node.children().filter(Node::is_element) {
             match name(element) {
                 "title" => {
-                    if let Some(title) = non_empty(text(element)) {
+                    if let Some(title) = non_empty(text(element, self.version)) {
                         self.push(format!("{scope}/title"), BlockKind::Heading, section, title);
                     }
                 }
@@ -55,14 +55,17 @@ impl Builder {
                     counters.sections += 1;
                     let child_scope = section_scope(scope, counters.sections);
                     let mut child_section = section.to_vec();
-                    if let Some(title) = child(element, "title").map(text).and_then(non_empty) {
+                    if let Some(title) = child(element, "title")
+                        .map(|title| text(title, self.version))
+                        .and_then(non_empty)
+                    {
                         child_section.push(title);
                     }
                     self.walk(element, &child_scope, &child_section);
                 }
                 "p" => {
                     counters.paragraphs += 1;
-                    let body = text(element);
+                    let body = text(element, self.version);
                     if !body.is_empty() {
                         let key = format!("{scope}/p{}", counters.paragraphs);
                         self.push(key, BlockKind::Paragraph, section, body);
@@ -71,7 +74,7 @@ impl Builder {
                 "list" => {
                     for item in element.descendants().filter(|node| is(*node, "list-item")) {
                         counters.items += 1;
-                        let body = text(item);
+                        let body = text(item, self.version);
                         if !body.is_empty() {
                             let key = format!("{scope}/li{}", counters.items);
                             self.push(key, BlockKind::ListItem, section, body);
@@ -80,7 +83,7 @@ impl Builder {
                 }
                 "disp-formula" => {
                     counters.formulas += 1;
-                    let body = text(element);
+                    let body = text(element, self.version);
                     if !body.is_empty() {
                         let key = format!("{scope}/eq{}", counters.formulas);
                         self.push(key, BlockKind::Formula, section, body);
@@ -106,14 +109,17 @@ fn section_scope(scope: &str, index: u32) -> String {
     }
 }
 
-pub(crate) fn build(article: Node<'_, '_>) -> Built {
-    let mut builder = Builder::default();
+pub(crate) fn build(article: Node<'_, '_>, version: Version) -> Built {
+    let mut builder = Builder {
+        blocks: Vec::new(),
+        version,
+    };
     let meta = child(article, "front").and_then(|front| child(front, "article-meta"));
 
     if let Some(title) = meta
         .and_then(|meta| child(meta, "title-group"))
         .and_then(|group| child(group, "article-title"))
-        .map(text)
+        .map(|title| text(title, version))
         .and_then(non_empty)
     {
         builder.push("title".to_owned(), BlockKind::Title, &[], title);
@@ -127,7 +133,7 @@ pub(crate) fn build(article: Node<'_, '_>) -> Built {
                 format!("abstract{}", index + 1)
             };
             let heading = child(abstract_node, "title")
-                .map(text)
+                .map(|title| text(title, version))
                 .and_then(non_empty)
                 .unwrap_or_else(|| "Abstract".to_owned());
             let start = builder.blocks.len();
@@ -149,9 +155,9 @@ pub(crate) fn build(article: Node<'_, '_>) -> Built {
     }
 
     let mut blocks = builder.blocks;
-    blocks.extend(tables(article));
-    blocks.extend(figures(article));
-    let (supplement_blocks, supplements) = supplements(article);
+    blocks.extend(tables(article, version));
+    blocks.extend(figures(article, version));
+    let (supplement_blocks, supplements) = supplements(article, version);
     blocks.extend(supplement_blocks);
     Built {
         blocks,
@@ -176,7 +182,7 @@ fn walk_back(builder: &mut Builder, back: Node<'_, '_>) {
                 for app in apps {
                     appendices += 1;
                     let title = child(app, "title")
-                        .map(text)
+                        .map(|title| text(title, builder.version))
                         .and_then(non_empty)
                         .unwrap_or_else(|| format!("Appendix {appendices}"));
                     builder.walk(app, &format!("app{appendices}"), &[title]);
@@ -185,14 +191,16 @@ fn walk_back(builder: &mut Builder, back: Node<'_, '_>) {
             "notes" => {
                 notes += 1;
                 let title = child(element, "title")
-                    .map(text)
+                    .map(|title| text(title, builder.version))
                     .and_then(non_empty)
                     .unwrap_or_else(|| "Notes".to_owned());
                 builder.walk(element, &format!("notes{notes}"), &[title]);
             }
             "sec" => {
                 sections += 1;
-                let title = child(element, "title").map(text).and_then(non_empty);
+                let title = child(element, "title")
+                    .map(|title| text(title, builder.version))
+                    .and_then(non_empty);
                 builder.walk(
                     element,
                     &format!("back.s{sections}"),
@@ -202,7 +210,7 @@ fn walk_back(builder: &mut Builder, back: Node<'_, '_>) {
             "fn-group" => {
                 for footnote in children(element, "fn") {
                     footnotes += 1;
-                    if let Some(body) = non_empty(text(footnote)) {
+                    if let Some(body) = non_empty(text(footnote, builder.version)) {
                         builder.push(
                             format!("fn{footnotes}"),
                             BlockKind::Footnote,
@@ -221,15 +229,17 @@ fn outside_references(node: Node<'_, '_>) -> bool {
     !node.ancestors().any(|ancestor| is(ancestor, "ref-list"))
 }
 
-fn caption_text(node: Node<'_, '_>) -> String {
-    child(node, "caption").map_or_default(text)
+fn caption_text(node: Node<'_, '_>, version: Version) -> String {
+    child(node, "caption").map_or_default(|caption| text(caption, version))
 }
 
-fn label(node: Node<'_, '_>) -> Option<String> {
-    child(node, "label").map(text).and_then(non_empty)
+fn label(node: Node<'_, '_>, version: Version) -> Option<String> {
+    child(node, "label")
+        .map(|label| text(label, version))
+        .and_then(non_empty)
 }
 
-fn tables(article: Node<'_, '_>) -> Vec<Block> {
+fn tables(article: Node<'_, '_>, version: Version) -> Vec<Block> {
     let mut blocks = Vec::new();
     let wraps = article
         .descendants()
@@ -239,9 +249,9 @@ fn tables(article: Node<'_, '_>) -> Vec<Block> {
         let mut caption = Block::new(
             format!("{key}/caption"),
             BlockKind::TableCaption,
-            caption_text(wrap),
+            caption_text(wrap, version),
         );
-        caption.label = label(wrap);
+        caption.label = label(wrap, version);
         blocks.push(caption);
         let mut last_row = 0;
         for table_node in wrap.descendants().filter(|node| is(*node, "table")) {
@@ -252,7 +262,7 @@ fn tables(article: Node<'_, '_>) -> Vec<Block> {
             {
                 continue;
             }
-            let (cells, row) = table::cells(table_node, &key, last_row);
+            let (cells, row) = table::cells(table_node, &key, last_row, version);
             blocks.extend(cells);
             last_row = row;
         }
@@ -262,7 +272,7 @@ fn tables(article: Node<'_, '_>) -> Vec<Block> {
                 .descendants()
                 .filter(|node| is(*node, "fn") || (is(*node, "p") && !in_footnote(node)));
             for (note_index, note) in notes.enumerate() {
-                if let Some(body) = non_empty(text(note)) {
+                if let Some(body) = non_empty(text(note, version)) {
                     blocks.push(Block::new(
                         format!("{key}/foot{}", note_index + 1),
                         BlockKind::TableFootnote,
@@ -275,7 +285,7 @@ fn tables(article: Node<'_, '_>) -> Vec<Block> {
     blocks
 }
 
-fn figures(article: Node<'_, '_>) -> Vec<Block> {
+fn figures(article: Node<'_, '_>, version: Version) -> Vec<Block> {
     article
         .descendants()
         .filter(|node| is(*node, "fig") && outside_references(*node))
@@ -284,15 +294,15 @@ fn figures(article: Node<'_, '_>) -> Vec<Block> {
             let mut block = Block::new(
                 format!("f{}/caption", index + 1),
                 BlockKind::FigureCaption,
-                caption_text(figure),
+                caption_text(figure, version),
             );
-            block.label = label(figure);
+            block.label = label(figure, version);
             block
         })
         .collect()
 }
 
-fn supplements(article: Node<'_, '_>) -> (Vec<Block>, Vec<Supplement>) {
+fn supplements(article: Node<'_, '_>, version: Version) -> (Vec<Block>, Vec<Supplement>) {
     let mut seen = HashSet::new();
     let mut blocks = Vec::new();
     let mut found = Vec::new();
@@ -311,10 +321,11 @@ fn supplements(article: Node<'_, '_>) -> (Vec<Block>, Vec<Supplement>) {
         let caption = [Some(material), media]
             .into_iter()
             .flatten()
-            .map(caption_text)
+            .map(|node| caption_text(node, version))
             .find(|caption| !caption.is_empty())
             .unwrap_or_default();
-        let label = label(material).or_else(|| media.and_then(label));
+        let label =
+            label(material, version).or_else(|| media.and_then(|media| label(media, version)));
         let media_type = media.and_then(|media| {
             let main = media.attribute("mimetype")?;
             Some(match media.attribute("mime-subtype") {

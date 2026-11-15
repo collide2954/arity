@@ -3,13 +3,19 @@ use std::collections::HashSet;
 use arity_text::{Block, BlockKind, Cell};
 use roxmltree::Node;
 
+use crate::Version;
 use crate::flatten::{is, name, text};
 
 const MAX_SPAN: u32 = 100;
 
 /// Reads the cells of a `<table>` into blocks, with grid positions that take
 /// row and column spans into account.
-pub(crate) fn cells(table: Node<'_, '_>, table_key: &str, first_row: u32) -> (Vec<Block>, u32) {
+pub(crate) fn cells(
+    table: Node<'_, '_>,
+    table_key: &str,
+    first_row: u32,
+    version: Version,
+) -> (Vec<Block>, u32) {
     let mut blocks = Vec::new();
     let mut occupied: HashSet<(u32, u32)> = HashSet::new();
     let mut row = first_row;
@@ -37,7 +43,7 @@ pub(crate) fn cells(table: Node<'_, '_>, table_key: &str, first_row: u32) -> (Ve
             let mut block = Block::new(
                 format!("{table_key}/r{row}c{column}"),
                 BlockKind::TableCell,
-                text(cell),
+                text(cell, version),
             );
             block.cell = Some(Cell {
                 table: table_key.to_owned(),
@@ -71,7 +77,7 @@ mod tests {
 
     fn read(xml: &str) -> Vec<(String, String, bool, u32, u32)> {
         let document = roxmltree::Document::parse(xml).unwrap();
-        let (blocks, _) = cells(document.root_element(), "t1", 0);
+        let (blocks, _) = cells(document.root_element(), "t1", 0, Version::V1);
         blocks
             .into_iter()
             .map(|block| {

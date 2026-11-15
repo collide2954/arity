@@ -121,19 +121,23 @@ fn reads_the_text_as_keyed_blocks() {
             ("s1/title", BlockKind::Heading, "Methods"),
             ("s1/p1", BlockKind::Paragraph, "Cells were grown at 37 °C."),
             ("s1.1/title", BlockKind::Heading, "Assay"),
-            ("s1.1/p1", BlockKind::Paragraph, "The IC50 was measured."),
+            ("s1.1/p1", BlockKind::Paragraph, "The IC₅₀ was measured."),
             ("s1.1/li1", BlockKind::ListItem, "Step one."),
             ("s1.1/li2", BlockKind::ListItem, "Step two."),
             ("s1.1/eq1", BlockKind::Formula, "y=2"),
             ("s2/title", BlockKind::Heading, "Results"),
             ("ack/p1", BlockKind::Paragraph, "We thank the reviewers."),
             ("fn1", BlockKind::Footnote, "Footnote text."),
-            ("t1/caption", BlockKind::TableCaption, "IC50 values."),
+            ("t1/caption", BlockKind::TableCaption, "IC₅₀ values."),
             ("t1/r1c1", BlockKind::TableCell, "Compound"),
-            ("t1/r1c2", BlockKind::TableCell, "IC50 (μM)a"),
+            ("t1/r1c2", BlockKind::TableCell, "IC₅₀ (μM)^{a}"),
             ("t1/r2c1", BlockKind::TableCell, "Doxorubicin"),
             ("t1/r2c2", BlockKind::TableCell, "0.24 ± 0.02"),
-            ("t1/foot1", BlockKind::TableFootnote, "a Mean ± SD, n = 3."),
+            (
+                "t1/foot1",
+                BlockKind::TableFootnote,
+                "^{a} Mean ± SD, n = 3."
+            ),
             (
                 "f1/caption",
                 BlockKind::FigureCaption,
@@ -269,7 +273,7 @@ fn reads_a_real_article_with_tables() {
         document.block("t1/caption").unwrap().label.as_deref(),
         Some("Table 1")
     );
-    assert_eq!(document.block("t1/r1c5").unwrap().text, "IC50 (μM) a");
+    assert_eq!(document.block("t1/r1c5").unwrap().text, "IC₅₀ (μM) ^{a}");
     assert_eq!(document.block("t1/r2c5").unwrap().text, "MCF-7");
     assert_eq!(document.block("t1/r3c5").unwrap().text, "19.53 ± 1.05");
     assert_eq!(article.supplements.len(), 1);

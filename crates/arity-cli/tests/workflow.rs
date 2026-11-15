@@ -123,7 +123,7 @@ fn submission(context: &Context, number: &str) -> serde_json::Value {
         .find(|block| {
             block
                 .text
-                .contains("reference drug, doxorubicin (IC50 = 7.30")
+                .contains("reference drug, doxorubicin (IC₅₀ = 7.30")
         })
         .unwrap();
     json!({
@@ -153,7 +153,7 @@ fn submission(context: &Context, number: &str) -> serde_json::Value {
                 "uncertainty": { "kind": "other", "number": "0.84" }
             },
             "conditions": [{ "role": "cell_line", "entity": "mcf7" }],
-            "evidence": [{ "block": block.key, "quote": "doxorubicin (IC50 = 7.30 ± 0.84 μM)" }]
+            "evidence": [{ "block": block.key, "quote": "doxorubicin (IC₅₀ = 7.30 ± 0.84 μM)" }]
         }]
     })
 }

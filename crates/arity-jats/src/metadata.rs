@@ -2,8 +2,14 @@ use arity_core::{Author, Doi, License, Pmid, WorkMetadata};
 use jiff::civil::Date;
 use roxmltree::Node;
 
-use crate::RelatedArticle;
-use crate::flatten::{child, children, href, is, name, non_empty, text};
+use crate::flatten::{self, child, children, href, is, name, non_empty};
+use crate::{RelatedArticle, Version};
+
+/// The text of an element of the bibliographic record. The record is not part
+/// of the digest of the text, so it uses the latest version of the parser.
+fn text(node: Node<'_, '_>) -> String {
+    flatten::text(node, Version::LATEST)
+}
 
 pub(crate) fn read(article: Node<'_, '_>) -> WorkMetadata {
     let mut work = WorkMetadata {

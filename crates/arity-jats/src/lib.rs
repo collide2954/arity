@@ -7,7 +7,9 @@
 mod blocks;
 mod flatten;
 mod metadata;
+mod script;
 mod table;
+mod tex;
 
 use arity_core::{Digest, Doi, Pmid, WorkMetadata};
 use arity_text::{Document, DocumentError};
@@ -21,17 +23,24 @@ pub enum Version {
     /// Writes superscripts and subscripts as plain characters, and a formula
     /// that has only TeX as its TeX source.
     V1,
+    /// Writes the digits and the signs of superscripts and subscripts as
+    /// script characters, for example `10⁴` and `IC₅₀`, and other scripts with
+    /// a mark, for example `^{a}`. Writes the fractions, the roots, and the
+    /// brackets of MathML formulas, and a formula that has only TeX as plain
+    /// text.
+    V2,
 }
 
 impl Version {
     /// The version that makes new texts.
-    pub const LATEST: Self = Self::V1;
+    pub const LATEST: Self = Self::V2;
 
-    const ALL: [Self; 1] = [Self::V1];
+    const ALL: [Self; 2] = [Self::V1, Self::V2];
 
     pub fn name(self) -> &'static str {
         match self {
             Self::V1 => "arity-jats 0.1.0",
+            Self::V2 => "arity-jats 0.2.0",
         }
     }
 
@@ -100,7 +109,7 @@ pub fn parse_as(bytes: &[u8], version: Version) -> Result<Article, JatsError> {
     if root.tag_name().name() != "article" {
         return Err(JatsError::NotAnArticle(root.tag_name().name().to_owned()));
     }
-    let built = blocks::build(root);
+    let built = blocks::build(root, version);
     Ok(Article {
         metadata: metadata::read(root),
         document: Document::new(Digest::of(bytes), version.name(), built.blocks)?,

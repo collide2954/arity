@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { reportRows } from "./reports";
 import type { Index, Report } from "./types";
-import { figureRows, readFigure, rowsOfFigure, writeFigure, type FigureView } from "./values";
+import type { ValueRow } from "./charts";
+import {
+  boxesOf,
+  figureRows,
+  readFigure,
+  rowsOfFigure,
+  writeFigure,
+  type FigureView,
+} from "./values";
 
 const index: Index = {
   format: "arity-site/1",
@@ -180,6 +188,35 @@ describe("figureRows", () => {
       [4, "\u{26a0}\u{fe0e} Retraction \u{b7} Keshk et al. 2025, Sci Rep", 0],
       [1, "Lafi et al. 2023, PLOS ONE", 0],
       [2, "Lafi et al. 2023, PLOS ONE", 1],
+    ]);
+  });
+});
+
+describe("boxesOf", () => {
+  const dot = (label: string, value: number, check: ValueRow["check"] = "unchecked"): ValueRow => ({
+    report: value,
+    label,
+    value,
+    low: null,
+    high: null,
+    reported: String(value),
+    work: "a work",
+    check,
+    origin: "stated",
+    notices: "none",
+    marker: "",
+    detail: label,
+    slot: 0,
+  });
+
+  it("gives a box for each row with at least five values, without the rejected reports", () => {
+    const plotted = [
+      ...[1, 2, 3, 4, 5].map((value) => dot("a", value)),
+      dot("a", 100, "rejected"),
+      ...[1, 2, 3, 4].map((value) => dot("b", value)),
+    ];
+    expect(boxesOf(plotted)).toEqual([
+      { label: "a", count: 5, min: 1, q1: 2, median: 3, q3: 4, max: 5 },
     ]);
   });
 });

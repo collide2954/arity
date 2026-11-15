@@ -6,6 +6,7 @@ import {
   effectListSpec,
   effectSpec,
   effectTilesSpec,
+  histogramSpec,
   valueSpec,
   type EffectRow,
   type ValueRow,
@@ -117,6 +118,26 @@ describe("valueSpec", () => {
     );
   });
 
+  it("draws a box behind the dots of each row that has one, and keeps the order of the rows", () => {
+    const box = { label: "b", count: 5, min: 0.1, q1: 0.2, median: 0.24, q3: 0.3, max: 0.4 };
+    const rows = [
+      { ...value, label: "a" },
+      { ...value, report: 2, label: "b" },
+    ];
+    const spec = valueSpec(rows, { ...options, grouped: true, boxes: [box] });
+    const layers = (spec as { layer: { mark: { type: string }; data?: unknown }[] }).layer;
+    expect(layers.map((layer) => layer.mark.type)).toEqual([
+      "rule",
+      "bar",
+      "tick",
+      "rule",
+      "point",
+      "text",
+    ]);
+    expect(layers[1]?.data).toEqual({ values: [box] });
+    expect(JSON.stringify(spec)).toContain('"domain":["a","b"]');
+  });
+
   it("lets a person drag a range along the axis of values, and makes a highlighted dot larger", () => {
     const spec = valueSpec([value], options);
     expect(JSON.stringify(spec)).toContain(
@@ -124,6 +145,22 @@ describe("valueSpec", () => {
     );
     expect(spec.params).toEqual([{ name: "highlight", value: 0 }]);
     expect(JSON.stringify(spec)).toContain("datum.report === highlight");
+  });
+});
+
+describe("histogramSpec", () => {
+  it("draws one bar for each bin", () => {
+    const bins = [
+      { start: 0, end: 2, count: 2 },
+      { start: 2, end: 4, count: 1 },
+    ];
+    const spec = histogramSpec(bins, { unit: "\u{b5}mol/L", logarithmic: false, mode: "light" });
+    expect(spec.data).toEqual({ values: bins });
+    expect(JSON.stringify(spec)).toContain('"type":"bar"');
+    expect(JSON.stringify(spec)).toContain('"bin":{"binned":true}');
+    expect(JSON.stringify(histogramSpec(bins, { ...options, logarithmic: true }))).toContain(
+      '"type":"log"',
+    );
   });
 });
 

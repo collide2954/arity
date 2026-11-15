@@ -10,6 +10,7 @@
   import ReportCell from "../components/ReportCell.svelte";
   import ReportPreview from "../components/ReportPreview.svelte";
   import SelectionChips from "../components/SelectionChips.svelte";
+  import Statistics from "../components/Statistics.svelte";
   import { valueSpec } from "../lib/charts";
   import { download } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
@@ -35,6 +36,7 @@
   import { replaceRoute, theme } from "../lib/state.svelte";
   import type { Index, PropertySummary } from "../lib/types";
   import {
+    boxesOf,
     FIGURE_ROWS,
     figureRows,
     readFigure,
@@ -130,6 +132,15 @@
   const plotted = $derived(
     logarithmic && filtered ? figureRows(filtered.items, { rows, logarithmic }) : linear,
   );
+  const boxes = $derived(rows === "report" ? [] : boxesOf(plotted));
+  /** The values of the selection for its statistics, without the reports that a person rejected. */
+  const values = $derived(
+    filtered
+      ? filtered.items
+          .filter((row) => row.report.check !== "rejected")
+          .flatMap((row) => (row.number === null ? [] : [row.number]))
+      : [],
+  );
   /** The width of the row labels: a part of the width of the figure, in steps of 20 pixels. */
   const labelLimit = $derived(
     chartWidth > 0 ? Math.min(320, Math.max(120, Math.round((chartWidth * 0.3) / 20) * 20)) : 0,
@@ -194,7 +205,9 @@
       dot is a report that a person confirmed, a hollow dot is a report that no person checked yet,
       and a pale dot is a report that a person rejected. A diamond is a value that the reader read
       from an image. A sign above a dot tells that its source has a notice, for example a
-      retraction. Drag along the axis of values to select a range.
+      retraction. Drag along the axis of values to select a range. When a row of a subject or of a
+      work has five or more values, a box shows the middle half of its values with a line at the
+      median, and a thin line goes from the smallest to the largest value.
     </p>
     <p><a href={docsLink("website", "figures")}>How the figure works</a></p>
   </PageHeader>
@@ -287,6 +300,7 @@
                 mode: theme.mode,
                 grouped: rows !== "report",
                 labelLimit,
+                boxes,
               })}
               label="The values of {summary.label} in each report"
               {highlight}
@@ -297,6 +311,10 @@
             />
           {/if}
         </div>
+      {/if}
+
+      {#if summary.unit}
+        <Statistics {values} unit={unit || "1"} {logarithmic} />
       {/if}
 
       <h2>Table</h2>

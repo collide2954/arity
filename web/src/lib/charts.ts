@@ -5,6 +5,8 @@
 
 import type { TopLevelSpec } from "vega-lite";
 
+import type { Bin, Summary } from "./stats";
+
 export type Mode = "light" | "dark";
 
 /** The colors of the figures, from the validated reference palette. */
@@ -86,6 +88,11 @@ export interface ValueRow {
   slot: number;
 }
 
+/** The box of one row of the value figure: the quartiles, the median, and the extremes of its values. */
+export interface Box extends Summary {
+  readonly label: string;
+}
+
 export interface ValueOptions {
   unit: string;
   logarithmic: boolean;
@@ -94,6 +101,58 @@ export interface ValueOptions {
   grouped: boolean;
   /** The largest width of a row label, in pixels. */
   labelLimit?: number;
+  /** The box of each row that has one. The figure draws it behind the dots. */
+  boxes?: readonly Box[];
+}
+
+/**
+ * The layers of the boxes: a line from the smallest to the largest value, a
+ * box from the first to the third quartile, and a line at the median.
+ */
+function boxLayers(boxes: readonly Box[], unit: string, mode: Mode, scale: object) {
+  if (boxes.length === 0) return [];
+  const tokens = TOKENS[mode];
+  const data = { values: boxes.map((box) => ({ ...box })) };
+  const format = ".4~g";
+  return [
+    {
+      data,
+      mark: { type: "rule" as const, color: tokens.muted, strokeWidth: 1 },
+      encoding: {
+        x: { field: "min", type: "quantitative" as const, scale },
+        x2: { field: "max" },
+      },
+    },
+    {
+      data,
+      mark: {
+        type: "bar" as const,
+        color: tokens.series,
+        opacity: 0.14,
+        stroke: tokens.series,
+        strokeOpacity: 0.55,
+        cornerRadius: 3,
+        height: { band: 0.6 },
+      },
+      encoding: {
+        x: { field: "q1", type: "quantitative" as const, scale },
+        x2: { field: "q3" },
+        tooltip: [
+          { field: "count", title: "Values in the box" },
+          { field: "min", title: `Smallest, in ${unit}`, format },
+          { field: "q1", title: "First quartile", format },
+          { field: "median", title: "Median", format },
+          { field: "q3", title: "Third quartile", format },
+          { field: "max", title: "Largest", format },
+        ],
+      },
+    },
+    {
+      data,
+      mark: { type: "tick" as const, color: tokens.series, thickness: 2 },
+      encoding: { x: { field: "median", type: "quantitative" as const, scale } },
+    },
+  ];
 }
 
 /** A figure with more rows than this has the axis of values at the top. */
@@ -125,10 +184,16 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
           encoding: {
             x: { field: "low", type: "quantitative" as const, scale },
             x2: { field: "high" },
+            ...offset,
           },
         },
       ]
     : [];
+  // The layers of the boxes have their own data, so a grouped figure names
+  // the order of its rows: else the rows with a box would come first.
+  const order = options.grouped
+    ? { scale: { domain: [...new Set(rows.map((row) => row.label))] } }
+    : {};
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: "container",
@@ -146,10 +211,11 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
         type: "nominal",
         sort: options.grouped ? null : { field: "value", order: "ascending" },
         axis: { title: null, labelLimit: options.labelLimit ?? 320 },
+        ...order,
       },
-      ...offset,
     },
     layer: [
+      ...boxLayers(options.boxes ?? [], options.unit, options.mode, scale),
       ...intervals,
       {
         mark: {
@@ -196,6 +262,7 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
             { field: "check", title: "Check" },
             { field: "notices", title: "Notices" },
           ],
+          ...offset,
         },
       },
       {
@@ -203,9 +270,48 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
         encoding: {
           x: { field: "value", type: "quantitative", scale },
           text: { field: "marker" },
+          ...offset,
         },
       },
     ],
+  };
+}
+
+export interface HistogramOptions {
+  unit: string;
+  logarithmic: boolean;
+  mode: Mode;
+}
+
+/** A bar for each bin of the values: how many of the selected values are in the bin. */
+export function histogramSpec(bins: readonly Bin[], options: HistogramOptions): TopLevelSpec {
+  const tokens = TOKENS[options.mode];
+  const scale = options.logarithmic ? { type: "log" as const } : { zero: false };
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+    width: "container",
+    height: 120,
+    autosize: { type: "fit-x", contains: "padding" },
+    data: { values: bins.map((bin) => ({ ...bin })) },
+    config: config(options.mode),
+    mark: { type: "bar", color: tokens.series, opacity: 0.8 },
+    encoding: {
+      x: {
+        field: "start",
+        type: "quantitative",
+        bin: { binned: true },
+        scale,
+        title: options.unit,
+        axis: { labelOverlap: true, tickCount: 8 },
+      },
+      x2: { field: "end" },
+      y: { field: "count", type: "quantitative", title: "Values" },
+      tooltip: [
+        { field: "start", title: "From", format: ".4~g" },
+        { field: "end", title: "To", format: ".4~g" },
+        { field: "count", title: "Values" },
+      ],
+    },
   };
 }
 

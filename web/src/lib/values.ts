@@ -1,7 +1,30 @@
-import type { ValueRow } from "./charts";
+import type { Box, ValueRow } from "./charts";
 import { markerSign, noticeMarker, noticeNames } from "./notices";
 import type { ReportRow } from "./reports";
 import { compareValues } from "./sort";
+import { summary } from "./stats";
+
+/** A row of the figure needs this many values for a box. A box of fewer values shows little. */
+export const BOX_VALUES = 5;
+
+/**
+ * The box of each row of the figure that has at least five values. A box
+ * describes the values of its row, and leaves out the reports that a person
+ * rejected. It is not a consensus value: each report keeps its own dot.
+ */
+export function boxesOf(rows: readonly ValueRow[]): Box[] {
+  const groups = new Map<string, number[]>();
+  for (const row of rows) {
+    if (row.check === "rejected") continue;
+    const values = groups.get(row.label);
+    if (values) values.push(row.value);
+    else groups.set(row.label, [row.value]);
+  }
+  return [...groups.entries()].flatMap(([label, values]) => {
+    const found = values.length >= BOX_VALUES ? summary(values) : null;
+    return found ? [{ label, ...found }] : [];
+  });
+}
 
 /** What one row of the figure of a property shows: one report, or all reports of a subject or of a work. */
 export type FigureRows = "report" | "subject" | "work";

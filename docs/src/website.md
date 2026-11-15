@@ -122,6 +122,16 @@ and the text view shows the quote.
   each report if the property has 60 reports or fewer. Else it shows one row
   for each subject if there are 40 subjects or fewer, and one row for each
   work if there are more.
+- In a row of a subject or of a work with five or more values, a box shows the
+  middle half of the values of the row, from the first to the third quartile,
+  with a line at the median. A thin line goes from the smallest to the largest
+  value. The box leaves out the reports that a person rejected. Each report
+  keeps its own dot.
+- Below the figure, the statistics of the selected values give their number,
+  the smallest and the largest value, the quartiles, the median, and a
+  histogram. arity calculates them from the selected reports, without the
+  reports that a person rejected. They describe the selection. They are not a
+  consensus value, and arity does not weigh the reports.
 - Drag along the axis of values to select a range. Then the figure and the
   table show only the values in that range. Put the pointer on a row of the
   table to make the dot of its report larger.

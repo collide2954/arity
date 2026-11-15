@@ -14,7 +14,7 @@ The website is a static site in Svelte and TypeScript. It reads the files that
 | Reports | All reports in one table, with a search, filters, a sort, a choice of columns, and downloads. |
 | Report | One report: its value or effect, its conditions, its quotes, its checks, and its provenance. |
 | Properties | Each property with its unit and its dimension. |
-| Property | A figure and a table of all values of the property, in the unit of the property. |
+| Property | A figure and a table of all values of the property, in the unit of the property, with the filters of the Reports page. |
 | Entities | Each entity with its kind and its registry identifiers. |
 | Entity | The reports about one entity. |
 | Effects | A matrix of agents and targets, with one mark for each reported effect. |
@@ -63,8 +63,19 @@ and the text view shows the quote.
 ## Figures
 
 - In the figure of a property, each dot is one report of one source. A filled
-  dot is a confirmed report. A hollow dot is an unchecked report. A diamond is
-  a value that the reader read from a plot. A line shows the uncertainty.
+  dot is a confirmed report. A hollow dot is an unchecked report. A pale dot is
+  a rejected report. A diamond is a value that the reader read from a plot. A
+  line shows the uncertainty.
+- The figure of a property can show one row for each report, for each
+  subject, or for each work. In a row of a subject or of a work, each report
+  keeps its own dot, and dots that are near each other go to separate places
+  in the row. When you do not select the rows, the figure shows one row for
+  each report if the property has 60 reports or fewer. Else it shows one row
+  for each subject if there are 40 subjects or fewer, and one row for each
+  work if there are more.
+- Drag along the axis of values to select a range. Then the figure and the
+  table show only the values in that range. Put the pointer on a row of the
+  table to make the dot of its report larger.
 - In the effect matrix, the shape and the color show the direction: up and red
   for an increase, down and blue for a decrease, a gray dot for no change (0),
   and a diamond for a mixed result.

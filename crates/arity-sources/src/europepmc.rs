@@ -155,14 +155,42 @@ struct CommentCorrection {
     kind: Option<String>,
 }
 
-static TAGS: LazyLock<Regex> = LazyLock::new(|| crate::compile(r"<[^>]+>"));
+static TAGS: LazyLock<Regex> = LazyLock::new(|| crate::compile(r"</?[A-Za-z][^>]*>"));
+static ESCAPED_TAGS: LazyLock<Regex> = LazyLock::new(|| crate::compile(r"&lt;/?[A-Za-z].*?&gt;"));
+static REFERENCE: LazyLock<Regex> =
+    LazyLock::new(|| crate::compile(r"&(#[0-9]+|#[xX][0-9A-Fa-f]+|[A-Za-z]+);"));
 static DOI_IN_TEXT: LazyLock<Regex> = LazyLock::new(|| crate::compile(r"(?i)doi:\s*(10\.\S+)"));
 
+/// The text without markup. Europe PMC writes some titles with HTML tags,
+/// some with escaped tags such as `&lt;i&gt;`, and some with character
+/// references.
 fn plain(text: &str) -> String {
-    TAGS.replace_all(text, "")
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
+    let untagged = TAGS.replace_all(text, "");
+    let unescaped = ESCAPED_TAGS.replace_all(&untagged, "");
+    let decoded = REFERENCE.replace_all(&unescaped, |captures: &regex::Captures<'_>| {
+        character(&captures[1]).map_or_else(|| captures[0].to_owned(), String::from)
+    });
+    decoded.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The character of a character reference, without its `&` and `;`.
+fn character(name: &str) -> Option<char> {
+    let code = if let Some(hex) = name.strip_prefix("#x").or_else(|| name.strip_prefix("#X")) {
+        u32::from_str_radix(hex, 16).ok()?
+    } else if let Some(decimal) = name.strip_prefix('#') {
+        decimal.parse().ok()?
+    } else {
+        return match name {
+            "lt" => Some('<'),
+            "gt" => Some('>'),
+            "amp" => Some('&'),
+            "quot" => Some('"'),
+            "apos" => Some('\''),
+            "nbsp" => Some('\u{a0}'),
+            _ => None,
+        };
+    };
+    char::from_u32(code)
 }
 
 /// The kind of notice for a link type of Europe PMC, for the links that are

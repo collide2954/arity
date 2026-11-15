@@ -80,6 +80,27 @@ fn reads_works_from_a_search() {
 }
 
 #[test]
+fn reads_titles_without_markup() {
+    let body = br#"{"hitCount": 2, "resultList": {"result": [
+        {"source": "MED", "title": "From molecular design to &lt;i&gt;in vivo&lt;/i&gt; validation."},
+        {"source": "MED", "title": "Conjugates of <i>o</i>-phenylenediamine &amp; IC<sub>50</sub> &lt; 10&#160;&#x3bc;M"}
+    ]}}"#;
+    let page = europepmc::parse_search(body, now()).unwrap();
+    let titles: Vec<&str> = page
+        .found
+        .iter()
+        .map(|found| found.metadata.title.as_str())
+        .collect();
+    assert_eq!(
+        titles,
+        [
+            "From molecular design to in vivo validation.",
+            "Conjugates of o-phenylenediamine & IC50 < 10 μM",
+        ]
+    );
+}
+
+#[test]
 fn reads_retraction_and_concern_links_but_not_comments() {
     let page = europepmc::parse_search(SEARCH, now()).unwrap();
     let retracted = page

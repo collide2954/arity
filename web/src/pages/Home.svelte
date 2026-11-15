@@ -1,22 +1,52 @@
 <script lang="ts">
-  import { loadIndex } from "../lib/data";
+  import { loadIndex, loadReports } from "../lib/data";
+  import { headline, names } from "../lib/describe";
+  import { emptySelection, filter, selectionQuery } from "../lib/filter";
+  import { findInCatalogue } from "../lib/find";
+  import { REPORT_FACETS, reportRows, type ReportRow } from "../lib/reports";
   import { link } from "../lib/route";
   import type { Index } from "../lib/types";
 
-  let query = $state("");
+  /** The number of reports that the start page lists for a search. */
+  const FIRST = 5;
 
-  function search(index: Index, text: string) {
-    const needle = text.trim().toLowerCase();
-    if (needle.length < 2) return null;
-    const has = (value: string | null | undefined) => (value ?? "").toLowerCase().includes(needle);
-    return {
-      works: index.works.filter((work) => has(work.title) || has(work.pmcid) || has(work.doi)),
-      properties: index.properties.filter((property) => has(property.label) || has(property.key)),
-      entities: index.entities.filter(
-        (entity) => has(entity.label) || entity.names.some(has) || entity.xrefs.some(has),
-      ),
-    };
-  }
+  let query = $state("");
+  let index = $state.raw<Index | null>(null);
+  let failure = $state<string | null>(null);
+  let rows = $state.raw<readonly ReportRow[] | null>(null);
+  let asked = false;
+
+  loadIndex()
+    .then((loaded) => {
+      index = loaded;
+    })
+    .catch((error: unknown) => {
+      failure = error instanceof Error ? error.message : String(error);
+    });
+
+  const found = $derived(index ? findInCatalogue(index, query) : null);
+  const lookup = $derived(index ? names(index) : null);
+  const reports = $derived(
+    found && rows ? filter(rows, { ...emptySelection(), text: query }, REPORT_FACETS).items : null,
+  );
+  const empty = $derived(
+    found !== null &&
+      reports !== null &&
+      found.works.length + found.properties.length + found.entities.length + reports.length === 0,
+  );
+
+  $effect(() => {
+    const catalogue = index;
+    if (!found || !catalogue || asked) return;
+    asked = true;
+    loadReports()
+      .then((loaded) => {
+        rows = reportRows(catalogue, loaded);
+      })
+      .catch(() => {
+        asked = false;
+      });
+  });
 </script>
 
 <h1>Values that open-access research reports, with their sources</h1>
@@ -27,16 +57,18 @@
   for example a retraction.
 </p>
 
-{#await loadIndex()}
+{#if failure}
+  <p>arity cannot load the catalogue: {failure}</p>
+{:else if !index}
   <p class="muted">arity is loading the catalogue.</p>
-{:then index}
-  {@const reports = index.works.reduce((total, work) => total + work.reports, 0)}
+{:else}
+  {@const total = index.works.reduce((sum, work) => sum + work.reports, 0)}
   <div class="stats">
     <a class="card stat" href={link({ page: "works" })}
       ><strong>{index.works.length}</strong><span>works</span></a
     >
     <a class="card stat" href={link({ page: "reports" })}
-      ><strong>{reports}</strong><span>reports</span></a
+      ><strong>{total}</strong><span>reports</span></a
     >
     <a class="card stat" href={link({ page: "properties" })}
       ><strong>{index.properties.length}</strong><span>properties</span></a
@@ -46,14 +78,13 @@
     >
   </div>
 
-  <label for="search"><h2>Find a work, a property, or an entity</h2></label>
+  <label for="search"><h2>Find a work, a property, an entity, or a report</h2></label>
   <input
     id="search"
     type="search"
-    placeholder="For example: doxorubicin, IC50, MCF-7"
+    placeholder="For example: doxorubicin, IC50, MCF-7, or a quote"
     bind:value={query}
   />
-  {@const found = search(index, query)}
   {#if found}
     <div class="results">
       {#each found.properties as property (property.key)}
@@ -63,7 +94,9 @@
       {/each}
       {#each found.entities as entity (entity.id)}
         <a href={link({ page: "entity", id: entity.id })}
-          >{entity.label} <span class="muted">{entity.kind} · {entity.reports} reports</span></a
+          >{entity.label}
+          <span class="muted">{entity.kind.replaceAll("_", " ")} · {entity.reports} reports</span
+          ></a
         >
       {/each}
       {#each found.works as work (work.id)}
@@ -71,8 +104,29 @@
           >{work.title} <span class="muted">{work.citation}</span></a
         >
       {/each}
-      {#if found.works.length + found.properties.length + found.entities.length === 0}
-        <p class="muted">Nothing matches "{query}".</p>
+      {#if reports === null}
+        <p class="muted">arity is loading the reports.</p>
+      {:else if reports.length > 0 && lookup}
+        <h3>
+          {reports.length}
+          {reports.length === 1 ? "report has" : "reports have"} these words
+        </h3>
+        {#each reports.slice(0, FIRST) as row (row.report.id)}
+          <a href={link({ page: "report", id: row.report.id })}
+            >{headline(row.report, lookup)} <span class="muted">{row.citation}</span></a
+          >
+        {/each}
+        <a
+          class="all"
+          href={link({
+            page: "reports",
+            params: selectionQuery({ ...emptySelection(), text: query }, REPORT_FACETS),
+          })}
+          >Show {reports.length > FIRST ? `all ${String(reports.length)}` : "them"} in the report explorer</a
+        >
+      {/if}
+      {#if empty}
+        <p class="muted">Nothing has the words "{query.trim()}".</p>
       {/if}
     </div>
   {/if}
@@ -97,9 +151,7 @@
     Data of {index.generated_at.slice(0, 10)} from {index.software}.
     <a href={`${import.meta.env.BASE_URL}data/${index.database}`}>Download the full database</a> (SQLite).
   </p>
-{:catch error}
-  <p>arity cannot load the catalogue: {error instanceof Error ? error.message : String(error)}</p>
-{/await}
+{/if}
 
 <style>
   .stats {
@@ -128,5 +180,13 @@
     display: grid;
     gap: 0.35rem;
     margin-top: 0.75rem;
+  }
+
+  .results h3 {
+    margin: 0.75rem 0 0.1rem;
+  }
+
+  .all {
+    font-weight: 600;
   }
 </style>

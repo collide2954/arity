@@ -64,6 +64,8 @@ issue_codes! {
         "No quote of the report contains the category of the value.";
     ConditionShape => "condition_shape", Error,
         "A condition does not have a role with an entity or a text, or a property with a value.";
+    CorrectionCueMissing => "correction_cue_missing", Warning,
+        "No quote names the correction for multiple tests that the significance gives.";
     DimensionMismatch => "dimension_mismatch", Error,
         "The unit does not measure the dimension of the property.";
     DirectionCueMissing => "direction_cue_missing", Warning,
@@ -82,6 +84,8 @@ issue_codes! {
         "The text has no caption of a figure or of a table with the key that the value names.";
     FigureNotInEvidence => "figure_not_in_evidence", Error,
         "A value from an image does not have the caption of the figure or the table in its evidence.";
+    InvalidDegreesOfFreedom => "invalid_degrees_of_freedom", Error,
+        "A number of degrees of freedom is not more than zero.";
     InvalidId => "invalid_id", Error,
         "An identifier is empty or has a space.";
     InvalidInterval => "invalid_interval", Error,
@@ -139,7 +143,7 @@ issue_codes! {
     SkipWithoutNumber => "skip_without_number", Error,
         "A quote that the reader skips contains no number.";
     SignificanceShape => "significance_shape", Error,
-        "A significance does not have a statement, a p-value, or both.";
+        "A significance has none of a statement, a p-value, and a q-value, or it has a comparison without a p-value.";
     TableHasCells => "table_has_cells", Error,
         "A value is read from the image of a table, but the text has the cells of that table. Quote the cells.";
     TextMismatch => "text_mismatch", Error,

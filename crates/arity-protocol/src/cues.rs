@@ -1,7 +1,7 @@
 //! Words that state a direction or a limit. A missing cue gives a warning,
 //! not an error: the checks cannot read meaning, so a person must look.
 
-use arity_core::vocabulary::{Bound, Direction};
+use arity_core::vocabulary::{Bound, Correction, Direction};
 use arity_text::normalize;
 
 const INCREASE: &[&str] = &[
@@ -102,6 +102,23 @@ pub(crate) fn states_direction(direction: Direction, quotes: &[String]) -> bool 
         Direction::Decrease => DECREASE,
         Direction::NoChange => NO_CHANGE,
         Direction::Mixed => return true,
+    };
+    let text = joined(quotes);
+    cues.iter().any(|cue| text.contains(cue))
+}
+
+/// True when a quote names the correction for multiple tests. The correction
+/// `other` needs no name.
+pub(crate) fn names_correction(correction: Correction, quotes: &[String]) -> bool {
+    let cues: &[&str] = match correction {
+        Correction::Bonferroni => &["bonferroni"],
+        Correction::Holm => &["holm"],
+        Correction::Sidak => &["sidak", "šidák", "šidak"],
+        Correction::Tukey => &["tukey"],
+        Correction::Dunnett => &["dunnett"],
+        Correction::Scheffe => &["scheff"],
+        Correction::BenjaminiHochberg => &["benjamini", "false discovery", "fdr"],
+        Correction::Other => return true,
     };
     let text = joined(quotes);
     cues.iter().any(|cue| text.contains(cue))

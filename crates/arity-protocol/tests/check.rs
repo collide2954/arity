@@ -43,6 +43,11 @@ fn document() -> Document {
             BlockKind::TableCaption,
             "Table 2: IC50 values of the compounds in MCF-7 cells.",
         ),
+        Block::new(
+            "s3/p2",
+            BlockKind::Paragraph,
+            "Viability of treated cells (n = 8) was lower than in control cells (n = 6) (t(12) = 2.31, p = 0.04; q = 0.08 after Bonferroni correction).",
+        ),
     ];
     Document::new(Digest::of(b"source"), "test 1", blocks).unwrap()
 }
@@ -520,6 +525,99 @@ fn checks_uncertainty_and_statistics() {
     assert_eq!(
         errors(&changed(|v| v["reports"][0]["value"]["n"] = json!(0))),
         one("/reports/0/value/n", "invalid_sample_size")
+    );
+}
+
+/// The submission with an effect that gives a test statistic, a correction
+/// for multiple tests, a q-value, and the size of each group.
+fn with_statistics(edit: impl FnOnce(&mut Value)) -> Value {
+    changed(|v| {
+        v["reports"].as_array_mut().unwrap().push(json!({
+            "type": "effect", "id": "e2",
+            "agents": [{ "entity": "hyd" }],
+            "target": { "entity": "mcf7", "property": "cell_viability" },
+            "direction": "decrease",
+            "comparator": "control cells",
+            "groups": [
+                { "label": "treated cells", "n": 8 },
+                { "label": "control cells", "n": 6 }
+            ],
+            "significance": {
+                "statement": "significant", "comparison": "eq", "p": "0.04",
+                "statistic": { "kind": "t", "number": "2.31", "df": ["12"] },
+                "correction": "bonferroni", "q": "0.08"
+            },
+            "evidence": [{
+                "block": "s3/p2",
+                "quote": "Viability of treated cells (n = 8) was lower than in control cells (n = 6) (t(12) = 2.31, p = 0.04; q = 0.08 after Bonferroni correction)"
+            }]
+        }));
+        edit(v);
+    })
+}
+
+#[test]
+fn accepts_test_statistics_corrections_and_groups() {
+    assert_eq!(warnings(&with_statistics(|_| {})), []);
+    assert_eq!(
+        errors(&with_statistics(|v| {
+            let significance = &mut v["reports"][2]["significance"];
+            significance.as_object_mut().unwrap().remove("p");
+            significance.as_object_mut().unwrap().remove("comparison");
+            significance.as_object_mut().unwrap().remove("statement");
+        })),
+        []
+    );
+}
+
+#[test]
+fn checks_the_numbers_of_statistics_and_groups() {
+    assert_eq!(
+        errors(&with_statistics(|v| {
+            let significance = &mut v["reports"][2]["significance"];
+            significance["statistic"]["number"] = json!("2.4");
+            significance["statistic"]["df"] = json!(["13", "0"]);
+            significance["q"] = json!("1.5");
+            v["reports"][2]["groups"][0]["label"] = json!("treated mice");
+            v["reports"][2]["groups"][1]["n"] = json!(0);
+        })),
+        [
+            (
+                "/reports/2/groups/0/label".to_owned(),
+                "text_not_in_evidence"
+            ),
+            ("/reports/2/groups/1/n".to_owned(), "invalid_sample_size"),
+            (
+                "/reports/2/significance/statistic/number".to_owned(),
+                "number_not_in_evidence"
+            ),
+            (
+                "/reports/2/significance/statistic/df/0".to_owned(),
+                "number_not_in_evidence"
+            ),
+            (
+                "/reports/2/significance/statistic/df/1".to_owned(),
+                "invalid_degrees_of_freedom"
+            ),
+            ("/reports/2/significance/q".to_owned(), "invalid_p"),
+            (
+                "/reports/2/significance/q".to_owned(),
+                "number_not_in_evidence"
+            ),
+        ]
+    );
+}
+
+#[test]
+fn warns_when_no_quote_names_the_correction() {
+    assert_eq!(
+        warnings(&with_statistics(
+            |v| v["reports"][2]["significance"]["correction"] = json!("tukey")
+        )),
+        one(
+            "/reports/2/significance/correction",
+            "correction_cue_missing"
+        )
     );
 }
 

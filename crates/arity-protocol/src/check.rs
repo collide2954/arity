@@ -13,8 +13,8 @@ use crate::issue::{Issue, IssueCode, Severity};
 use crate::properties::{Properties, PropertyDefinition};
 use crate::submission::{
     ConditionInput, EffectReportInput, EvidenceInput, FigureReadingInput, MagnitudeInput,
-    MethodInput, PropertyInput, ReportInput, SUBMISSION_FORMAT, SkipInput, Submission,
-    UncertaintyInput, ValueInput, ValueReportInput,
+    MethodInput, PropertyInput, ReportInput, SUBMISSION_FORMAT, SignificanceInput, SkipInput,
+    Submission, UncertaintyInput, ValueInput, ValueReportInput,
 };
 
 const LONG_QUOTE: usize = 400;
@@ -672,38 +672,85 @@ impl Checker<'_> {
                 format!("no quote contains the comparator {comparator:?}"),
             );
         }
+        for (index, group) in report.groups.iter().enumerate() {
+            let group_path = format!("{path}/groups/{index}");
+            if !evidence.has_text(&group.label, true) {
+                self.raise(
+                    format!("{group_path}/label"),
+                    IssueCode::TextNotInEvidence,
+                    format!("no quote contains the group {:?}", group.label),
+                );
+            }
+            self.sample_size(&format!("{group_path}/n"), group.n, &evidence);
+        }
         if let Some(significance) = &report.significance {
-            let significance_path = format!("{path}/significance");
-            if significance.statement.is_none() && significance.p.is_none() {
-                self.raise(
-                    &significance_path,
-                    IssueCode::SignificanceShape,
-                    "give a statement, a p-value, or both",
-                );
-            }
-            if let Some(p) = significance.p {
-                if p < Decimal::ZERO || p > Decimal::new(1, 0) {
-                    self.raise(
-                        format!("{significance_path}/p"),
-                        IssueCode::InvalidP,
-                        "a p-value is from 0 to 1",
-                    );
-                }
-                self.number_in_evidence(&format!("{significance_path}/p"), p, &evidence);
-            }
-            if significance.comparison.is_some() && significance.p.is_none() {
-                self.raise(
-                    format!("{significance_path}/comparison"),
-                    IssueCode::SignificanceShape,
-                    "a comparison needs a p-value",
-                );
-            }
+            self.significance(&format!("{path}/significance"), significance, &evidence);
         }
         if let Some(n) = report.n {
             self.sample_size(&format!("{path}/n"), n, &evidence);
         }
         self.conditions(path, &report.conditions, &evidence);
         self.method(path, report.method.as_ref(), &evidence);
+    }
+
+    fn significance(&mut self, path: &str, significance: &SignificanceInput, evidence: &Evidence) {
+        if significance.statement.is_none() && significance.p.is_none() && significance.q.is_none()
+        {
+            self.raise(
+                path,
+                IssueCode::SignificanceShape,
+                "give a statement, a p-value, or a q-value",
+            );
+        }
+        if let Some(p) = significance.p {
+            self.probability(&format!("{path}/p"), p, evidence);
+        }
+        if significance.comparison.is_some() && significance.p.is_none() {
+            self.raise(
+                format!("{path}/comparison"),
+                IssueCode::SignificanceShape,
+                "a comparison needs a p-value",
+            );
+        }
+        if let Some(statistic) = &significance.statistic {
+            self.number_in_evidence(
+                &format!("{path}/statistic/number"),
+                statistic.number,
+                evidence,
+            );
+            for (index, df) in statistic.df.iter().enumerate() {
+                let df_path = format!("{path}/statistic/df/{index}");
+                if *df <= Decimal::ZERO {
+                    self.raise(
+                        df_path,
+                        IssueCode::InvalidDegreesOfFreedom,
+                        "degrees of freedom are more than zero",
+                    );
+                } else {
+                    self.number_in_evidence(&df_path, *df, evidence);
+                }
+            }
+        }
+        if let Some(correction) = significance.correction
+            && !cues::names_correction(correction, &evidence.quotes)
+        {
+            self.raise(
+                format!("{path}/correction"),
+                IssueCode::CorrectionCueMissing,
+                format!("no quote names the correction {correction}; a person must check it"),
+            );
+        }
+        if let Some(q) = significance.q {
+            self.probability(&format!("{path}/q"), q, evidence);
+        }
+    }
+
+    /// Checks a p-value or a q-value: it is from 0 to 1, and a quote states it.
+    fn probability(&mut self, path: &str, value: Decimal, evidence: &Evidence) {
+        if value < Decimal::ZERO || value > Decimal::new(1, 0) {
+            self.raise(path, IssueCode::InvalidP, "a p-value is from 0 to 1");
+        }
+        self.number_in_evidence(path, value, evidence);
     }
 
     fn magnitude(&mut self, path: &str, magnitude: &MagnitudeInput, evidence: &Evidence) {

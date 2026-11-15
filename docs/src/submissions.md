@@ -67,9 +67,39 @@ property), the `direction`, and the `evidence`. Optional fields:
 | `relation` | `effect` (the default) or `association`. |
 | `magnitude` | A `measure` such as `fold_change` or `percent_change`, a `number`, and a unit. |
 | `comparator` | What the source compares with, for example a control. |
-| `significance` | A `statement` (`significant` or `not_significant`), a `p` value with its `comparison`, and the `test`. |
+| `significance` | A `statement` (`significant` or `not_significant`), a `p` value with its `comparison`, the `test`, the test `statistic`, the `correction` for multiple tests, and a `q` value. See [Statistics of a test](#statistics-of-a-test). |
 | `n` | The number of samples. |
+| `groups` | The groups that the source compares, each with its `label` as the source writes it and its number of samples `n`. |
 | `conditions`, `method`, `note` | As for a value report. |
+
+### Statistics of a test
+
+Record the statistics of a test as the source states them:
+
+```json
+"groups": [
+  { "label": "treated cells", "n": 8 },
+  { "label": "control cells", "n": 6 }
+],
+"significance": {
+  "statement": "significant", "comparison": "eq", "p": "0.04",
+  "statistic": { "kind": "t", "number": "2.31", "df": ["12"] },
+  "correction": "bonferroni", "q": "0.08"
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `statistic.kind` | `t`, `f`, `chi_squared`, `u` (Mann–Whitney), `w` (Wilcoxon), `h` (Kruskal–Wallis), `z`, `r` (a tested correlation), or `other`. |
+| `statistic.number` | The value of the statistic. |
+| `statistic.df` | The degrees of freedom: one number for t or χ², and two numbers for F, for example `["2", "27"]`. |
+| `correction` | `bonferroni`, `holm`, `sidak`, `tukey`, `dunnett`, `scheffe`, `benjamini_hochberg`, or `other`. |
+| `q` | A p-value that the source corrects for the false discovery rate. |
+
+A quote must contain each number: the statistic, each degree of freedom, the
+`q` value, and the `n` of each group, and also the label of each group. A
+significance needs a statement, a p-value, or a q-value. When no quote names
+the correction, the checks give a warning, and a person must look.
 
 ## Conditions
 

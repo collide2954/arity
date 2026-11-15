@@ -55,8 +55,10 @@ or a table that the source gives only as an image.
 An effect report states that agents change a target, or that they associate
 with it. For example: compound 4d had no effect on MCF-7 cells. The direction
 is `increase` (+1), `decrease` (−1), `no_change` (0), or `mixed`. An effect can
-have a magnitude, for example a 20-fold decrease, a comparator, and a
-significance.
+have a magnitude, for example a 20-fold decrease, a comparator, the groups
+that it compares with their numbers of samples, and a significance. A
+significance can have a p-value, a statement, the test with its statistic and
+degrees of freedom, the correction for multiple tests, and a q-value.
 
 ## Conditions
 

@@ -184,6 +184,41 @@ vocabulary! {
 }
 
 vocabulary! {
+    /// The statistic of a test of significance, for example the t of
+    /// "t(12) = 2.31".
+    pub enum TestStatistic {
+        T => "t",
+        F => "f",
+        ChiSquared => "chi_squared",
+        /// The U of the Mann–Whitney test.
+        U => "u",
+        /// The W of the Wilcoxon test.
+        W => "w",
+        /// The H of the Kruskal–Wallis test.
+        H => "h",
+        Z => "z",
+        /// A correlation coefficient that the source tests.
+        R => "r",
+        Other => "other",
+    }
+}
+
+vocabulary! {
+    /// The correction of p-values for multiple tests that a source names.
+    pub enum Correction {
+        Bonferroni => "bonferroni",
+        Holm => "holm",
+        Sidak => "sidak",
+        Tukey => "tukey",
+        Dunnett => "dunnett",
+        Scheffe => "scheffe",
+        /// The false discovery rate of Benjamini and Hochberg.
+        BenjaminiHochberg => "benjamini_hochberg",
+        Other => "other",
+    }
+}
+
+vocabulary! {
     /// The comparison in a stated p-value, for example `p < 0.05`.
     pub enum Comparison {
         Equal => "eq",
@@ -266,6 +301,8 @@ mod tests {
         round_trip(Role::ALL);
         round_trip(EffectMeasure::ALL);
         round_trip(SignificanceStatement::ALL);
+        round_trip(TestStatistic::ALL);
+        round_trip(Correction::ALL);
         round_trip(Comparison::ALL);
         round_trip(CheckState::ALL);
         round_trip(ValueType::ALL);

@@ -1,6 +1,6 @@
 use arity_core::vocabulary::{
-    AgentKind, Bound, Comparison, Direction, EffectMeasure, Relation, Role, SignificanceStatement,
-    SkipReason, Statistic, UncertaintyKind, ValueType,
+    AgentKind, Bound, Comparison, Correction, Direction, EffectMeasure, Relation, Role,
+    SignificanceStatement, SkipReason, Statistic, TestStatistic, UncertaintyKind, ValueType,
 };
 use arity_core::{Curie, Decimal, Digest, EntityKind, Orcid};
 use schemars::JsonSchema;
@@ -285,6 +285,10 @@ pub struct EffectReportInput {
     pub significance: Option<SignificanceInput>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub n: Option<u32>,
+    /// The number of samples in each group that the source compares, for
+    /// example in the treated group and in the control group.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub groups: Vec<GroupInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub conditions: Vec<ConditionInput>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -349,6 +353,37 @@ pub struct SignificanceInput {
     /// The name of the statistical test, as the source writes it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub test: Option<String>,
+    /// The statistic of the test, as the source states it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub statistic: Option<TestStatisticInput>,
+    /// The correction for multiple tests that the source names.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub correction: Option<Correction>,
+    /// A q-value: a p-value that the source corrects for the false discovery
+    /// rate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub q: Option<Decimal>,
+}
+
+/// The statistic of a test, for example "t(12) = 2.31".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TestStatisticInput {
+    pub kind: TestStatistic,
+    pub number: Decimal,
+    /// The degrees of freedom, as the source states them: one number for t or
+    /// χ², and two numbers for F.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub df: Vec<Decimal>,
+}
+
+/// One group that an effect compares, with its number of samples.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GroupInput {
+    /// The name of the group, as the source writes it.
+    pub label: String,
+    pub n: u32,
 }
 
 /// The JSON Schema of the submission format.

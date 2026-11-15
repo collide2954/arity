@@ -10,6 +10,7 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `bound_cue_missing` | warning | The value has a bound, but no quote has a sign or a word for that bound. |
 | `category_not_in_evidence` | warning | No quote of the report contains the category of the value. |
 | `condition_shape` | error | A condition does not have a role with an entity or a text, or a property with a value. |
+| `correction_cue_missing` | warning | No quote names the correction for multiple tests that the significance gives. |
 | `dimension_mismatch` | error | The unit does not measure the dimension of the property. |
 | `direction_cue_missing` | warning | No quote has a word that states the direction of the effect. |
 | `duplicate_id` | error | Two entities, or two reports, have the same identifier. |
@@ -19,6 +20,7 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `empty_quote` | error | A quote is empty. |
 | `figure_not_found` | error | The text has no caption of a figure or of a table with the key that the value names. |
 | `figure_not_in_evidence` | error | A value from an image does not have the caption of the figure or the table in its evidence. |
+| `invalid_degrees_of_freedom` | error | A number of degrees of freedom is not more than zero. |
 | `invalid_id` | error | An identifier is empty or has a space. |
 | `invalid_interval` | error | The low end of an interval is greater than the high end. |
 | `invalid_json` | error | The file is not JSON, or it does not have the fields of a submission. |
@@ -47,7 +49,7 @@ The checks give each problem one of these codes. An error stops the submission. 
 | `quote_too_long` | error | A quote is longer than the maximum length of a quote. |
 | `skip_note_required` | error | A quote that the reader skips for the reason `other` has no note that tells the reason. |
 | `skip_without_number` | error | A quote that the reader skips contains no number. |
-| `significance_shape` | error | A significance does not have a statement, a p-value, or both. |
+| `significance_shape` | error | A significance has none of a statement, a p-value, and a q-value, or it has a comparison without a p-value. |
 | `table_has_cells` | error | A value is read from the image of a table, but the text has the cells of that table. Quote the cells. |
 | `text_mismatch` | error | The submission names a text that is not the current text of the work. |
 | `text_not_in_evidence` | error | No quote contains a text that the report gives, for example the comparator. |

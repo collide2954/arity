@@ -438,6 +438,13 @@
               "format": "uint32",
               "minimum": 0
             },
+            "groups": {
+              "description": "The number of samples in each group that the source compares, for\nexample in the treated group and in the control group.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/GroupInput"
+              }
+            },
             "conditions": {
               "type": "array",
               "items": {
@@ -967,6 +974,39 @@
             "string",
             "null"
           ]
+        },
+        "statistic": {
+          "description": "The statistic of the test, as the source states it.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TestStatisticInput"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "correction": {
+          "description": "The correction for multiple tests that the source names.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Correction"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "q": {
+          "description": "A q-value: a p-value that the source corrects for the false discovery\nrate.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Decimal"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -988,6 +1028,107 @@
         "le",
         "gt",
         "ge"
+      ]
+    },
+    "TestStatisticInput": {
+      "description": "The statistic of a test, for example \"t(12) = 2.31\".",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/TestStatistic"
+        },
+        "number": {
+          "$ref": "#/$defs/Decimal"
+        },
+        "df": {
+          "description": "The degrees of freedom, as the source states them: one number for t or\nχ², and two numbers for F.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Decimal"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "number"
+      ]
+    },
+    "TestStatistic": {
+      "description": "The statistic of a test of significance, for example the t of\n\"t(12) = 2.31\".",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "t",
+            "f",
+            "chi_squared",
+            "z",
+            "other"
+          ]
+        },
+        {
+          "description": "The U of the Mann–Whitney test.",
+          "type": "string",
+          "const": "u"
+        },
+        {
+          "description": "The W of the Wilcoxon test.",
+          "type": "string",
+          "const": "w"
+        },
+        {
+          "description": "The H of the Kruskal–Wallis test.",
+          "type": "string",
+          "const": "h"
+        },
+        {
+          "description": "A correlation coefficient that the source tests.",
+          "type": "string",
+          "const": "r"
+        }
+      ]
+    },
+    "Correction": {
+      "description": "The correction of p-values for multiple tests that a source names.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "bonferroni",
+            "holm",
+            "sidak",
+            "tukey",
+            "dunnett",
+            "scheffe",
+            "other"
+          ]
+        },
+        {
+          "description": "The false discovery rate of Benjamini and Hochberg.",
+          "type": "string",
+          "const": "benjamini_hochberg"
+        }
+      ]
+    },
+    "GroupInput": {
+      "description": "One group that an effect compares, with its number of samples.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "The name of the group, as the source writes it.",
+          "type": "string"
+        },
+        "n": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "n"
       ]
     },
     "SkipInput": {

@@ -26,13 +26,17 @@
   <a href={link({ page: "report", id: report.id })}>{row.reported}</a>
   {#if reading}<span class="chip" title={reading.explanation}>{reading.label}</span>{/if}
 {:else if column.id === "converted"}
-  {row.converted === null ? "" : `${formatNumber(row.converted)} ${row.unit}`}
+  <span class="value"
+    >{row.converted === null ? "" : `${formatNumber(row.converted)} ${row.unit}`}</span
+  >
 {:else if column.numeric && typeof value === "number" && column.id !== "id" && column.id !== "year"}
   {formatNumber(value)}
 {:else if column.id === "conditions"}
   <ConditionList parts={row.conditionParts} limit={4} />
 {:else if column.id === "source"}
-  <a href={link({ page: "work", id: report.work, report: report.id })}>{row.citation}</a>
+  <a class="source" href={link({ page: "work", id: report.work, report: report.id })}
+    >{row.citation}</a
+  >
 {:else if column.id === "identifier"}
   <span class="mono">{row.identifier}</span>
 {:else if column.id === "check"}
@@ -50,7 +54,16 @@
 <style>
   .about {
     display: block;
-    min-width: 12ch;
+    min-width: 23ch;
+  }
+
+  .value {
+    white-space: nowrap;
+  }
+
+  .source {
+    display: inline-block;
+    min-width: 14ch;
   }
 
   .clamp {

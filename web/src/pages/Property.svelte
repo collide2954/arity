@@ -6,6 +6,7 @@
   import FilterPanel from "../components/FilterPanel.svelte";
   import RangeFields from "../components/RangeFields.svelte";
   import ReportCell from "../components/ReportCell.svelte";
+  import ReportPreview from "../components/ReportPreview.svelte";
   import SelectionChips from "../components/SelectionChips.svelte";
   import { valueSpec } from "../lib/charts";
   import { download } from "../lib/csv";
@@ -162,6 +163,10 @@
 
 {#snippet cell(row: ReportRow, column: Column<ReportRow>)}
   <ReportCell {row} {column} />
+{/snippet}
+
+{#snippet preview(row: ReportRow)}
+  <ReportPreview {row} />
 {/snippet}
 
 {#if failure}
@@ -332,6 +337,7 @@
           label="Values of {summary.label}"
           key={(row: ReportRow) => row.report.id}
           {cell}
+          detail={preview}
           onview={(next: TableView) => {
             show(selection, next);
           }}

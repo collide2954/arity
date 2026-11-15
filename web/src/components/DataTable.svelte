@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends object">
   import type { Snippet } from "svelte";
+  import { SvelteSet } from "svelte/reactivity";
 
   import type { Page } from "../lib/paging";
   import { PAGE_SIZES, sortedBy, type Column, type TableView } from "../lib/view";
@@ -13,6 +14,7 @@
     key,
     label,
     onhover,
+    detail,
   }: {
     page: Page<T>;
     columns: readonly Column<T>[];
@@ -23,7 +25,17 @@
     label: string;
     /** Gets the row under the pointer, or null when the pointer leaves the rows. */
     onhover?: (row: T | null) => void;
+    /** The details of a row, which a person can open below the row. */
+    detail?: Snippet<[T]>;
   } = $props();
+
+  const open = new SvelteSet<string | number>();
+
+  function toggle(row: T): void {
+    const id = key(row);
+    if (open.has(id)) open.delete(id);
+    else open.add(id);
+  }
 
   function sign(column: Column<T>): string {
     if (view.sort !== column.id) return "";
@@ -35,6 +47,7 @@
   <table aria-label={label}>
     <thead>
       <tr>
+        {#if detail}<th scope="col" class="opener"><span class="hidden">Details</span></th>{/if}
         {#each columns as column (column.id)}
           <th
             class:numeric={column.numeric}
@@ -58,15 +71,33 @@
       }}
     >
       {#each page.rows as row (key(row))}
+        {@const id = key(row)}
         <tr
           onpointerenter={() => {
             onhover?.(row);
           }}
         >
+          {#if detail}
+            <td class="opener">
+              <button
+                type="button"
+                aria-expanded={open.has(id)}
+                aria-label={open.has(id) ? "Close the details" : "Open the details"}
+                onclick={() => {
+                  toggle(row);
+                }}>{open.has(id) ? "\u{25be}" : "\u{25b8}"}</button
+              >
+            </td>
+          {/if}
           {#each columns as column (column.id)}
             <td class:numeric={column.numeric}>{@render cell(row, column)}</td>
           {/each}
         </tr>
+        {#if detail && open.has(id)}
+          <tr class="detail">
+            <td colspan={columns.length + 1}>{@render detail(row)}</td>
+          </tr>
+        {/if}
       {/each}
     </tbody>
   </table>
@@ -120,6 +151,31 @@
   th button:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .opener {
+    width: 1.5rem;
+    padding-right: 0;
+  }
+
+  .opener button {
+    border: 0;
+    background: none;
+    padding: 0 0.25rem;
+    color: var(--accent-ink);
+  }
+
+  .hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .detail td {
+    background: var(--page);
   }
 
   .sign {

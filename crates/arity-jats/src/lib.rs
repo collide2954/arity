@@ -30,7 +30,8 @@ pub enum Version {
     /// text.
     V2,
     /// Writes as version 2, and also writes the variant Greek letters of TeX,
-    /// for example `\varDelta`, as their characters.
+    /// for example `\varDelta`, as their characters, and the Latin letters of
+    /// small capitals as capitals, for example `n<sc>m</sc>` as `nM`.
     V3,
 }
 

@@ -136,8 +136,10 @@ fn parts(node: Node<'_, '_>, version: Version) -> Vec<String> {
 }
 
 /// Writes the markup that version 2 and later versions write as plain text:
-/// the scripts, the parts of MathML formulas, and formulas in TeX. Gives
-/// false for each other element.
+/// the scripts, the parts of MathML formulas, and formulas in TeX. From
+/// version 3, also small capitals as capitals, because a source can write the
+/// M of a molar unit in small capitals, for example `n<sc>m</sc>` for nM.
+/// Gives false for each other element.
 fn push_markup(node: Node<'_, '_>, version: Version, out: &mut String) -> bool {
     match name(node) {
         "sup" => out.push_str(&script::write(&content(node, version), Script::Superscript)),
@@ -147,6 +149,13 @@ fn push_markup(node: Node<'_, '_>, version: Version, out: &mut String) -> bool {
             out.push_str(&group(&content(node, version)));
         }
         "mfenced" => out.push_str(&fenced(node, version)),
+        "sc" if version >= Version::V3 => {
+            out.extend(
+                content(node, version)
+                    .chars()
+                    .map(|c| c.to_ascii_uppercase()),
+            );
+        }
         "mtr" | "mtd" => {
             out.push(' ');
             push_children(node, version, out);
@@ -241,6 +250,25 @@ mod tests {
     fn flatten_2(xml: &str) -> String {
         let document = roxmltree::Document::parse(xml).unwrap();
         text(document.root_element(), Version::V2)
+    }
+
+    fn flatten_3(xml: &str) -> String {
+        let document = roxmltree::Document::parse(xml).unwrap();
+        text(document.root_element(), Version::V3)
+    }
+
+    #[test]
+    fn version_3_writes_small_capitals_as_capitals() {
+        let xml = "<p>IC<sub>50</sub> = 471 n<sc>m</sc>, 1.80 µ<sc>m</sc>, and 2 m<sc>m</sc> <sc>l</sc>-glutamine</p>";
+        assert_eq!(
+            flatten_3(xml),
+            "IC₅₀ = 471 nM, 1.80 µM, and 2 mM L-glutamine"
+        );
+        assert_eq!(
+            flatten_2(xml),
+            "IC₅₀ = 471 nm, 1.80 µm, and 2 mm l-glutamine"
+        );
+        assert_eq!(flatten_3("<p><sc>Dna µ</sc></p>"), "DNA µ");
     }
 
     const MATHML: &str = r#"xmlns:mml="http://www.w3.org/1998/Math/MathML""#;

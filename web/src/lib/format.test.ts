@@ -5,6 +5,7 @@ import {
   imageReading,
   reportedValue,
   scoreLabel,
+  formatCount,
   groupsLabel,
   significanceLabel,
   uncertaintyLabel,
@@ -120,6 +121,14 @@ describe("labels", () => {
     expect(significanceLabel({ statistic: { kind: "u", number: "12" }, p: "0.02" })).toBe(
       "U = 12, p = 0.02",
     );
+  });
+});
+
+describe("formatCount", () => {
+  it("writes a count with a comma between each group of three digits", () => {
+    expect(formatCount(3349)).toBe("3,349");
+    expect(formatCount(14)).toBe("14");
+    expect(formatCount(1234567)).toBe("1,234,567");
   });
 });
 

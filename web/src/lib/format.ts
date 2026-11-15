@@ -75,6 +75,11 @@ export function unitLabel(code: string): string {
 }
 
 /** Writes a calculated number with four significant digits. */
+/** A count of things, with a comma between each group of three digits. */
+export function formatCount(count: number): string {
+  return count.toLocaleString("en-US");
+}
+
 export function formatNumber(value: number): string {
   if (!Number.isFinite(value)) return String(value);
   if (value === 0) return "0";

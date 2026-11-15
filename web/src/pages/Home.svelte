@@ -3,6 +3,7 @@
   import { headline, names } from "../lib/describe";
   import { emptySelection, filter, selectionQuery } from "../lib/filter";
   import { findInCatalogue } from "../lib/find";
+  import { formatCount } from "../lib/format";
   import { REPORT_FACETS, reportRows, type ReportRow } from "../lib/reports";
   import { docsLink } from "../lib/docs";
   import { link } from "../lib/route";
@@ -159,13 +160,16 @@
 
   {@const total = index.works.reduce((sum, work) => sum + work.reports, 0)}
   <section class="metrics" aria-label="The catalogue">
-    <a href={link({ page: "works" })}><strong>{index.works.length}</strong><span>works</span></a>
-    <a href={link({ page: "reports" })}><strong>{total}</strong><span>reports</span></a>
+    <a href={link({ page: "works" })}
+      ><strong>{formatCount(index.works.length)}</strong><span>works</span></a
+    >
+    <a href={link({ page: "reports" })}><strong>{formatCount(total)}</strong><span>reports</span></a
+    >
     <a href={link({ page: "properties" })}
-      ><strong>{index.properties.length}</strong><span>properties</span></a
+      ><strong>{formatCount(index.properties.length)}</strong><span>properties</span></a
     >
     <a href={link({ page: "entities" })}
-      ><strong>{index.entities.length}</strong><span>entities</span></a
+      ><strong>{formatCount(index.entities.length)}</strong><span>entities</span></a
     >
   </section>
 
@@ -367,6 +371,7 @@
 
   .entry {
     display: grid;
+    align-content: start;
     gap: 0.3rem;
     text-decoration: none;
     color: var(--ink);

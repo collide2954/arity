@@ -52,6 +52,17 @@ link. A download gives all the rows that you select, not only the rows of the
 page: a CSV file with all columns, or a JSON file with each report as arity
 exports it.
 
+## Check mode
+
+A person compares each report with its source, and confirms or rejects it.
+Select "Check mode" at the top of the website. Then the page of each report,
+and the list of reports of each work and of each entity, have the buttons
+Confirm and Reject, with a field for a note. The browser keeps your marks. On
+the page "Your checks", give your name and, if you have one, your ORCID iD.
+Then download the check file, and give it to a person who keeps the data of
+arity. That person records it with `arity check --file`. See
+[Check a report](start.md#check-a-report).
+
 ## Compare reports in a matrix
 
 On the Compare page, select a property. Then select what the rows and the

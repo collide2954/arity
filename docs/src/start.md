@@ -89,6 +89,20 @@ arity check 12 confirm --note "The value agrees with Table 1."
 arity check 13 reject --note "The source states mg/mL."
 ```
 
+The website also has a check mode. In check mode, a person confirms or rejects
+reports on the website, and then downloads a check file. The file names the
+person, and for each check the work, the run, the report, the result, the note,
+and the time. To record the checks of the file, use:
+
+```sh
+arity check --file arity-checks-2026-11-15.json
+```
+
+arity records each check with the person that the file names, so look at the
+file before you record it. arity finds the report of each check before it
+records a check. Thus a file with a problem adds no checks. A check that the
+database has already is not recorded again.
+
 ## Read the notices again
 
 ```sh

@@ -9,6 +9,7 @@ pub mod context;
 pub mod coverage;
 pub mod error;
 pub mod fetch;
+pub mod guide;
 pub mod notices;
 pub mod show;
 pub mod submit;

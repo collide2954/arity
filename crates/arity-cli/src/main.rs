@@ -8,7 +8,8 @@ use arity_cli::config::{CONFIG_FILE, Config, PersonConfig};
 use arity_cli::submit::Outcome;
 use arity_cli::update_text::{self, Update};
 use arity_cli::{
-    CliError, Context, Result, archive, catalogue, checks, coverage, fetch, notices, show, submit,
+    CliError, Context, Result, archive, catalogue, checks, coverage, fetch, guide, notices, show,
+    submit,
 };
 use arity_core::vocabulary::CheckState;
 use arity_core::{EntityKind, License, NoticeKind, Orcid, PREFIXES, Scope};
@@ -134,6 +135,9 @@ enum Command {
     },
     /// Print the JSON Schema of the submission format.
     Schema,
+    /// Print the guide for readers, as Markdown: the rules and the steps to
+    /// read a work for arity.
+    Guide,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -216,6 +220,10 @@ fn run(cli: Cli, out: &mut impl Write) -> Result<ExitCode> {
         Command::Vocab { list } => vocab(list, data, out),
         Command::Schema => {
             emit(out, json_text(&arity_protocol::schema())?)?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Guide => {
+            emit(out, guide::GUIDE.trim_end())?;
             Ok(ExitCode::SUCCESS)
         }
     }

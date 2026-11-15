@@ -440,9 +440,10 @@ fn check(
 fn check_file(data: &Path, file: &Path, now: Timestamp, out: &mut impl Write) -> Result<ExitCode> {
     let context = open(data)?;
     let recorded = checks::record_file(&context, file, now)?;
+    let noun = if recorded == 1 { "check" } else { "checks" };
     emit(
         out,
-        format!("Recorded {recorded} new checks from {}.", file.display()),
+        format!("Recorded {recorded} new {noun} from {}.", file.display()),
     )?;
     Ok(ExitCode::SUCCESS)
 }

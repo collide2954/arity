@@ -1,11 +1,12 @@
 <script lang="ts">
   import { checking } from "../lib/checking.svelte";
-  import { conditions, headline, type Names } from "../lib/describe";
+  import { conditionParts, headline, type Names } from "../lib/describe";
   import { imageReading } from "../lib/format";
   import { link } from "../lib/route";
   import type { Report, WorkSummary } from "../lib/types";
   import CheckBadge from "./CheckBadge.svelte";
   import CheckControls from "./CheckControls.svelte";
+  import ConditionList from "./ConditionList.svelte";
   import NoticeChips from "./NoticeChips.svelte";
 
   let {
@@ -40,10 +41,8 @@
     {#if reading}
       <span class="chip" title={reading.explanation}>{reading.label}</span>
     {/if}
-    {#each conditions(report, lookup) as condition (condition)}
-      <span class="chip">{condition}</span>
-    {/each}
   </div>
+  <ConditionList parts={conditionParts(report, lookup)} limit={3} />
   {#if !located}
     <p class="muted small">arity cannot find this quote in the PDF. The text view shows it.</p>
   {/if}
@@ -60,7 +59,9 @@
     box-shadow: 0 0 0 1px var(--ring);
     background: var(--surface);
     display: grid;
-    gap: 0.35rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.45rem;
+    min-width: 0;
   }
 
   article.selected {
@@ -69,8 +70,11 @@
 
   .headline {
     all: unset;
+    display: block;
     cursor: pointer;
     font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
   }
 
   .headline:focus-visible {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import QuickJump from "./components/QuickJump.svelte";
   import { checking, setCheckMode } from "./lib/checking.svelte";
   import { link } from "./lib/route";
   import { location } from "./lib/state.svelte";
@@ -48,6 +49,7 @@
       >
     {/each}
     <span class="checking">
+      <QuickJump />
       {#if checking.on || checking.draft.marks.length > 0}
         <a
           href={link({ page: "checks" })}

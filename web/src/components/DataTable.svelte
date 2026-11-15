@@ -30,6 +30,30 @@
   } = $props();
 
   const open = new SvelteSet<string | number>();
+  let wrapper: HTMLDivElement | undefined = $state();
+
+  /** The arrow keys move the focus to the first link or button of the next or the previous row. */
+  $effect(() => {
+    const element = wrapper;
+    if (!element) return;
+    const move = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      const down = event.key === "ArrowDown";
+      let row = event.target instanceof Element ? event.target.closest("tbody tr") : null;
+      do {
+        row = (down ? row?.nextElementSibling : row?.previousElementSibling) ?? null;
+      } while (row?.classList.contains("detail"));
+      const target = row?.querySelector<HTMLElement>("a, button");
+      if (target) {
+        event.preventDefault();
+        target.focus();
+      }
+    };
+    element.addEventListener("keydown", move);
+    return () => {
+      element.removeEventListener("keydown", move);
+    };
+  });
 
   function toggle(row: T): void {
     const id = key(row);
@@ -43,7 +67,7 @@
   }
 </script>
 
-<div class="table-wrap card">
+<div class="table-wrap card" bind:this={wrapper}>
   <table aria-label={label}>
     <thead>
       <tr>

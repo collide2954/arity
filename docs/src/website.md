@@ -19,7 +19,10 @@ The website is a static site in Svelte and TypeScript. It reads the files that
 | Entity | The reports about one entity. |
 | Effects | A matrix of agents and targets, with one mark for each reported effect. |
 
-Each table can download its rows as a CSV file.
+Each table can download its rows as a CSV file. The pages of works,
+properties, entities, and effects also have a search box, filters, and columns
+that you can sort, as on the Reports page. On the Effects page, the filters
+change the matrix and the table.
 
 ## Find and filter reports
 

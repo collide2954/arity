@@ -121,9 +121,18 @@ and the text view shows the quote.
 - Drag along the axis of values to select a range. Then the figure and the
   table show only the values in that range. Put the pointer on a row of the
   table to make the dot of its report larger.
-- In the effect matrix, the shape and the color show the direction: up and red
-  for an increase, down and blue for a decrease, a gray dot for no change (0),
-  and a diamond for a mixed result.
+- The figure of effects has three forms. The tiles give one square for each
+  report, in the order of the directions, so the length of a row shows its
+  number of reports. The list gives each direction its own column. The matrix
+  puts the agents against the targets. In the tiles and the list, you select
+  what a row is: an agent, a target, an agent and a target, a work, or a
+  condition, for example the cell line.
+- In the figures of effects, the color shows the direction: red for an
+  increase, blue for a decrease, and gray for no change (0) or a mixed result.
+  In the list and the matrix, the shape also shows the direction: up for an
+  increase, down for a decrease, a dot for no change, and a diamond for a mixed
+  result. In the tiles, a square with a dark outline comes from a source with a
+  notice.
 - When a source has a notice, the figures show it. See [Notices](notices.md).
 
 The website has a light theme and a dark theme, and it follows the setting of

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { effectRows, matrixRows } from "./effects";
 import type { Index, Report } from "./types";
-import { figureRows, valueRows } from "./values";
 
 const index: Index = {
   format: "arity-site/1",
@@ -103,54 +102,6 @@ function effect(id: number, direction: "increase" | "no_change", score: number):
     },
   };
 }
-
-describe("valueRows", () => {
-  it("gives each report a unique label and leaves out rejected reports", () => {
-    const reports = [
-      value(1, "confirmed", 0.24),
-      value(2, "unchecked", 0.3),
-      value(3, "rejected", 9),
-    ];
-    const rows = valueRows(index, reports, "ic50", false);
-    expect(rows.map((row) => row.label)).toEqual([
-      "doxorubicin \u{b7} cell line: MCF-7 \u{2014} Lafi et al. 2023, PLOS ONE",
-      "doxorubicin \u{b7} cell line: MCF-7 \u{2014} Lafi et al. 2023, PLOS ONE (2)",
-    ]);
-    expect(valueRows(index, reports, "ic50", true)).toHaveLength(3);
-    expect(rows[0]?.notices).toEqual(["retraction"]);
-  });
-
-  it("plots only values that have a display value", () => {
-    const rows = valueRows(
-      index,
-      [value(1, "confirmed", 0.24), value(2, "unchecked", null)],
-      "ic50",
-      true,
-    );
-    const plotted = figureRows(rows);
-    expect(plotted).toHaveLength(1);
-    expect(plotted[0]).toMatchObject({
-      report: 1,
-      value: 0.24,
-      origin: "stated",
-      notices: "Retraction",
-    });
-  });
-
-  it("starts the figure label with the notices of the source", () => {
-    const [noticed] = figureRows(valueRows(index, [value(1, "confirmed", 0.24)], "ic50", true));
-    expect(noticed?.label).toBe(
-      "\u{26a0}\u{fe0e} Retraction \u{b7} doxorubicin \u{b7} cell line: MCF-7 \u{2014} Lafi et al. 2023, PLOS ONE",
-    );
-    const [plain] = figureRows(
-      valueRows(withoutNotices, [value(1, "confirmed", 0.24)], "ic50", true),
-    );
-    expect(plain?.label).toBe(
-      "doxorubicin \u{b7} cell line: MCF-7 \u{2014} Lafi et al. 2023, PLOS ONE",
-    );
-    expect(plain?.notices).toBe("none");
-  });
-});
 
 describe("effectRows", () => {
   it("puts reports of the same cell in separate slots", () => {

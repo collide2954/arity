@@ -78,51 +78,89 @@ export interface ValueRow {
   check: "unchecked" | "confirmed" | "rejected";
   origin: "stated" | "read from an image";
   notices: string;
+  /** The notice sign of the source, or empty text. */
+  marker: string;
+  /** The subject and the conditions of the report. */
+  detail: string;
+  /** The place of the dot in its row, when a row has more than one dot. */
+  slot: number;
 }
 
 export interface ValueOptions {
   unit: string;
   logarithmic: boolean;
   mode: Mode;
+  /** True when a row of the figure can have more than one dot: the reports of a subject or of a work. */
+  grouped: boolean;
+  /** The largest width of a row label, in pixels. */
+  labelLimit?: number;
 }
 
-/** A dot for each reported value, with its uncertainty interval as a line. */
+/** A figure with more rows than this has the axis of values at the top. */
+const TALL = 12;
+
+/**
+ * A dot for each reported value, with its uncertainty interval as a line and
+ * the notice sign of its source above it. A person can drag a range along the
+ * axis of values; the parameter `highlight` makes the dot of one report larger.
+ */
 export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): TopLevelSpec {
   const tokens = TOKENS[options.mode];
   const scale = options.logarithmic ? { type: "log" as const } : { zero: false };
-  const height = Math.max(120, rows.length * 28);
+  const slots = Math.max(1, ...rows.map((row) => row.slot + 1));
+  const tall = new Set(rows.map((row) => row.label)).size > TALL;
+  const offset =
+    options.grouped && slots > 1
+      ? { yOffset: { field: "slot", type: "nominal" as const, legend: null } }
+      : {};
+  const intervals = rows.some((row) => row.low !== null && row.high !== null)
+    ? [
+        {
+          mark: {
+            type: "rule" as const,
+            strokeWidth: 2,
+            strokeCap: "round" as const,
+            color: tokens.series,
+          },
+          encoding: {
+            x: { field: "low", type: "quantitative" as const, scale },
+            x2: { field: "high" },
+          },
+        },
+      ]
+    : [];
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: "container",
-    height,
+    height: {
+      step: options.grouped ? Math.min(64, Math.max(28, 10 + 9 * slots)) : 28,
+      for: "position",
+    },
+    autosize: { type: "fit-x", contains: "padding" },
     data: { values: rows.map((row) => ({ ...row })) },
     config: config(options.mode),
+    params: [{ name: "highlight", value: 0 }],
     encoding: {
       y: {
         field: "label",
         type: "nominal",
-        sort: { field: "value", order: "ascending" },
-        axis: { title: null, labelLimit: 320 },
+        sort: options.grouped ? null : { field: "value", order: "ascending" },
+        axis: { title: null, labelLimit: options.labelLimit ?? 320 },
       },
+      ...offset,
     },
     layer: [
-      {
-        mark: { type: "rule", strokeWidth: 2, strokeCap: "round", color: tokens.series },
-        encoding: {
-          x: { field: "low", type: "quantitative", scale },
-          x2: { field: "high" },
-        },
-      },
+      ...intervals,
       {
         mark: {
           type: "point",
-          size: 110,
           strokeWidth: 2,
           stroke: tokens.series,
           cursor: "pointer",
         },
         params: [
           { name: "hover", select: { type: "point", on: "pointerover", clear: "pointerout" } },
+          { name: "range", select: { type: "interval", encodings: ["x"] } },
         ],
         encoding: {
           x: {
@@ -130,6 +168,7 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
             type: "quantitative",
             scale,
             title: options.unit,
+            ...(tall ? { axis: { orient: "top" as const } } : {}),
           },
           fill: {
             condition: { test: "datum.check === 'confirmed'", value: tokens.series },
@@ -139,16 +178,31 @@ export function valueSpec(rows: readonly ValueRow[], options: ValueOptions): Top
             field: "origin",
             type: "nominal",
             scale: { domain: ["stated", "read from an image"], range: ["circle", "diamond"] },
-            legend: { title: "Value" },
+            legend: { title: "Value", orient: "top" },
           },
-          opacity: { condition: { param: "hover", empty: false, value: 1 }, value: 0.9 },
+          size: { condition: { test: "datum.report === highlight", value: 320 }, value: 110 },
+          opacity: {
+            condition: [
+              { test: "datum.check === 'rejected'", value: 0.35 },
+              { param: "hover", empty: false, value: 1 },
+            ],
+            value: 0.9,
+          },
           tooltip: [
+            { field: "detail", title: "Report" },
             { field: "work", title: "Source" },
             { field: "reported", title: "As reported" },
             { field: "value", title: `In ${options.unit}`, format: ".4~g" },
             { field: "check", title: "Check" },
             { field: "notices", title: "Notices" },
           ],
+        },
+      },
+      {
+        mark: { type: "text", dy: -12, fontSize: 12, color: tokens.ink },
+        encoding: {
+          x: { field: "value", type: "quantitative", scale },
+          text: { field: "marker" },
         },
       },
     ],

@@ -65,7 +65,7 @@
     <Properties />
   {:else if route.page === "property"}
     {#key route.key}
-      <Property key={route.key} />
+      <Property key={route.key} params={route.params ?? ""} />
     {/key}
   {:else if route.page === "entities"}
     <Entities />

@@ -1,76 +1,133 @@
 import type { ValueRow } from "./charts";
-import { conditions, entityName, names } from "./describe";
-import { reportedValue } from "./format";
-import { noticeMarker, noticeNames } from "./notices";
-import type { Index, Report, ValueBody } from "./types";
+import { markerSign, noticeMarker, noticeNames } from "./notices";
+import type { ReportRow } from "./reports";
+import { compareValues } from "./sort";
 
-/** One reported value of a property, for the table and the figure. */
-export interface ValueTableRow {
-  readonly report: Report;
-  readonly body: ValueBody;
-  readonly label: string;
-  readonly subject: string;
-  readonly conditions: readonly string[];
-  readonly citation: string;
-  readonly notices: readonly string[];
+/** What one row of the figure of a property shows: one report, or all reports of a subject or of a work. */
+export type FigureRows = "report" | "subject" | "work";
+
+export const FIGURE_ROWS: readonly FigureRows[] = ["report", "subject", "work"];
+
+export interface FigureOptions {
+  readonly rows: FigureRows;
+  readonly logarithmic: boolean;
 }
 
-/** The value reports of a property, each with a unique label for the figure. */
-export function valueRows(
-  index: Index,
-  reports: readonly Report[],
-  property: string,
-  includeRejected: boolean,
-): ValueTableRow[] {
-  const lookup = names(index);
-  const works = new Map(index.works.map((work) => [work.id, work]));
-  const counts = new Map<string, number>();
-  return reports
-    .filter((report) => report.property === property && report.body.type === "value")
-    .filter((report) => includeRejected || report.check !== "rejected")
-    .map((report) => {
-      const body = report.body as ValueBody;
-      const subject = body.subject.map((local) => entityName(report, local, lookup)).join(" + ");
-      const work = works.get(report.work);
-      const context = conditions(report, lookup);
-      const citation = work?.citation ?? `work ${String(report.work)}`;
-      const base = `${[subject, ...context].join(" \u{b7} ")} \u{2014} ${citation}`;
-      const count = (counts.get(base) ?? 0) + 1;
-      counts.set(base, count);
-      return {
-        report,
-        body,
-        subject,
-        conditions: context,
-        citation,
-        notices: work?.notices ?? [],
-        label: count === 1 ? base : `${base} (${String(count)})`,
-      };
-    });
+/** The settings of the figure that the address keeps. No rows means the default rows. */
+export interface FigureView {
+  readonly rows: FigureRows | null;
+  readonly logarithmic: boolean;
+}
+
+/** The largest number of rows that the figure shows by default. */
+const FEW_REPORTS = 60;
+const FEW_SUBJECTS = 40;
+
+function isFigureRows(text: string | null): text is FigureRows {
+  return (FIGURE_ROWS as readonly (string | null)[]).includes(text);
+}
+
+/** Reads the settings of the figure from the parameters `rows` and `scale` of an address. */
+export function readFigure(params: URLSearchParams): FigureView {
+  const rows = params.get("rows");
+  return { rows: isFigureRows(rows) ? rows : null, logarithmic: params.get("scale") === "log" };
+}
+
+export function writeFigure(params: URLSearchParams, figure: FigureView): void {
+  if (figure.rows !== null) params.set("rows", figure.rows);
+  if (figure.logarithmic) params.set("scale", "log");
 }
 
 /**
- * The rows that the figure can plot: those with a value in the display unit.
- * The label of a report whose source has notices starts with the notices.
+ * The rows of the figure: those of the settings, or by default one row for
+ * each report when there are few reports, one row for each subject when there
+ * are few subjects, and else one row for each work.
  */
-export function figureRows(rows: readonly ValueTableRow[]): ValueRow[] {
-  return rows.flatMap((row) => {
+export function rowsOfFigure(
+  figure: FigureView,
+  counts: { readonly reports: number; readonly subjects: number },
+): FigureRows {
+  if (figure.rows !== null) return figure.rows;
+  if (counts.reports <= FEW_REPORTS) return "report";
+  return counts.subjects <= FEW_SUBJECTS ? "subject" : "work";
+}
+
+/** Two dots of one row are near when they are closer than this part of the width of the figure. */
+const NEAR = 0.012;
+
+function withNotices(label: string, notices: readonly string[]): string {
+  return notices.length > 0 ? `${noticeMarker(notices)} \u{b7} ${label}` : label;
+}
+
+/**
+ * The dots of the figure of a property: one dot for each report with a value
+ * in the unit of the property. Each report keeps its own dot. In a row of a
+ * subject or of a work, a dot that is near another dot goes into the next slot.
+ */
+export function figureRows(rows: readonly ReportRow[], options: FigureOptions): ValueRow[] {
+  const counts = new Map<string, number>();
+  const dots = rows.flatMap((row): ValueRow[] => {
     const display = row.report.display;
     if (display?.value === null || display?.value === undefined) return [];
+    const detail = [row.subject, ...row.conditions].join(" \u{b7} ");
+    let label: string;
+    if (options.rows === "subject") {
+      label = row.subject;
+    } else if (options.rows === "work") {
+      label = withNotices(row.citation, row.notices);
+    } else {
+      const base = `${detail} \u{2014} ${row.citation}`;
+      const count = (counts.get(base) ?? 0) + 1;
+      counts.set(base, count);
+      label = withNotices(count === 1 ? base : `${base} (${String(count)})`, row.notices);
+    }
     return [
       {
         report: row.report.id,
-        label:
-          row.notices.length > 0 ? `${noticeMarker(row.notices)} \u{b7} ${row.label}` : row.label,
+        label,
         value: display.value,
         low: display.interval_low,
         high: display.interval_high,
-        reported: reportedValue(row.body.value),
+        reported: row.reported,
         work: row.citation,
         check: row.report.check,
-        origin: row.body.value.read_from_figure ? "read from an image" : "stated",
+        origin: row.values.origin?.includes("image") ? "read from an image" : "stated",
         notices: noticeNames(row.notices) || "none",
+        marker: markerSign(row.notices),
+        detail,
+        slot: 0,
       },
     ];
   });
+  if (options.rows === "report") return dots;
+  return withSlots(
+    dots.sort((a, b) => compareValues(a.label, b.label)),
+    options.logarithmic ? Math.log10 : (value: number) => value,
+  );
+}
+
+function withSlots(dots: readonly ValueRow[], position: (value: number) => number): ValueRow[] {
+  const places = dots.flatMap((dot) =>
+    [dot.value, dot.low, dot.high].flatMap((value) => (value === null ? [] : [position(value)])),
+  );
+  const span = Math.max(...places) - Math.min(...places);
+  const gap = span > 0 ? span * NEAR : 1;
+  const groups = new Map<string, ValueRow[]>();
+  for (const dot of dots) {
+    const group = groups.get(dot.label);
+    if (group) group.push(dot);
+    else groups.set(dot.label, [dot]);
+  }
+  const slots = new Map<ValueRow, number>();
+  for (const members of groups.values()) {
+    const ends: number[] = [];
+    for (const dot of [...members].sort((a, b) => a.value - b.value)) {
+      const at = position(dot.value);
+      let slot = ends.findIndex((end) => at - end > gap);
+      if (slot < 0) slot = ends.length;
+      ends[slot] = at;
+      slots.set(dot, slot);
+    }
+  }
+  return dots.map((dot) => ({ ...dot, slot: slots.get(dot) ?? 0 }));
 }

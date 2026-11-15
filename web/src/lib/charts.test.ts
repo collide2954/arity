@@ -13,7 +13,12 @@ const value: ValueRow = {
   check: "unchecked",
   origin: "stated",
   notices: "",
+  marker: "",
+  detail: "doxorubicin",
+  slot: 0,
 };
+
+const options = { unit: "\u{b5}mol/L", logarithmic: false, mode: "light", grouped: false } as const;
 
 const effect: EffectRow = {
   report: 2,
@@ -49,26 +54,66 @@ describe("config", () => {
 });
 
 describe("valueSpec", () => {
-  it("draws one dot and one interval for each report", () => {
-    const spec = valueSpec([value], { unit: "\u{b5}mol/L", logarithmic: false, mode: "light" });
+  it("draws one dot, one interval, and one notice sign for each report", () => {
+    const spec = valueSpec([value], options);
     expect(spec.data).toEqual({ values: [value] });
     const layers = (spec as { layer: { mark: { type: string } }[] }).layer;
-    expect(layers.map((layer) => layer.mark.type)).toEqual(["rule", "point"]);
+    expect(layers.map((layer) => layer.mark.type)).toEqual(["rule", "point", "text"]);
+  });
+
+  it("leaves out the layer of intervals when no report has an interval", () => {
+    const spec = valueSpec([{ ...value, low: null, high: null }], options);
+    const layers = (spec as { layer: { mark: { type: string } }[] }).layer;
+    expect(layers.map((layer) => layer.mark.type)).toEqual(["point", "text"]);
+    expect(spec.autosize).toEqual({ type: "fit-x", contains: "padding" });
   });
 
   it("uses a logarithmic scale on request", () => {
-    const spec = JSON.stringify(
-      valueSpec([value], { unit: "\u{b5}mol/L", logarithmic: true, mode: "light" }),
-    );
+    const spec = JSON.stringify(valueSpec([value], { ...options, logarithmic: true }));
     expect(spec).toContain('"type":"log"');
     expect(spec).not.toContain('"zero":false');
   });
 
-  it("fills only the dots of confirmed reports", () => {
-    const spec = JSON.stringify(
-      valueSpec([value], { unit: "\u{b5}mol/L", logarithmic: false, mode: "light" }),
-    );
+  it("fills only the dots of confirmed reports, and makes the dots of rejected reports pale", () => {
+    const spec = JSON.stringify(valueSpec([value], options));
     expect(spec).toContain("datum.check === 'confirmed'");
+    expect(spec).toContain("datum.check === 'rejected'");
+  });
+
+  it("gives each slot of a row its own place when a row has more than one dot", () => {
+    const second = { ...value, report: 2, slot: 1 };
+    expect(JSON.stringify(valueSpec([value, second], { ...options, grouped: true }))).toContain(
+      '"yOffset":{"field":"slot"',
+    );
+    expect(JSON.stringify(valueSpec([value], { ...options, grouped: true }))).not.toContain(
+      "yOffset",
+    );
+  });
+
+  it("puts the axis of values at the top of a tall figure, and limits the width of the labels", () => {
+    const many = Array.from({ length: 13 }, (_, position) => ({
+      ...value,
+      report: position,
+      label: `row ${String(position)}`,
+    }));
+    expect(JSON.stringify(valueSpec(many, { ...options, labelLimit: 150 }))).toContain(
+      '"orient":"top"',
+    );
+    expect(JSON.stringify(valueSpec([value], { ...options, labelLimit: 150 }))).toContain(
+      '"labelLimit":150',
+    );
+    expect(JSON.stringify(valueSpec(many.slice(0, 12), options))).not.toContain(
+      '"axis":{"orient":"top"',
+    );
+  });
+
+  it("lets a person drag a range along the axis of values, and makes a highlighted dot larger", () => {
+    const spec = valueSpec([value], options);
+    expect(JSON.stringify(spec)).toContain(
+      '{"name":"range","select":{"type":"interval","encodings":["x"]}}',
+    );
+    expect(spec.params).toEqual([{ name: "highlight", value: 0 }]);
+    expect(JSON.stringify(spec)).toContain("datum.report === highlight");
   });
 });
 

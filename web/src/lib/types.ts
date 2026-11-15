@@ -184,6 +184,8 @@ export interface Report {
   check: CheckState;
   checks: Check[];
   evidence: Evidence[];
+  /** The warnings of the checks about this report. */
+  warnings: Issue[];
   display: Display | null;
   /** The run that corrects the run of this report. */
   replaced_by: number | null;

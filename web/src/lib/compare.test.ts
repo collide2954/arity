@@ -99,6 +99,7 @@ function value(id: number, number: string, conditions: Condition[]): Report {
     check: "unchecked",
     checks: [],
     replaced_by: null,
+    warnings: [],
     evidence: [],
     display: null,
   };

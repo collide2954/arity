@@ -83,6 +83,7 @@ function value(id: number, work: number, subject: "dox" | "hyd", display: number
     check: "unchecked",
     checks: [],
     replaced_by: null,
+    warnings: [],
     evidence: [],
     display:
       display === null

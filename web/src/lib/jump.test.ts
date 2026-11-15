@@ -72,6 +72,7 @@ const report: Report = {
   check: "unchecked",
   checks: [],
   replaced_by: null,
+  warnings: [],
   evidence: [],
   display: null,
 };

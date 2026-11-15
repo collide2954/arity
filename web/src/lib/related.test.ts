@@ -24,6 +24,7 @@ function value(id: number, work: number, property: string, subject: number): Rep
     check: "unchecked",
     checks: [],
     replaced_by: null,
+    warnings: [],
     evidence: [],
     display: null,
   };

@@ -82,6 +82,7 @@ function report(body: Report["body"]): Report {
     check: "unchecked",
     checks: [],
     replaced_by: null,
+    warnings: [],
     evidence: [],
     display: null,
   };

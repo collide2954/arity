@@ -91,6 +91,7 @@ function value(id: number, check: Report["check"], display: number | null): Repo
     check,
     checks: [],
     replaced_by: null,
+    warnings: [],
     evidence: [],
     display:
       display === null

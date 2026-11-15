@@ -96,6 +96,7 @@ const value: Report = {
   check: "unchecked",
   checks: [],
   replaced_by: null,
+  warnings: [],
   evidence: [{ block: "s3/p2", quote: "The IC50 of DOX was 0.24 \u{3bc}M", start: 0, end: 31 }],
   display: {
     unit: "umol/L",

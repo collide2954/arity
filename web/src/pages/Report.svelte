@@ -313,11 +313,11 @@
           <dd>{run.submitted_at}, checked by {run.software}</dd>
           <dt>Submission</dt>
           <dd class="mono">{run.submission_sha256}</dd>
-          {#if run.warnings.length > 0}
+          {#if report.warnings.length > 0}
             <dt>Warnings of the checks</dt>
             <dd>
               <ul>
-                {#each run.warnings.filter( (warning) => warning.path.startsWith(`/reports/`) ) as warning (warning.path + warning.code)}
+                {#each report.warnings as warning (warning.path + warning.code)}
                   <li>{warning.message} <span class="mono muted">{warning.path}</span></li>
                 {/each}
               </ul>

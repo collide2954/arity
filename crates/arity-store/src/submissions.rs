@@ -647,6 +647,16 @@ impl Store {
             .collect())
     }
 
+    /// The work of a run, or nothing when there is no such run.
+    pub fn work_of_run(&self, run: RunId) -> Result<Option<WorkId>> {
+        Ok(self
+            .connection
+            .query_row("SELECT work_id FROM run WHERE id = ?1", [run.0], |row| {
+                row.get(0).map(WorkId)
+            })
+            .optional()?)
+    }
+
     pub fn reports_of_run(&self, run: RunId) -> Result<Vec<(ReportId, String)>> {
         let mut statement = self
             .connection

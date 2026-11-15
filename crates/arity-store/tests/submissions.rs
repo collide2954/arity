@@ -467,6 +467,25 @@ fn shows_reports_with_their_evidence_checks_and_provenance() {
 }
 
 #[test]
+fn gives_the_work_of_a_run() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let run = store_one(
+        &store,
+        work,
+        text,
+        &document,
+        &submission(&document, "0.24", "chemical"),
+    )
+    .unwrap();
+    assert_eq!(store.work_of_run(run).unwrap(), Some(work));
+    assert_eq!(
+        store.work_of_run(arity_store::RunId(run.0 + 1)).unwrap(),
+        None
+    );
+}
+
+#[test]
 fn gives_each_report_only_the_entities_that_its_body_uses() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(

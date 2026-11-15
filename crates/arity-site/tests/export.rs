@@ -3,7 +3,7 @@
 use arity_core::{Digest, License, WorkMetadata};
 use arity_protocol::check;
 use arity_site::export;
-use arity_store::{Blobs, Retrieval, RetrievalRole, Store, WorkId};
+use arity_store::{Blobs, Retrieval, RetrievalRole, RunId, Store, WorkId};
 use arity_text::{Block, BlockKind, Document};
 use jiff::Timestamp;
 use serde_json::{Value, json};
@@ -68,8 +68,13 @@ fn work(
             },
         )
         .unwrap();
-    let text_id = store.add_text(work, xml, &document, at()).unwrap();
-    let submission = json!({
+    store.add_text(work, xml, &document, at()).unwrap();
+    submit(store, work, &document, &submission(store, pmcid, &document));
+    (work, document)
+}
+
+fn submission(store: &Store, pmcid: &str, document: &Document) -> Value {
+    json!({
         "format": "arity-submission/1",
         "work": pmcid,
         "text": document.digest().unwrap(),
@@ -89,14 +94,17 @@ fn work(
             "value": { "number": "240", "unit": "nmol/L", "unit_text": "nM", "uncertainty": { "kind": "sd", "number": "20" } },
             "evidence": [{ "block": "s1/p1", "quote": "240 ± 20 nM" }]
         }]
-    });
-    let raw = serde_json::to_vec(&submission).unwrap();
+    })
+}
+
+fn submit(store: &Store, work: WorkId, document: &Document, submission: &Value) -> RunId {
+    let (text, _) = store.latest_text(work).unwrap().unwrap();
+    let raw = serde_json::to_vec(submission).unwrap();
     let properties = store.properties().unwrap();
-    let checked = check(&raw, &document, &properties).unwrap();
+    let checked = check(&raw, document, &properties).unwrap();
     store
-        .store_submission(work, text_id, &raw, &checked, at())
-        .unwrap();
-    (work, document)
+        .store_submission(work, text, &raw, &checked, at())
+        .unwrap()
 }
 
 fn read(path: &std::path::Path) -> Value {
@@ -168,4 +176,45 @@ fn writes_the_site_and_leaves_out_text_that_may_not_be_shared() {
     assert_eq!(copy.report_views().unwrap().len(), 2);
     let closed_text = copy.latest_text(closed);
     assert!(closed_text.is_err() || closed_text.unwrap().is_none());
+}
+
+#[test]
+fn writes_the_current_reports_and_keeps_the_replaced_reports_apart() {
+    let folder = tempfile::tempdir().unwrap();
+    let blobs = Blobs::new(folder.path().join("blobs"));
+    let out = folder.path().join("site");
+    let store = Store::open_in_memory().unwrap();
+    let (work_id, document) = work(
+        &store,
+        &blobs,
+        "PMC1",
+        License::Unknown("free to read".to_owned()),
+        "The IC50 of doxorubicin was 240 ± 20 nM.",
+    );
+    let first = store.run_views().unwrap()[0].id;
+    let mut correction = submission(&store, "PMC1", &document);
+    correction["replaces"] = json!(first);
+    correction["note"] = json!("The reader corrected the report.");
+    let second = submit(&store, work_id, &document, &correction);
+
+    let exported = export(&store, &blobs, &out, at()).unwrap();
+    assert_eq!(exported.reports, 1);
+
+    let reports = read(&out.join("reports.json"));
+    assert_eq!(reports.as_array().unwrap().len(), 1);
+    assert_eq!(reports[0]["run"], second.0);
+    let replaced = read(&out.join("replaced.json"));
+    assert_eq!(replaced.as_array().unwrap().len(), 1);
+    assert_eq!(replaced[0]["run"], first);
+    assert_eq!(replaced[0]["replaced_by"], second.0);
+    assert_eq!(replaced[0]["successor"], reports[0]["id"]);
+
+    let index = read(&out.join("index.json"));
+    assert_eq!(index["works"][0]["reports"], 1);
+    assert_eq!(index["properties"][0]["reports"], 1);
+
+    let page = read(&out.join(format!("works/{}.json", work_id.0)));
+    assert_eq!(page["reports"], json!([reports[0]["id"]]));
+    assert_eq!(page["runs"][0]["replaced_by"], second.0);
+    assert_eq!(page["runs"][1]["replaces"], first);
 }

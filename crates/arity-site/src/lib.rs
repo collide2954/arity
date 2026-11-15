@@ -1,9 +1,13 @@
 //! Writes the arity database as static files for the website.
 //!
 //! The website reads `index.json`, `reports.json`, and one file for each
-//! work. The export also writes a copy of the database, and a copy of each
-//! PDF whose license lets others share it. For a work whose license does not
-//! let others share the text, the export keeps the metadata and the evidence
+//! work. `reports.json` holds only the reports of current runs. The reports
+//! of runs that a later run replaces go into `replaced.json`, so that links
+//! to them continue to work.
+//!
+//! The export also writes a copy of the database, and a copy of each PDF
+//! whose license lets others share it. For a work whose license does not let
+//! others share the text, the export keeps the metadata and the evidence
 //! quotes, and leaves out the full text and the PDF.
 
 mod display;
@@ -100,6 +104,14 @@ struct ReportOut {
 }
 
 #[derive(Debug, Serialize)]
+struct ReplacedOut {
+    #[serde(flatten)]
+    report: ReportOut,
+    /// The report with the same local id in the current run of the work.
+    successor: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
 struct Attribution {
     citation: String,
     license: Option<String>,
@@ -187,9 +199,17 @@ pub fn export(store: &Store, blobs: &Blobs, out: &Path, now: Timestamp) -> Resul
     })?;
     let works = store.work_views()?;
     let properties = store.property_views()?;
-    let reports = reports_with_display(store, &properties)?;
+    let runs = store.run_views()?;
+    let (reports, replaced): (Vec<ReportOut>, Vec<ReportOut>) =
+        reports_with_display(store, &properties)?
+            .into_iter()
+            .partition(|report| report.report.replaced_by.is_none());
     write_json(&out.join("reports.json"), &reports)?;
-    let pdfs = write_work_pages(store, blobs, out, &works, &reports)?;
+    write_json(
+        &out.join("replaced.json"),
+        &with_successors(replaced, &reports, &runs),
+    )?;
+    let pdfs = write_work_pages(store, blobs, out, &works, &runs, &reports)?;
     write_index(store, out, &works, properties, &reports, now)?;
     write_database(store, out, &works)?;
     Ok(Exported {
@@ -219,6 +239,42 @@ fn reports_with_display(store: &Store, properties: &[PropertyView]) -> Result<Ve
         .collect())
 }
 
+/// Gives each replaced report the report with the same local id in the
+/// current run of its work. A run can replace only an earlier run, so each
+/// chain of replaced runs comes to an end.
+fn with_successors(
+    replaced: Vec<ReportOut>,
+    current: &[ReportOut],
+    runs: &[RunView],
+) -> Vec<ReplacedOut> {
+    let newer: HashMap<i64, i64> = runs
+        .iter()
+        .filter_map(|run| Some((run.id, run.replaced_by?)))
+        .collect();
+    let current: HashMap<(i64, &str), i64> = current
+        .iter()
+        .map(|out| {
+            (
+                (out.report.run, out.report.local_id.as_str()),
+                out.report.id,
+            )
+        })
+        .collect();
+    replaced
+        .into_iter()
+        .map(|report| {
+            let mut run = report.report.run;
+            while let Some(next) = newer.get(&run) {
+                run = *next;
+            }
+            let successor = current
+                .get(&(run, report.report.local_id.as_str()))
+                .copied();
+            ReplacedOut { report, successor }
+        })
+        .collect()
+}
+
 fn copy_pdf(store: &Store, blobs: &Blobs, out: &Path, work: &WorkView) -> Result<Option<String>> {
     let latest = store
         .retrievals(WorkId(work.id))?
@@ -243,9 +299,9 @@ fn write_work_pages(
     blobs: &Blobs,
     out: &Path,
     works: &[WorkView],
+    runs: &[RunView],
     reports: &[ReportOut],
 ) -> Result<usize> {
-    let runs = store.run_views()?;
     let mut pdfs = 0;
     for work in works {
         let latest = store.latest_text(WorkId(work.id))?;

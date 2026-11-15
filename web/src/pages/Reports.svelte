@@ -4,6 +4,7 @@
   import CopyLink from "../components/CopyLink.svelte";
   import DataTable from "../components/DataTable.svelte";
   import FilterPanel from "../components/FilterPanel.svelte";
+  import PageHeader from "../components/PageHeader.svelte";
   import RangeFields from "../components/RangeFields.svelte";
   import ReportCell from "../components/ReportCell.svelte";
   import ReportPreview from "../components/ReportPreview.svelte";
@@ -85,15 +86,19 @@
   <ReportPreview {row} />
 {/snippet}
 
-<h1>Reports</h1>
-<p class="lede">
-  Each row is one report of one source: a value or an effect, with its conditions. Find reports by
-  words, filter them, sort the table by a column, and download the rows that you select. arity does
-  not combine or weigh the reports. The address of the page keeps your selection, so you can share
-  it. <a href={docsLink("website", "find-and-filter-reports")}
-    >How the search and the filters work</a
-  >.
-</p>
+<PageHeader
+  title="Reports"
+  summary="Every value and effect in the catalogue, each with its conditions and its source."
+>
+  <p>
+    Each row is one report of one source. Find reports by words, filter them, sort the table by a
+    column, and download the rows that you select. arity does not combine or weigh the reports. The
+    address of the page keeps your selection, so you can share it.
+  </p>
+  <p>
+    <a href={docsLink("website", "find-and-filter-reports")}>How the search and the filters work</a>
+  </p>
+</PageHeader>
 
 {#if failure}
   <p>arity cannot load the reports: {failure}</p>

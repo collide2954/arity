@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "../components/PageHeader.svelte";
   import { docsLink } from "../lib/docs";
   import CopyLink from "../components/CopyLink.svelte";
   import FilterPanel from "../components/FilterPanel.svelte";
@@ -132,14 +133,19 @@
   }
 </script>
 
-<h1>Compare</h1>
-<p class="lede">
-  Choose a property, and what the rows and the columns of the matrix are. Each cell lists every
-  report of its row and its column, with a link to the report. arity does not average or combine the
-  reports of a cell. A check sign marks a confirmed report, a cross marks a rejected report, and a
-  warning sign marks a report whose source has a notice.
-  <a href={docsLink("website", "compare-reports-in-a-matrix")}>How the matrix works</a>.
-</p>
+<PageHeader
+  title="Compare"
+  summary="The reports of one property in a matrix of rows and columns that you choose."
+>
+  <p>
+    Each cell lists every report of its row and its column, with a link to the report. arity does
+    not average or combine the reports of a cell. A check sign marks a confirmed report, a cross
+    marks a rejected report, and a warning sign marks a report whose source has a notice.
+  </p>
+  <p>
+    <a href={docsLink("website", "compare-reports-in-a-matrix")}>How the matrix works</a>
+  </p>
+</PageHeader>
 
 {#if failure}
   <p>arity cannot load the reports: {failure}</p>

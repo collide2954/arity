@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "../components/PageHeader.svelte";
   import FilteredTable from "../components/FilteredTable.svelte";
   import NoticeChips from "../components/NoticeChips.svelte";
   import { download, toCsv } from "../lib/csv";
@@ -74,11 +75,10 @@
   >
 {/snippet}
 
-<h1>Works</h1>
-<p class="lede">
-  The open-access works in the catalogue, in the order that arity found them. Sort the works by a
-  column, or filter them by notice, license, and year.
-</p>
+<PageHeader
+  title="Works"
+  summary="The open-access articles in the catalogue, with their licenses, notices, and reports."
+/>
 
 {#await loadIndex()}
   <p class="muted">arity is loading the works.</p>

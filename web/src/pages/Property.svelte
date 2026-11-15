@@ -5,6 +5,7 @@
   import CopyLink from "../components/CopyLink.svelte";
   import DataTable from "../components/DataTable.svelte";
   import FilterPanel from "../components/FilterPanel.svelte";
+  import PageHeader from "../components/PageHeader.svelte";
   import RangeFields from "../components/RangeFields.svelte";
   import ReportCell from "../components/ReportCell.svelte";
   import ReportPreview from "../components/ReportPreview.svelte";
@@ -181,20 +182,22 @@
   {@const data = loaded}
   {@const summary = loaded.property}
   {@const unit = summary.unit ? unitLabel(summary.unit) || "1" : ""}
-  <h1>{summary.label}</h1>
-  <p class="secondary">
-    Key <span class="mono">{summary.key}</span>
-    {#if summary.unit}· values in {unit} · dimension
-      <span class="mono">{summary.dimension}</span>{/if}
-  </p>
-  <p class="lede">
-    Each dot is one report of one source. arity does not average or weigh the reports. A filled dot
-    is a report that a person confirmed, a hollow dot is a report that no person checked yet, and a
-    pale dot is a report that a person rejected. A diamond is a value that the reader read from an
-    image. A sign above a dot tells that its source has a notice, for example a retraction. Drag
-    along the axis of values to select a range.
-    <a href={docsLink("website", "figures")}>How the figure works</a>.
-  </p>
+  <PageHeader
+    eyebrow="Property"
+    title={summary.label}
+    summary={summary.unit
+      ? `Values in ${unit}, from ${String(data.rows.length)} reports. Key ${summary.key}, dimension ${summary.dimension ?? "1"}.`
+      : `Values from ${String(data.rows.length)} reports. Key ${summary.key}.`}
+  >
+    <p>
+      Each dot is one report of one source. arity does not average or weigh the reports. A filled
+      dot is a report that a person confirmed, a hollow dot is a report that no person checked yet,
+      and a pale dot is a report that a person rejected. A diamond is a value that the reader read
+      from an image. A sign above a dot tells that its source has a notice, for example a
+      retraction. Drag along the axis of values to select a range.
+    </p>
+    <p><a href={docsLink("website", "figures")}>How the figure works</a></p>
+  </PageHeader>
 
   <div class="explorer">
     <FilterPanel

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "../components/PageHeader.svelte";
   import FilteredTable from "../components/FilteredTable.svelte";
   import { loadIndex } from "../lib/data";
   import {
@@ -26,11 +27,10 @@
   {/if}
 {/snippet}
 
-<h1>Properties</h1>
-<p class="lede">
-  Each property is a quantity or a quality that reports give values for. Select a property to
-  compare its values across works, experiments, and conditions.
-</p>
+<PageHeader
+  title="Properties"
+  summary="The quantities and qualities that reports give values for. Select one to compare its values."
+/>
 
 {#await loadIndex()}
   <p class="muted">arity is loading the properties.</p>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "../components/PageHeader.svelte";
   import { docsLink } from "../lib/docs";
   import { checkFile, isOrcid } from "../lib/checkfile";
   import {
@@ -27,15 +28,19 @@
   }
 </script>
 
-<h1>Your checks</h1>
-<p class="lede">
-  A person compares each report with its source, and confirms or rejects it. In check mode, the page
-  of each report and the list of reports of each work have the buttons Confirm and Reject. This
-  browser keeps your marks until you download them as a check file. A person who keeps the data of
-  arity then records the file with the command <span class="mono">arity check --file</span>, with
-  your name and the time of each check.
-  <a href={docsLink("website", "check-mode")}>How check mode works</a>.
-</p>
+<PageHeader
+  title="Your checks"
+  summary="Confirm or reject reports against their sources, then give your check file to arity."
+>
+  <p>
+    A person compares each report with its source, and confirms or rejects it. In check mode, the
+    page of each report and the list of reports of each work have the buttons Confirm and Reject.
+    This browser keeps your marks until you download them as a check file. A person who keeps the
+    data of arity then records the file with the command <span class="mono">arity check --file</span
+    >, with your name and the time of each check.
+  </p>
+  <p><a href={docsLink("website", "check-mode")}>How check mode works</a></p>
+</PageHeader>
 
 <div class="controls">
   <button

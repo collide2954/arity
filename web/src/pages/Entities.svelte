@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "../components/PageHeader.svelte";
   import FilteredTable from "../components/FilteredTable.svelte";
   import { loadIndex } from "../lib/data";
   import {
@@ -32,11 +33,15 @@
   {/if}
 {/snippet}
 
-<h1>Entities</h1>
-<p class="lede">
-  The things that reports are about. arity links an entity across works through its identifiers in
-  public registries.
-</p>
+<PageHeader
+  title="Entities"
+  summary="The compounds, cells, organisms, materials, and other things that reports are about."
+>
+  <p>
+    arity links an entity across works through its identifiers in public registries. An entity
+    without an identifier stays in the work that names it.
+  </p>
+</PageHeader>
 
 {#await loadIndex()}
   <p class="muted">arity is loading the entities.</p>

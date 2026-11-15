@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageHeader from "../components/PageHeader.svelte";
   import { docsLink } from "../lib/docs";
   import CheckBadge from "../components/CheckBadge.svelte";
   import Chart from "../components/Chart.svelte";
@@ -110,16 +111,21 @@
   >
 {/snippet}
 
-<h1>Effects</h1>
-<p class="lede">
-  Each mark is one effect or association that one source reports: an increase (+1), a decrease (−1),
-  no change or no effect (0), or a mixed result. arity does not combine the reports, so two sources
-  that disagree show as two marks. The tiles give one square for each report, so the length of a row
-  shows its number of reports. The list gives each direction its own column. The matrix puts the
-  agents against the targets. If the source has a notice, for example a retraction, a sign shows
-  above the mark, or a square has a dark outline. The filters change the figure and the table.
-  <a href={docsLink("website", "figures")}>How the figures work</a>.
-</p>
+<PageHeader
+  title="Effects"
+  summary="What each agent does to each target, as each source reports it."
+>
+  <p>
+    Each mark is one effect or association that one source reports: an increase (+1), a decrease
+    (−1), no change or no effect (0), or a mixed result. arity does not combine the reports, so two
+    sources that disagree show as two marks. The tiles give one square for each report, so the
+    length of a row shows its number of reports. The list gives each direction its own column. The
+    matrix puts the agents against the targets. If the source has a notice, for example a
+    retraction, a sign shows next to the mark, or a square has a dark outline. The filters change
+    the figure and the table.
+  </p>
+  <p><a href={docsLink("website", "figures")}>How the figures work</a></p>
+</PageHeader>
 {#await data}
   <p class="muted">arity is loading the effects.</p>
 {:then [index, reports]}

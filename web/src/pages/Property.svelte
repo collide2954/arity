@@ -237,6 +237,12 @@
         <span class="secondary">of {data.rows.length} reports</span>
         <span class="actions">
           <a href={explorer(selection)}>Open in the report explorer</a>
+          <a
+            href={link({
+              page: "compare",
+              params: selectionQuery(selection, FACETS, [["property", property]]),
+            })}>Compare in a matrix</a
+          >
           <CopyLink />
         </span>
       </div>

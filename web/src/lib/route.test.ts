@@ -20,17 +20,24 @@ describe("parseRoute", () => {
     ["#/entities/3", { page: "entity", id: 3 }],
     ["#/effects", { page: "effects" }],
     ["#/effects?direction=decrease", { page: "effects", params: "direction=decrease" }],
+    ["#/compare", { page: "compare" }],
+    ["#/compare?property=ic50&by=subject", { page: "compare", params: "property=ic50&by=subject" }],
     ["#/about", { page: "about" }],
   ])("reads %s", (hash, route) => {
     expect(parseRoute(hash)).toEqual(route);
   });
 
-  it.each(["#/works/0", "#/works/x", "#/reports/x", "#/nothing", "#/works/1/2", "#/effects/1"])(
-    "gives the missing page for %s",
-    (hash) => {
-      expect(parseRoute(hash).page).toBe("missing");
-    },
-  );
+  it.each([
+    "#/works/0",
+    "#/works/x",
+    "#/reports/x",
+    "#/nothing",
+    "#/works/1/2",
+    "#/effects/1",
+    "#/compare/1",
+  ])("gives the missing page for %s", (hash) => {
+    expect(parseRoute(hash).page).toBe("missing");
+  });
 
   it("ignores a report number that is not valid", () => {
     expect(parseRoute("#/works/12?report=abc")).toEqual({ page: "work", id: 12, report: null });
@@ -57,6 +64,7 @@ describe("link", () => {
     { page: "entities" },
     { page: "entity", id: 3 },
     { page: "effects" },
+    { page: "compare", params: "property=ic50&across=work" },
     { page: "about" },
   ])("round-trips %j", (route) => {
     expect(parseRoute(link(route))).toEqual(route);

@@ -2,6 +2,7 @@
   import { link } from "./lib/route";
   import { location } from "./lib/state.svelte";
   import About from "./pages/About.svelte";
+  import Compare from "./pages/Compare.svelte";
   import Effects from "./pages/Effects.svelte";
   import Entities from "./pages/Entities.svelte";
   import Entity from "./pages/Entity.svelte";
@@ -20,6 +21,7 @@
     { page: "properties", label: "Properties" },
     { page: "entities", label: "Entities" },
     { page: "effects", label: "Effects" },
+    { page: "compare", label: "Compare" },
     { page: "about", label: "About" },
   ] as const;
 
@@ -75,6 +77,8 @@
     {/key}
   {:else if route.page === "effects"}
     <Effects params={route.params ?? ""} />
+  {:else if route.page === "compare"}
+    <Compare params={route.params ?? ""} />
   {:else if route.page === "about"}
     <About />
   {:else}

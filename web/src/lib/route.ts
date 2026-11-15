@@ -14,6 +14,7 @@ export type Route =
   | { page: "entities"; params?: string }
   | { page: "entity"; id: number }
   | { page: "effects"; params?: string }
+  | { page: "compare"; params?: string }
   | { page: "about" }
   | { page: "missing"; path: string };
 
@@ -63,6 +64,8 @@ export function parseRoute(hash: string): Route {
     }
     case "effects":
       return second === undefined ? withParams({ page: "effects" }, query) : missing;
+    case "compare":
+      return second === undefined ? withParams({ page: "compare" }, query) : missing;
     case "about":
       return second === undefined ? { page: "about" } : missing;
     default:
@@ -98,6 +101,8 @@ export function link(route: Route): string {
       return `#/entities/${String(route.id)}`;
     case "effects":
       return `#/effects${querySuffix(route.params)}`;
+    case "compare":
+      return `#/compare${querySuffix(route.params)}`;
     case "about":
       return "#/about";
     case "missing":

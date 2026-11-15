@@ -18,6 +18,7 @@ The website is a static site in Svelte and TypeScript. It reads the files that
 | Entities | Each entity with its kind and its registry identifiers. |
 | Entity | The reports about one entity. |
 | Effects | A matrix of agents and targets, with one mark for each reported effect. |
+| Compare | The reports of one property in a matrix. You select what the rows and the columns are. |
 
 Each table can download its rows as a CSV file. The pages of works,
 properties, entities, and effects also have a search box, filters, and columns
@@ -50,6 +51,18 @@ filters, the sort, the page, and the columns, so you can share a selection as a
 link. A download gives all the rows that you select, not only the rows of the
 page: a CSV file with all columns, or a JSON file with each report as arity
 exports it.
+
+## Compare reports in a matrix
+
+On the Compare page, select a property. Then select what the rows and the
+columns of the matrix show: the subject, the work, the method, or a condition,
+for example the cell line or the exposure time. Each cell lists each report of
+its row and its column, with a link to the report. arity does not average or
+combine the reports of a cell. A report that does not state a value for a row
+or a column goes into "not stated". The cells can show the values as the
+sources report them, or the converted values in the unit of the property. The
+filters of the Reports page also apply, and the CSV file has one line for each
+report.
 
 ## Marks on the PDF
 

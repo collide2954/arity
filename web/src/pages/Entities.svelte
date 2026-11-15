@@ -1,7 +1,36 @@
 <script lang="ts">
+  import FilteredTable from "../components/FilteredTable.svelte";
   import { loadIndex } from "../lib/data";
+  import {
+    ENTITY_COLUMNS,
+    ENTITY_FACETS,
+    ENTITY_TITLES,
+    entityLabel,
+    entityRows,
+    type EntityRow,
+  } from "../lib/lists";
   import { link } from "../lib/route";
+  import { replaceRoute } from "../lib/state.svelte";
+  import type { Column } from "../lib/view";
+
+  let { params = "" }: { params?: string } = $props();
 </script>
+
+{#snippet cell(row: EntityRow, column: Column<EntityRow>)}
+  {#if column.id === "label"}
+    <a href={link({ page: "entity", id: row.entity.id })}>{row.entity.label}</a>
+  {:else if column.id === "identifiers"}
+    <div class="chips">
+      {#each row.entity.xrefs as xref (xref)}
+        <a class="chip mono" href="https://bioregistry.io/{xref}">{xref}</a>
+      {/each}
+    </div>
+  {:else if column.id === "names"}
+    {row.entity.names.join(", ")}
+  {:else}
+    {column.value(row) ?? ""}
+  {/if}
+{/snippet}
 
 <h1>Entities</h1>
 <p class="lede">
@@ -12,31 +41,21 @@
 {#await loadIndex()}
   <p class="muted">arity is loading the entities.</p>
 {:then index}
-  <div class="table-wrap card">
-    <table>
-      <thead>
-        <tr
-          ><th>Entity</th><th>Kind</th><th>Identifiers</th><th>Names in sources</th><th>Reports</th
-          ></tr
-        >
-      </thead>
-      <tbody>
-        {#each index.entities as entity (entity.id)}
-          <tr>
-            <td><a href={link({ page: "entity", id: entity.id })}>{entity.label}</a></td>
-            <td>{entity.kind.replaceAll("_", " ")}</td>
-            <td>
-              <div class="chips">
-                {#each entity.xrefs as xref (xref)}
-                  <a class="chip mono" href="https://bioregistry.io/{xref}">{xref}</a>
-                {/each}
-              </div>
-            </td>
-            <td>{entity.names.join(", ")}</td>
-            <td>{entity.reports}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+  <FilteredTable
+    rows={entityRows(index)}
+    facets={ENTITY_FACETS}
+    titles={ENTITY_TITLES}
+    label={entityLabel}
+    columns={ENTITY_COLUMNS}
+    {params}
+    onparams={(next: string) => {
+      replaceRoute({ page: "entities", params: next });
+    }}
+    {cell}
+    key={(row: EntityRow) => row.entity.id}
+    name="entities"
+    placeholder="Find entities by name or identifier"
+  />
+{:catch error}
+  <p>arity cannot load the entities: {error instanceof Error ? error.message : String(error)}</p>
 {/await}

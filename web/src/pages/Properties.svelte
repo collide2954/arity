@@ -1,8 +1,30 @@
 <script lang="ts">
+  import FilteredTable from "../components/FilteredTable.svelte";
   import { loadIndex } from "../lib/data";
-  import { unitLabel } from "../lib/format";
+  import {
+    PROPERTY_COLUMNS,
+    PROPERTY_FACETS,
+    PROPERTY_TITLES,
+    propertyLabel,
+    propertyRows,
+    type PropertyRow,
+  } from "../lib/lists";
   import { link } from "../lib/route";
+  import { replaceRoute } from "../lib/state.svelte";
+  import type { Column } from "../lib/view";
+
+  let { params = "" }: { params?: string } = $props();
 </script>
+
+{#snippet cell(row: PropertyRow, column: Column<PropertyRow>)}
+  {#if column.id === "label"}
+    <a href={link({ page: "property", key: row.property.key })}>{row.property.label}</a>
+  {:else if column.id === "key" || column.id === "dimension"}
+    <span class="mono">{column.value(row) ?? ""}</span>
+  {:else}
+    {column.value(row) ?? ""}
+  {/if}
+{/snippet}
 
 <h1>Properties</h1>
 <p class="lede">
@@ -13,27 +35,21 @@
 {#await loadIndex()}
   <p class="muted">arity is loading the properties.</p>
 {:then index}
-  <div class="table-wrap card">
-    <table>
-      <thead>
-        <tr
-          ><th>Property</th><th>Key</th><th>Type</th><th>Display unit</th><th>Dimension</th><th
-            >Reports</th
-          ></tr
-        >
-      </thead>
-      <tbody>
-        {#each index.properties as property (property.key)}
-          <tr>
-            <td><a href={link({ page: "property", key: property.key })}>{property.label}</a></td>
-            <td class="mono">{property.key}</td>
-            <td>{property.value_type}</td>
-            <td>{property.unit ? unitLabel(property.unit) || "1" : ""}</td>
-            <td class="mono">{property.dimension ?? ""}</td>
-            <td>{property.reports}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+  <FilteredTable
+    rows={propertyRows(index)}
+    facets={PROPERTY_FACETS}
+    titles={PROPERTY_TITLES}
+    label={propertyLabel}
+    columns={PROPERTY_COLUMNS}
+    {params}
+    onparams={(next: string) => {
+      replaceRoute({ page: "properties", params: next });
+    }}
+    {cell}
+    key={(row: PropertyRow) => row.property.key}
+    name="properties"
+    placeholder="Find properties by name, key, or unit"
+  />
+{:catch error}
+  <p>arity cannot load the properties: {error instanceof Error ? error.message : String(error)}</p>
 {/await}

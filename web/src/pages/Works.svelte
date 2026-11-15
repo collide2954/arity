@@ -1,11 +1,23 @@
 <script lang="ts">
+  import FilteredTable from "../components/FilteredTable.svelte";
   import NoticeChips from "../components/NoticeChips.svelte";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex } from "../lib/data";
+  import {
+    WORK_COLUMNS,
+    WORK_FACETS,
+    WORK_TITLES,
+    workLabel,
+    workRows,
+    type WorkRow,
+  } from "../lib/lists";
   import { link } from "../lib/route";
-  import type { WorkSummary } from "../lib/types";
+  import { replaceRoute } from "../lib/state.svelte";
+  import type { Column } from "../lib/view";
 
-  function save(works: WorkSummary[]): void {
+  let { params = "" }: { params?: string } = $props();
+
+  function save(rows: readonly WorkRow[]): void {
     download(
       "arity-works.csv",
       toCsv(
@@ -21,7 +33,7 @@
           "notices",
           "reports",
         ],
-        works.map((work) => [
+        rows.map(({ work }) => [
           work.id,
           work.title,
           work.citation,
@@ -38,51 +50,55 @@
   }
 </script>
 
+{#snippet cell(row: WorkRow, column: Column<WorkRow>)}
+  {#if column.id === "title"}
+    <a href={link({ page: "work", id: row.work.id, report: null })}>{row.work.title}</a>
+    <div class="muted">
+      {row.work.citation}
+      {#if row.work.pmcid}· {row.work.pmcid}{/if}
+      {#if row.work.is_preprint}· <span class="chip">Preprint</span>{/if}
+    </div>
+  {:else if column.id === "notices"}
+    <NoticeChips kinds={row.work.notices} />
+  {:else}
+    {column.value(row) ?? ""}
+  {/if}
+{/snippet}
+
+{#snippet actions(rows: readonly WorkRow[])}
+  <button
+    type="button"
+    onclick={() => {
+      save(rows);
+    }}>Download CSV</button
+  >
+{/snippet}
+
 <h1>Works</h1>
-<p class="lede">The open-access works in the catalogue, in the order that arity found them.</p>
+<p class="lede">
+  The open-access works in the catalogue, in the order that arity found them. Sort the works by a
+  column, or filter them by notice, license, and year.
+</p>
 
 {#await loadIndex()}
   <p class="muted">arity is loading the works.</p>
 {:then index}
-  <div class="controls">
-    <button
-      type="button"
-      onclick={() => {
-        save(index.works);
-      }}>Download CSV</button
-    >
-  </div>
-  <div class="table-wrap card">
-    <table>
-      <thead>
-        <tr>
-          <th>Work</th>
-          <th>Year</th>
-          <th>License</th>
-          <th>Notices</th>
-          <th>Reports</th>
-        </tr>
-      </thead>
-      <tbody>
-        {#each index.works as work (work.id)}
-          <tr>
-            <td>
-              <a href={link({ page: "work", id: work.id, report: null })}>{work.title}</a>
-              <div class="muted">
-                {work.citation}
-                {#if work.pmcid}· {work.pmcid}{/if}
-                {#if work.is_preprint}· <span class="chip">Preprint</span>{/if}
-              </div>
-            </td>
-            <td>{work.year ?? ""}</td>
-            <td>{work.license ?? "not stated"}</td>
-            <td><NoticeChips kinds={work.notices} /></td>
-            <td>{work.reports}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+  <FilteredTable
+    rows={workRows(index)}
+    facets={WORK_FACETS}
+    titles={WORK_TITLES}
+    label={workLabel}
+    columns={WORK_COLUMNS}
+    {params}
+    onparams={(next: string) => {
+      replaceRoute({ page: "works", params: next });
+    }}
+    {cell}
+    {actions}
+    key={(row: WorkRow) => row.work.id}
+    name="works"
+    placeholder="Find works by title, journal, year, or identifier"
+  />
 {:catch error}
   <p>arity cannot load the works: {error instanceof Error ? error.message : String(error)}</p>
 {/await}

@@ -1,19 +1,32 @@
 <script lang="ts">
   import CheckBadge from "../components/CheckBadge.svelte";
   import Chart from "../components/Chart.svelte";
+  import FilteredTable from "../components/FilteredTable.svelte";
   import NoticeChips from "../components/NoticeChips.svelte";
   import { effectSpec } from "../lib/charts";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
-  import { effectRows, matrixRows, type EffectTableRow } from "../lib/effects";
+  import {
+    EFFECT_COLUMNS,
+    EFFECT_FACETS,
+    EFFECT_TITLES,
+    effectItems,
+    effectLabels,
+    effectRows,
+    matrixRows,
+    type EffectItem,
+  } from "../lib/effects";
   import { directionLabel, scoreLabel } from "../lib/format";
   import { link } from "../lib/route";
-  import { theme } from "../lib/state.svelte";
+  import { replaceRoute, theme } from "../lib/state.svelte";
   import type { Report } from "../lib/types";
+  import type { Column } from "../lib/view";
+
+  let { params = "" }: { params?: string } = $props();
 
   const data = Promise.all([loadIndex(), loadReports()]);
 
-  function save(rows: readonly EffectTableRow[]): void {
+  function save(rows: readonly EffectItem[]): void {
     download(
       "arity-effects.csv",
       toCsv(
@@ -51,75 +64,77 @@
   }
 </script>
 
+{#snippet cell(row: EffectItem, column: Column<EffectItem>)}
+  {#if column.id === "direction"}
+    <strong>{scoreLabel(row.report.score)}</strong>
+    {directionLabel(row.body.direction)}
+  {:else if column.id === "source"}
+    <a href={link({ page: "work", id: row.report.work, report: row.report.id })}>{row.citation}</a>
+  {:else if column.id === "check"}
+    <CheckBadge state={row.report.check} />
+  {:else if column.id === "notices"}
+    <NoticeChips kinds={row.notices} />
+  {:else}
+    {column.value(row) ?? ""}
+  {/if}
+{/snippet}
+
+{#snippet actions(rows: readonly EffectItem[])}
+  <button
+    type="button"
+    onclick={() => {
+      save(rows);
+    }}>Download CSV</button
+  >
+{/snippet}
+
 <h1>Effects</h1>
 <p class="lede">
   Each mark is one effect or association that one source reports. Up is an increase (+1), down is a
   decrease (−1), and a dot is a statement of no change or no effect (0). Two sources that disagree
   show as two marks in the same cell: arity does not combine them. If the source has a notice, for
-  example a retraction, a sign shows above the mark.
+  example a retraction, a sign shows above the mark. The filters change the matrix and the table.
 </p>
 
 {#await data}
   <p class="muted">arity is loading the effects.</p>
 {:then [index, reports]}
-  {@const rows = effectRows(index, reports)}
-  {#if rows.length === 0}
+  {@const items = effectItems(effectRows(index, reports))}
+  {#if items.length === 0}
     <p class="muted">No reader has submitted effects yet.</p>
   {:else}
-    <div class="controls">
-      <button
-        type="button"
-        onclick={() => {
-          save(rows);
-        }}>Download CSV</button
-      >
-    </div>
-    <div class="card">
-      <Chart
-        spec={effectSpec(matrixRows(rows), theme.mode)}
-        label="The effects that each source reports, by agent and target"
-        onselect={(report: number) => {
-          open(report, reports);
-        }}
-      />
-    </div>
-    <h2>Table</h2>
-    <div class="table-wrap card">
-      <table>
-        <thead>
-          <tr>
-            <th>Agent</th>
-            <th>Target</th>
-            <th>Direction</th>
-            <th>Details</th>
-            <th>Conditions</th>
-            <th>Source</th>
-            <th>Check</th>
-            <th>Notices</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each rows as row (row.report.id)}
-            <tr>
-              <td>{row.agent}</td>
-              <td>{row.target}</td>
-              <td>
-                <strong>{scoreLabel(row.report.score)}</strong>
-                {directionLabel(row.body.direction)}
-              </td>
-              <td>{row.detail}</td>
-              <td>{row.context}</td>
-              <td>
-                <a href={link({ page: "work", id: row.report.work, report: row.report.id })}
-                  >{row.citation}</a
-                >
-              </td>
-              <td><CheckBadge state={row.report.check} /></td>
-              <td><NoticeChips kinds={row.notices} /></td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    {#snippet matrix(rows: readonly EffectItem[])}
+      {#if rows.length > 0}
+        <div class="card">
+          <Chart
+            spec={effectSpec(matrixRows(rows), theme.mode)}
+            label="The effects that each source reports, by agent and target"
+            onselect={(report: number) => {
+              open(report, reports);
+            }}
+          />
+        </div>
+        <h2>Table</h2>
+      {/if}
+    {/snippet}
+    <FilteredTable
+      rows={items}
+      facets={EFFECT_FACETS}
+      titles={EFFECT_TITLES}
+      label={effectLabels(index)}
+      columns={EFFECT_COLUMNS}
+      {params}
+      onparams={(next: string) => {
+        replaceRoute({ page: "effects", params: next });
+      }}
+      {cell}
+      {actions}
+      above={matrix}
+      key={(row: EffectItem) => row.report.id}
+      name="effects"
+      placeholder="Find effects, for example: hydralazine apoptosis"
+    />
   {/if}
+{:catch error}
+  <p>arity cannot load the effects: {error instanceof Error ? error.message : String(error)}</p>
 {/await}

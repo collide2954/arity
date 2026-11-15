@@ -50,7 +50,7 @@
   {#if route.page === "home"}
     <Home />
   {:else if route.page === "works"}
-    <Works />
+    <Works params={route.params ?? ""} />
   {:else if route.page === "work"}
     {#key route.id}
       <Work id={route.id} selected={route.report} />
@@ -62,19 +62,19 @@
       <Report id={route.id} />
     {/key}
   {:else if route.page === "properties"}
-    <Properties />
+    <Properties params={route.params ?? ""} />
   {:else if route.page === "property"}
     {#key route.key}
       <Property key={route.key} params={route.params ?? ""} />
     {/key}
   {:else if route.page === "entities"}
-    <Entities />
+    <Entities params={route.params ?? ""} />
   {:else if route.page === "entity"}
     {#key route.id}
       <Entity id={route.id} />
     {/key}
   {:else if route.page === "effects"}
-    <Effects />
+    <Effects params={route.params ?? ""} />
   {:else if route.page === "about"}
     <About />
   {:else}

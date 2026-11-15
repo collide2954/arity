@@ -69,6 +69,14 @@ Then download the check file, and give it to a person who keeps the data of
 arity. That person records it with `arity check --file`. See
 [Check a report](start.md#check-a-report).
 
+## Keys
+
+| Key | What it does |
+| --- | --- |
+| Ctrl+K, or Cmd+K on a Mac | Opens a box that finds and opens a work, a property, an entity, a report, or a page. In the box, ↑ and ↓ select, Enter opens, and Esc closes. |
+| / | Goes to the search box of the page. |
+| ↑ and ↓ | In a table, go to the row above or below. |
+
 ## Compare reports in a matrix
 
 On the Compare page, select a property. Then select what the rows and the

@@ -6,7 +6,9 @@
   import { coverageLine } from "../lib/coverage";
   import { dataUrl, loadIndex, loadReports, loadWork } from "../lib/data";
   import { names } from "../lib/describe";
+  import { emptySelection, filter, selectionQuery } from "../lib/filter";
   import { highlightsOf } from "../lib/highlight";
+  import { REPORT_FACETS, reportRows } from "../lib/reports";
   import { link } from "../lib/route";
 
   let { id, selected: initial }: { id: number; selected: number | null } = $props();
@@ -15,6 +17,7 @@
   let selected: number | null = $state(initial);
   let view: "pdf" | "text" | null = $state(null);
   let located: ReadonlySet<number> | null = $state(null);
+  let find = $state("");
 
   // svelte-ignore state_referenced_locally
   const data = Promise.all([loadIndex(), loadReports(), loadWork(id)]);
@@ -31,6 +34,13 @@
 {:then [index, reports, page]}
   {@const lookup = names(index)}
   {@const own = reports.filter((report) => report.work === id)}
+  {@const ownRows = reportRows(index, own)}
+  {@const listed =
+    find.trim() === ""
+      ? own
+      : filter(ownRows, { ...emptySelection(), text: find }, REPORT_FACETS).items.map(
+          (row) => row.report,
+        )}
   {@const highlights = highlightsOf(own, lookup)}
   {@const metadata = page.work.metadata}
   {@const shown = view ?? (page.pdf ? "pdf" : "text")}
@@ -119,9 +129,29 @@
       <h2>Reports from this work ({own.length})</h2>
       {#if own.length === 0}
         <p class="muted">No reader has submitted reports from this work yet.</p>
+      {:else}
+        <input
+          type="search"
+          class="find"
+          aria-label="Find in the reports of this work"
+          placeholder="Find in the reports, for example: 13C, or a quote"
+          bind:value={find}
+        />
+        <p class="muted small">
+          {#if find.trim() !== ""}{listed.length} of {own.length} reports have these words.
+          {/if}<a
+            href={link({
+              page: "reports",
+              params: selectionQuery(
+                { ...emptySelection(), text: find, facets: { work: [String(id)] } },
+                REPORT_FACETS,
+              ),
+            })}>Open in the report explorer</a
+          >
+        </p>
       {/if}
       <div class="list">
-        {#each own as report (report.id)}
+        {#each listed as report (report.id)}
           <ReportItem
             {report}
             {lookup}
@@ -201,6 +231,15 @@
   .list {
     display: grid;
     gap: 0.5rem;
+  }
+
+  .find {
+    max-width: none;
+  }
+
+  .small {
+    font-size: 0.85rem;
+    margin: 0.35rem 0 0.75rem;
   }
 
   @media (max-width: 960px) {

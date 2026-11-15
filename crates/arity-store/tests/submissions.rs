@@ -466,6 +466,101 @@ fn shows_reports_with_their_evidence_checks_and_provenance() {
     );
 }
 
+fn correction(document: &Document, replaces: i64, note: &str) -> Value {
+    let mut value = submission(document, "0.24", "chemical");
+    value["replaces"] = json!(replaces);
+    value["note"] = json!(note);
+    value
+}
+
+#[test]
+fn stores_a_correction_that_replaces_an_earlier_run() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let mut original = submission(&document, "0.24", "chemical");
+    original["skipped"] = json!([
+        { "block": "t1/r1c2", "quote": "IC50 (μM)", "reason": "other", "note": "A test." }
+    ]);
+    let first = store_one(&store, work, text, &document, &original).unwrap();
+    let second = store_one(
+        &store,
+        work,
+        text,
+        &document,
+        &correction(&document, first.0, "The reader corrected the conditions."),
+    )
+    .unwrap();
+
+    let runs = store.run_views().unwrap();
+    let old = runs.iter().find(|run| run.id == first.0).unwrap();
+    let new = runs.iter().find(|run| run.id == second.0).unwrap();
+    assert_eq!((old.replaces, old.replaced_by), (None, Some(second.0)));
+    assert_eq!((new.replaces, new.replaced_by), (Some(first.0), None));
+
+    let reports = store.report_views().unwrap();
+    let replaced: Vec<_> = reports
+        .iter()
+        .map(|report| (report.run, report.replaced_by))
+        .collect();
+    assert_eq!(replaced, [(first.0, Some(second.0)), (second.0, None)]);
+    assert_eq!(store.quoted_ranges(text).unwrap()["s1/p1"].len(), 1);
+    assert_eq!(store.skipped_ranges(text).unwrap(), HashMap::new());
+    assert_eq!(store.work_views().unwrap()[0].reports, 1);
+}
+
+#[test]
+fn refuses_a_correction_of_a_missing_run_another_work_or_a_replaced_run() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let first = store_one(
+        &store,
+        work,
+        text,
+        &document,
+        &submission(&document, "0.24", "chemical"),
+    )
+    .unwrap();
+    let (other_work, other_text, other_document) = setup(
+        &store,
+        "PMC2",
+        "The IC50 of doxorubicin was 0.24 μM in this study.",
+    );
+    let mut other = submission(&other_document, "0.24", "chemical");
+    other["work"] = json!("PMC2");
+    let other_run = store_one(&store, other_work, other_text, &other_document, &other).unwrap();
+
+    for (replaces, problem) in [(other_run.0 + 1, "no run"), (other_run.0, "another work")] {
+        let error = store_one(
+            &store,
+            work,
+            text,
+            &document,
+            &correction(&document, replaces, problem),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains(problem), "{error}");
+    }
+    store_one(
+        &store,
+        work,
+        text,
+        &document,
+        &correction(&document, first.0, "one"),
+    )
+    .unwrap();
+    let error = store_one(
+        &store,
+        work,
+        text,
+        &document,
+        &correction(&document, first.0, "two"),
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(error.contains("already replaced"), "{error}");
+}
+
 #[test]
 fn gives_the_work_of_a_run() {
     let store = Store::open_in_memory().unwrap();

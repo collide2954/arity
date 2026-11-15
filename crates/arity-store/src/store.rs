@@ -13,6 +13,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../migrations/002_run_entity.sql"),
     include_str!("../migrations/003_skip.sql"),
     include_str!("../migrations/004_skip_restated.sql"),
+    include_str!("../migrations/005_replaces.sql"),
 ];
 
 macro_rules! id_type {

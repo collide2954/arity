@@ -1007,6 +1007,14 @@
       "$ref": "#/$defs/Reader",
       "description": "The person or software that read the source."
     },
+    "replaces": {
+      "description": "The sequence number of an earlier run of the same work that this\nsubmission corrects. arity keeps the earlier run, and shows only this\none.",
+      "format": "int64",
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
     "reports": {
       "items": {
         "$ref": "#/$defs/ReportInput"

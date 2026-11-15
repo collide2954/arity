@@ -99,6 +99,8 @@ pub struct ReportView {
     pub check: String,
     pub checks: Vec<CheckView>,
     pub evidence: Vec<EvidenceView>,
+    /// The run that corrects the run of this report, if there is one.
+    pub replaced_by: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -121,6 +123,10 @@ pub struct RunView {
     pub text_sha256: String,
     pub parser: String,
     pub warnings: Value,
+    /// The earlier run that this run corrects.
+    pub replaces: Option<i64>,
+    /// The later run that corrects this run.
+    pub replaced_by: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -241,8 +247,11 @@ impl Store {
     pub fn run_views(&self) -> Result<Vec<RunView>> {
         let mut statement = self.connection.prepare(
             "SELECT run.id, run.work_id, run.reader_id, run.responsible_id, run.software,
-             run.submitted_at, run.submission_sha256, text.sha256, text.parser, run.warnings
-             FROM run JOIN text ON text.id = run.text_id ORDER BY run.id",
+             run.submitted_at, run.submission_sha256, text.sha256, text.parser, run.warnings,
+             run.replaces, newer.id
+             FROM run JOIN text ON text.id = run.text_id
+             LEFT JOIN run AS newer ON newer.replaces = run.id
+             ORDER BY run.id",
         )?;
         let rows = statement
             .query_map([], |row| {
@@ -257,6 +266,8 @@ impl Store {
                     row.get::<_, String>(7)?,
                     row.get::<_, String>(8)?,
                     row.get::<_, String>(9)?,
+                    row.get::<_, Option<i64>>(10)?,
+                    row.get::<_, Option<i64>>(11)?,
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -273,6 +284,8 @@ impl Store {
                     text,
                     parser,
                     warnings,
+                    replaces,
+                    replaced_by,
                 )| {
                     Ok(RunView {
                         id,
@@ -285,6 +298,8 @@ impl Store {
                         text_sha256: text,
                         parser,
                         warnings: serde_json::from_str(&warnings)?,
+                        replaces,
+                        replaced_by,
                     })
                 },
             )
@@ -343,8 +358,9 @@ impl Store {
             "SELECT report.id, report.work_id, report.run_id, report.local_id, report.type,
              report.body, COALESCE(report.property_key, report.target_property_key),
              report.coherent, report.coherent_low, report.coherent_high, report.coherent_unit,
-             report.direction, report_state.state
+             report.direction, report_state.state, newer.id
              FROM report JOIN report_state ON report_state.report_id = report.id
+             LEFT JOIN run AS newer ON newer.replaces = report.run_id
              ORDER BY report.id",
         )?;
         let rows = statement
@@ -365,13 +381,26 @@ impl Store {
                     },
                     row.get::<_, Option<String>>(11)?,
                     row.get::<_, String>(12)?,
+                    row.get::<_, Option<i64>>(13)?,
                 ))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         let mut entities_by_run: HashMap<i64, BTreeMap<String, i64>> = HashMap::new();
         rows.into_iter()
             .map(
-                |(id, work, run, local_id, kind, body, property, coherent, direction, check)| {
+                |(
+                    id,
+                    work,
+                    run,
+                    local_id,
+                    kind,
+                    body,
+                    property,
+                    coherent,
+                    direction,
+                    check,
+                    replaced_by,
+                )| {
                     let body: Value = serde_json::from_str(&body)?;
                     let of_run = match entities_by_run.entry(run) {
                         Entry::Occupied(entry) => entry.into_mut(),
@@ -404,6 +433,7 @@ impl Store {
                         check,
                         checks: self.checks_of(id)?,
                         evidence: self.evidence_of(id)?,
+                        replaced_by,
                     })
                 },
             )
@@ -449,7 +479,8 @@ impl Store {
                         other => Err(other),
                     })?;
                 let reports: i64 = self.connection.query_row(
-                    "SELECT COUNT(*) FROM report WHERE work_id = ?1",
+                    "SELECT COUNT(*) FROM report WHERE work_id = ?1
+                     AND NOT EXISTS (SELECT 1 FROM run WHERE run.replaces = report.run_id)",
                     params![record.id.0],
                     |row| row.get(0),
                 )?;

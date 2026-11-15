@@ -36,6 +36,11 @@ pub struct Submission {
     pub skipped: Vec<SkipInput>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
+    /// The sequence number of an earlier run of the same work that this
+    /// submission corrects. arity keeps the earlier run, and shows only this
+    /// one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replaces: Option<i64>,
 }
 
 /// A quote with numbers that the reader does not report.

@@ -95,6 +95,7 @@ impl Store {
              FROM evidence
              JOIN report_state ON report_state.report_id = evidence.report_id
              WHERE evidence.text_id = ?1 AND report_state.state != 'rejected'
+             AND NOT EXISTS (SELECT 1 FROM run WHERE run.replaces = evidence.run_id)
              ORDER BY evidence.id",
             text,
         )
@@ -104,7 +105,9 @@ impl Store {
     /// counts Unicode scalar values of the text of its block.
     pub fn skipped_ranges(&self, text: TextId) -> Result<HashMap<String, Vec<Range<usize>>>> {
         self.ranges(
-            "SELECT block_key, start, \"end\" FROM skip WHERE text_id = ?1 ORDER BY id",
+            "SELECT block_key, start, \"end\" FROM skip WHERE text_id = ?1
+             AND NOT EXISTS (SELECT 1 FROM run WHERE run.replaces = skip.run_id)
+             ORDER BY id",
             text,
         )
     }

@@ -501,6 +501,9 @@ impl Store {
         let raw_text = std::str::from_utf8(raw)
             .map_err(|_| StoreError::Corrupt("the submission is not UTF-8".to_owned()))?;
         let submission = &checked.submission;
+        if let Some(replaced) = submission.replaces {
+            self.check_replaceable(work, RunId(replaced))?;
+        }
         let transaction = self.connection.unchecked_transaction()?;
         let reader = agent(
             &transaction,
@@ -526,8 +529,8 @@ impl Store {
         )?;
         transaction.execute(
             "INSERT INTO run (work_id, text_id, submission_sha256, submission, reader_id,
-             responsible_id, software, warnings, submitted_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+             responsible_id, software, warnings, submitted_at, replaces)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 work.0,
                 text.0,
@@ -537,7 +540,8 @@ impl Store {
                 responsible.0,
                 SOFTWARE,
                 serde_json::to_string(&checked.warnings)?,
-                now.to_string()
+                now.to_string(),
+                submission.replaces
             ],
         )?;
         let mut writer = Writer {
@@ -645,6 +649,36 @@ impl Store {
             .into_iter()
             .filter(|row| seen.insert(row.local_id.clone()))
             .collect())
+    }
+
+    /// Makes sure that a new run of a work can replace a run: the run exists,
+    /// it is a run of the same work, and no other run replaces it already.
+    fn check_replaceable(&self, work: WorkId, run: RunId) -> Result<()> {
+        match self.work_of_run(run)? {
+            None => Err(StoreError::Conflict(format!(
+                "there is no run {} to replace",
+                run.0
+            ))),
+            Some(owner) if owner != work => Err(StoreError::Conflict(format!(
+                "run {} is a run of another work",
+                run.0
+            ))),
+            Some(_) => {
+                let newer: Option<i64> = self
+                    .connection
+                    .query_row("SELECT id FROM run WHERE replaces = ?1", [run.0], |row| {
+                        row.get(0)
+                    })
+                    .optional()?;
+                match newer {
+                    Some(newer) => Err(StoreError::Conflict(format!(
+                        "run {} is already replaced by run {newer}",
+                        run.0
+                    ))),
+                    None => Ok(()),
+                }
+            }
+        }
     }
 
     /// The work of a run, or nothing when there is no such run.

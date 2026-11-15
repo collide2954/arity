@@ -19,6 +19,19 @@ describe("coverageLine", () => {
       "Reports quote 6 of 340 numbers in table cells, and 6 of 127 numbers in the text (4 skipped).",
     );
   });
+
+  it("leaves out a part that has no numbers", () => {
+    const none = { numbers: 0, quoted: 0, skipped: 0 };
+    expect(coverageLine({ ...coverage, cells: none })).toBe(
+      "Reports quote 6 of 127 numbers in the text (4 skipped).",
+    );
+    expect(coverageLine({ ...coverage, text: none })).toBe(
+      "Reports quote 6 of 340 numbers in table cells.",
+    );
+    expect(coverageLine({ ...coverage, cells: none, text: none })).toBe(
+      "The text has no numbers for reports to quote.",
+    );
+  });
 });
 
 describe("unquotedOf", () => {

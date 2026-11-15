@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import Chart from "../components/Chart.svelte";
   import ColumnChooser from "../components/ColumnChooser.svelte";
   import CopyLink from "../components/CopyLink.svelte";
@@ -192,6 +193,7 @@
     pale dot is a report that a person rejected. A diamond is a value that the reader read from an
     image. A sign above a dot tells that its source has a notice, for example a retraction. Drag
     along the axis of values to select a range.
+    <a href={docsLink("website", "figures")}>How the figure works</a>.
   </p>
 
   <div class="explorer">

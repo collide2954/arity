@@ -1,6 +1,7 @@
 <script lang="ts">
   import QuickJump from "./components/QuickJump.svelte";
   import { checking, setCheckMode } from "./lib/checking.svelte";
+  import { docsLink } from "./lib/docs";
   import { link } from "./lib/route";
   import { location } from "./lib/state.svelte";
   import About from "./pages/About.svelte";
@@ -48,6 +49,7 @@
         aria-current={active(section.page) ? "page" : undefined}>{section.label}</a
       >
     {/each}
+    <a href={docsLink()}>Docs</a>
     <span class="checking">
       <QuickJump />
       {#if checking.on || checking.draft.marks.length > 0}
@@ -115,6 +117,7 @@
   <p>
     arity reports what each source states. It does not rate, combine, or correct the data. Code
     under the Apache License 2.0. Data under CC0 1.0. Each source keeps its own license.
+    <a href={docsLink()}>Read the documentation</a>.
   </p>
 </footer>
 

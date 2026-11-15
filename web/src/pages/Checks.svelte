@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import { checkFile, isOrcid } from "../lib/checkfile";
   import {
     checking,
@@ -33,6 +34,7 @@
   browser keeps your marks until you download them as a check file. A person who keeps the data of
   arity then records the file with the command <span class="mono">arity check --file</span>, with
   your name and the time of each check.
+  <a href={docsLink("website", "check-mode")}>How check mode works</a>.
 </p>
 
 <div class="controls">

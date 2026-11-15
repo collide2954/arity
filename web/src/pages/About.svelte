@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import { link } from "../lib/route";
 </script>
 
@@ -66,6 +67,25 @@
   Each source keeps its own license; arity shows the text and the PDF of a source only when the
   license of the source lets others share them.
 </p>
+
+<h2>Documentation</h2>
+<p>The book of arity tells how each part works:</p>
+<ul>
+  <li>
+    <a href={docsLink("principles")}>Principles</a>: what arity does, and what it does not do.
+  </li>
+  <li>
+    <a href={docsLink("start")}>Start</a>: how to find, fetch, read, submit, and check a work.
+  </li>
+  <li><a href={docsLink("submissions")}>Submissions</a>: the format of a reading.</li>
+  <li><a href={docsLink("checks")}>Checks</a>: what arity checks before it stores a report.</li>
+  <li><a href={docsLink("provenance")}>Provenance</a>: what arity records about each step.</li>
+  <li><a href={docsLink("notices")}>Notices</a>: retractions, corrections, and other notices.</li>
+  <li>
+    <a href={docsLink("website")}>Website</a>: the pages, the search, the filters, the figures,
+    check mode, and the keys.
+  </li>
+</ul>
 
 <h2>Source code</h2>
 <p>

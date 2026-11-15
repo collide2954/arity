@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import CopyLink from "../components/CopyLink.svelte";
   import FilterPanel from "../components/FilterPanel.svelte";
   import SelectionChips from "../components/SelectionChips.svelte";
@@ -137,6 +138,7 @@
   report of its row and its column, with a link to the report. arity does not average or combine the
   reports of a cell. A check sign marks a confirmed report, a cross marks a rejected report, and a
   warning sign marks a report whose source has a notice.
+  <a href={docsLink("website", "compare-reports-in-a-matrix")}>How the matrix works</a>.
 </p>
 
 {#if failure}

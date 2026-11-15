@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import ColumnChooser from "../components/ColumnChooser.svelte";
   import CopyLink from "../components/CopyLink.svelte";
   import DataTable from "../components/DataTable.svelte";
@@ -89,7 +90,9 @@
   Each row is one report of one source: a value or an effect, with its conditions. Find reports by
   words, filter them, sort the table by a column, and download the rows that you select. arity does
   not combine or weigh the reports. The address of the page keeps your selection, so you can share
-  it.
+  it. <a href={docsLink("website", "find-and-filter-reports")}
+    >How the search and the filters work</a
+  >.
 </p>
 
 {#if failure}

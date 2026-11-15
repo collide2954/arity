@@ -37,9 +37,15 @@ fn used_entities(body: &Value) -> BTreeSet<&str> {
 pub struct EntityView {
     pub id: i64,
     pub kind: String,
+    /// The label that the first run gave the entity. When no current run
+    /// gives that label, the first label of the earliest current run.
     pub label: String,
     pub xrefs: Vec<String>,
+    /// The labels that the current runs give the entity. For an entity that
+    /// only replaced runs name, the labels of those runs.
     pub names: Vec<String>,
+    /// Whether a current run names the entity.
+    pub current: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -168,13 +174,15 @@ impl Store {
             let (entity, curie): (i64, String) = row?;
             xrefs.entry(entity).or_default().push(curie);
         }
-        let mut names: HashMap<i64, Vec<String>> = HashMap::new();
-        let mut statement = self
-            .connection
-            .prepare("SELECT entity_id, name FROM entity_name ORDER BY name")?;
-        for row in statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))? {
-            let (entity, name): (i64, String) = row?;
-            names.entry(entity).or_default().push(name);
+        let mut given: HashMap<i64, Vec<(String, bool)>> = HashMap::new();
+        let mut statement = self.connection.prepare(
+            "SELECT entity_id, name,
+             NOT EXISTS (SELECT 1 FROM run WHERE run.replaces = entity_name.run_id)
+             FROM entity_name ORDER BY run_id, name",
+        )?;
+        for row in statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))? {
+            let (entity, name, from_current): (i64, String, bool) = row?;
+            given.entry(entity).or_default().push((name, from_current));
         }
         let mut statement = self
             .connection
@@ -184,12 +192,30 @@ impl Store {
             .collect::<rusqlite::Result<Vec<(i64, String, String)>>>()?;
         Ok(rows
             .into_iter()
-            .map(|(id, kind, label)| EntityView {
-                id,
-                kind,
-                label,
-                xrefs: xrefs.remove(&id).unwrap_or_default(),
-                names: names.remove(&id).unwrap_or_default(),
+            .map(|(id, kind, label)| {
+                let given = given.remove(&id).unwrap_or_default();
+                let current: Vec<&str> = given
+                    .iter()
+                    .filter(|(_, from_current)| *from_current)
+                    .map(|(name, _)| name.as_str())
+                    .collect();
+                let label = match current.first() {
+                    Some(first) if !current.contains(&label.as_str()) => (*first).to_owned(),
+                    _ => label,
+                };
+                let names: BTreeSet<&str> = given
+                    .iter()
+                    .filter(|(_, from_current)| *from_current || current.is_empty())
+                    .map(|(name, _)| name.as_str())
+                    .collect();
+                EntityView {
+                    id,
+                    kind,
+                    label,
+                    xrefs: xrefs.remove(&id).unwrap_or_default(),
+                    names: names.into_iter().map(str::to_owned).collect(),
+                    current: !current.is_empty(),
+                }
             })
             .collect())
     }

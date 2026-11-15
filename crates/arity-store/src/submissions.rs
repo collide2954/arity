@@ -253,8 +253,8 @@ impl Writer<'_> {
             )?;
         }
         self.connection.execute(
-            "INSERT OR IGNORE INTO entity_name (entity_id, name) VALUES (?1, ?2)",
-            params![id.0, entity.label],
+            "INSERT OR IGNORE INTO entity_name (entity_id, name, run_id) VALUES (?1, ?2, ?3)",
+            params![id.0, entity.label, self.run.0],
         )?;
         for (mention_index, mention) in entity.mentions.iter().enumerate() {
             let path = format!("/entities/{position}/mentions/{mention_index}");

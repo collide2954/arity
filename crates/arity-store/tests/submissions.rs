@@ -513,6 +513,42 @@ fn stores_a_correction_that_replaces_an_earlier_run() {
 }
 
 #[test]
+fn gives_the_names_of_an_entity_from_the_current_runs() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(
+        &store,
+        "PMC1",
+        "The IC50 of doxorubicin was 0.24 μM in MCF-7 cells.",
+    );
+    let mut original = submission(&document, "0.24", "chemical");
+    original["entities"].as_array_mut().unwrap().push(json!({
+        "id": "mcf7", "kind": "cell_line", "label": "MCF-7 cell line",
+        "mentions": [{ "block": "s1/p1", "quote": "MCF-7" }]
+    }));
+    let first = store_one(&store, work, text, &document, &original).unwrap();
+    let mut corrected = correction(&document, first.0, "The reader corrected a label.");
+    corrected["entities"][0]["label"] = json!("doxorubicin hydrochloride");
+    store_one(&store, work, text, &document, &corrected).unwrap();
+
+    let entities = store.entity_views().unwrap();
+    let described: Vec<_> = entities
+        .iter()
+        .map(|entity| (entity.label.as_str(), entity.names.clone(), entity.current))
+        .collect();
+    assert_eq!(
+        described,
+        [
+            (
+                "doxorubicin hydrochloride",
+                vec!["doxorubicin hydrochloride".to_owned()],
+                true
+            ),
+            ("MCF-7 cell line", vec!["MCF-7 cell line".to_owned()], false),
+        ]
+    );
+}
+
+#[test]
 fn refuses_a_correction_of_a_missing_run_another_work_or_a_replaced_run() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");

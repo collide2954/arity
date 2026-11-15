@@ -214,6 +214,8 @@ export interface EffectRow {
   report: number;
   agent: string;
   target: string;
+  /** The row of the mark in the tiles and the list. */
+  group: string;
   direction: "increase" | "decrease" | "no_change" | "mixed";
   score: string;
   slot: number;
@@ -226,72 +228,180 @@ export interface EffectRow {
 
 export const DIRECTIONS = ["increase", "no_change", "decrease", "mixed"] as const;
 
+/** The names of the directions in a legend or on an axis. */
+const DIRECTION_LABELS =
+  "{'increase': 'Increase (+1)', 'no_change': 'No change (0)', 'decrease': 'Decrease (\u{2212}1)', 'mixed': 'Mixed'}[datum.label]";
+
+/** The order of the columns of the list, from a decrease to an increase. */
+const LIST_ORDER = ["decrease", "no_change", "increase", "mixed"] as const;
+
+function directionColor(mode: Mode) {
+  const tokens = TOKENS[mode];
+  return {
+    field: "direction",
+    type: "nominal" as const,
+    scale: {
+      domain: [...DIRECTIONS],
+      range: [tokens.increase, tokens.neutral, tokens.decrease, tokens.neutral],
+    },
+    legend: { title: "Direction", orient: "top" as const, labelExpr: DIRECTION_LABELS },
+  };
+}
+
+const DIRECTION_SHAPES = {
+  field: "direction",
+  type: "nominal" as const,
+  scale: { domain: [...DIRECTIONS], range: ["triangle-up", "circle", "triangle-down", "diamond"] },
+  legend: null,
+};
+
+const EFFECT_TOOLTIP = [
+  { field: "agent", title: "Agent" },
+  { field: "target", title: "Target" },
+  { field: "score", title: "Direction" },
+  { field: "detail", title: "Details" },
+  { field: "work", title: "Source" },
+  { field: "check", title: "Check" },
+  { field: "notices", title: "Notices" },
+];
+
+const DIM_REJECTED = {
+  condition: { test: "datum.check === 'rejected'", value: 0.35 },
+  value: 1,
+};
+
+/** A mark for each report, with its shape and color for its direction, and the notice sign above it. */
+function effectLayers(mode: Mode) {
+  const tokens = TOKENS[mode];
+  return [
+    {
+      mark: {
+        type: "point" as const,
+        size: 120,
+        strokeWidth: 2,
+        filled: true,
+        cursor: "pointer" as const,
+      },
+      encoding: {
+        color: directionColor(mode),
+        shape: DIRECTION_SHAPES,
+        stroke: { value: tokens.surface },
+        opacity: DIM_REJECTED,
+        tooltip: EFFECT_TOOLTIP,
+      },
+    },
+    {
+      mark: {
+        type: "text" as const,
+        dx: 9,
+        dy: -7,
+        fontSize: 10,
+        color: tokens.ink,
+        cursor: "pointer" as const,
+      },
+      encoding: { text: { field: "marker" } },
+    },
+  ];
+}
+
 /**
  * A grid of agents and targets. Each report is its own mark in its cell: up
  * for an increase, down for a decrease, a dot for no change (0), and a
- * diamond for a mixed result. A mark whose source has notices has the notice
- * sign above it.
+ * diamond for a mixed result. Each target has its own column, so the figure
+ * is as wide as its targets need.
  */
-export function effectSpec(rows: readonly EffectRow[], mode: Mode): TopLevelSpec {
-  const tokens = TOKENS[mode];
-  const agents = new Set(rows.map((row) => row.agent)).size;
+export function effectSpec(rows: readonly EffectRow[], mode: Mode, labelLimit = 240): TopLevelSpec {
   return {
     $schema: "https://vega.github.io/schema/vega-lite/v6.json",
-    width: "container",
-    height: Math.max(120, agents * 44),
+    width: { step: 30 },
+    height: { step: 36 },
     data: { values: rows.map((row) => ({ ...row })) },
     config: config(mode),
     encoding: {
       x: {
         field: "target",
         type: "nominal",
-        axis: { title: "Target", labelAngle: 0, labelLimit: 180 },
+        axis: {
+          title: "Target",
+          orient: "top",
+          labelAngle: -40,
+          labelAlign: "left",
+          labelLimit: 160,
+        },
       },
-      y: { field: "agent", type: "nominal", axis: { title: "Agent", labelLimit: 240 } },
+      y: { field: "agent", type: "nominal", axis: { title: "Agent", labelLimit } },
       xOffset: { field: "slot", type: "nominal" },
+    },
+    layer: effectLayers(mode),
+  };
+}
+
+/** One row for each group, one column for each direction, and one mark for each report. */
+export function effectListSpec(
+  rows: readonly EffectRow[],
+  mode: Mode,
+  labelLimit = 240,
+): TopLevelSpec {
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+    width: "container",
+    height: { step: 26, for: "position" },
+    autosize: { type: "fit-x", contains: "padding" },
+    data: { values: rows.map((row) => ({ ...row })) },
+    config: config(mode),
+    encoding: {
+      x: {
+        field: "direction",
+        type: "nominal",
+        scale: { domain: [...LIST_ORDER] },
+        axis: { title: null, orient: "top", labelAngle: 0, labelExpr: DIRECTION_LABELS },
+      },
+      y: { field: "group", type: "nominal", sort: "ascending", axis: { title: null, labelLimit } },
+      xOffset: { field: "slot", type: "nominal" },
+    },
+    layer: effectLayers(mode),
+  };
+}
+
+/**
+ * One row for each group, with one square for each report in the order of
+ * the directions. The length of a row shows its number of reports. A square
+ * with a dark outline comes from a source with a notice.
+ */
+export function effectTilesSpec(
+  rows: readonly EffectRow[],
+  mode: Mode,
+  labelLimit = 240,
+): TopLevelSpec {
+  const tokens = TOKENS[mode];
+  return {
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
+    width: { step: 14 },
+    height: { step: 18 },
+    data: { values: rows.map((row) => ({ ...row })) },
+    config: config(mode),
+    encoding: {
+      x: { field: "slot", type: "ordinal", axis: null },
+      y: {
+        field: "group",
+        type: "nominal",
+        sort: { op: "count", order: "descending" },
+        axis: { title: null, labelLimit },
+      },
     },
     layer: [
       {
-        mark: { type: "point", size: 140, strokeWidth: 2, filled: true, cursor: "pointer" },
+        mark: { type: "point", shape: "square", size: 110, filled: true, cursor: "pointer" },
         encoding: {
-          color: {
-            field: "direction",
-            type: "nominal",
-            scale: {
-              domain: [...DIRECTIONS],
-              range: [tokens.increase, tokens.neutral, tokens.decrease, tokens.neutral],
-            },
-            legend: {
-              title: "Direction",
-              labelExpr:
-                "{'increase': 'Increase (+1)', 'no_change': 'No change (0)', 'decrease': 'Decrease (\u{2212}1)', 'mixed': 'Mixed'}[datum.label]",
-            },
+          color: directionColor(mode),
+          stroke: {
+            condition: { test: "datum.marker !== ''", value: tokens.ink },
+            value: tokens.surface,
           },
-          shape: {
-            field: "direction",
-            type: "nominal",
-            scale: {
-              domain: [...DIRECTIONS],
-              range: ["triangle-up", "circle", "triangle-down", "diamond"],
-            },
-            legend: null,
-          },
-          stroke: { value: tokens.surface },
-          opacity: { condition: { test: "datum.check === 'rejected'", value: 0.35 }, value: 1 },
-          tooltip: [
-            { field: "agent", title: "Agent" },
-            { field: "target", title: "Target" },
-            { field: "score", title: "Direction" },
-            { field: "detail", title: "Details" },
-            { field: "work", title: "Source" },
-            { field: "check", title: "Check" },
-            { field: "notices", title: "Notices" },
-          ],
+          strokeWidth: { condition: { test: "datum.marker !== ''", value: 1.5 }, value: 1 },
+          opacity: DIM_REJECTED,
+          tooltip: EFFECT_TOOLTIP,
         },
-      },
-      {
-        mark: { type: "text", dy: -16, fontSize: 13, color: tokens.ink, cursor: "pointer" },
-        encoding: { text: { field: "marker" } },
       },
     ],
   };

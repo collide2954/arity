@@ -5,18 +5,22 @@
   import ConditionList from "../components/ConditionList.svelte";
   import FilteredTable from "../components/FilteredTable.svelte";
   import NoticeChips from "../components/NoticeChips.svelte";
-  import { effectSpec } from "../lib/charts";
+  import { effectListSpec, effectSpec, effectTilesSpec } from "../lib/charts";
   import { download, toCsv } from "../lib/csv";
   import { loadIndex, loadReports } from "../lib/data";
   import {
     EFFECT_COLUMNS,
     EFFECT_FACETS,
     EFFECT_TITLES,
+    EFFECT_VIEWS,
+    effectGroupings,
     effectItems,
     effectLabels,
     effectRows,
+    groupedMarks,
     matrixRows,
     type EffectItem,
+    type EffectView,
   } from "../lib/effects";
   import { directionLabel, scoreLabel } from "../lib/format";
   import { link } from "../lib/route";
@@ -27,6 +31,20 @@
   let { params = "" }: { params?: string } = $props();
 
   const data = Promise.all([loadIndex(), loadReports()]);
+
+  const VIEW_LABELS: Readonly<Record<EffectView, string>> = {
+    tiles: "Tiles",
+    list: "List",
+    matrix: "Matrix",
+  };
+
+  let view = $state<EffectView>("tiles");
+  let by = $state("agent");
+  let figureWidth = $state(0);
+  /** The width of the row labels: a part of the width of the figure, in steps of 20 pixels. */
+  const labelLimit = $derived(
+    figureWidth > 0 ? Math.min(320, Math.max(120, Math.round((figureWidth * 0.3) / 20) * 20)) : 240,
+  );
 
   function save(rows: readonly EffectItem[]): void {
     download(
@@ -94,13 +112,14 @@
 
 <h1>Effects</h1>
 <p class="lede">
-  Each mark is one effect or association that one source reports. Up is an increase (+1), down is a
-  decrease (−1), and a dot is a statement of no change or no effect (0). Two sources that disagree
-  show as two marks in the same cell: arity does not combine them. If the source has a notice, for
-  example a retraction, a sign shows above the mark. The filters change the matrix and the table.
+  Each mark is one effect or association that one source reports: an increase (+1), a decrease (−1),
+  no change or no effect (0), or a mixed result. arity does not combine the reports, so two sources
+  that disagree show as two marks. The tiles give one square for each report, so the length of a row
+  shows its number of reports. The list gives each direction its own column. The matrix puts the
+  agents against the targets. If the source has a notice, for example a retraction, a sign shows
+  above the mark, or a square has a dark outline. The filters change the figure and the table.
   <a href={docsLink("website", "figures")}>How the figures work</a>.
 </p>
-
 {#await data}
   <p class="muted">arity is loading the effects.</p>
 {:then [index, reports]}
@@ -108,12 +127,45 @@
   {#if items.length === 0}
     <p class="muted">No reader has submitted effects yet.</p>
   {:else}
-    {#snippet matrix(rows: readonly EffectItem[])}
+    {#snippet figure(rows: readonly EffectItem[])}
       {#if rows.length > 0}
-        <div class="card">
+        {@const groupings = effectGroupings(rows)}
+        {@const key = groupings.some((grouping) => grouping.key === by) ? by : "agent"}
+        <div class="controls" role="group" aria-label="Figure">
+          <span class="secondary">Figure</span>
+          {#each EFFECT_VIEWS as option (option)}
+            <button
+              type="button"
+              aria-pressed={view === option}
+              onclick={() => {
+                view = option;
+              }}>{VIEW_LABELS[option]}</button
+            >
+          {/each}
+          {#if view !== "matrix"}
+            <label class="rows"
+              >Rows
+              <select
+                value={key}
+                onchange={(event) => {
+                  by = event.currentTarget.value;
+                }}
+              >
+                {#each groupings as grouping (grouping.key)}
+                  <option value={grouping.key}>{grouping.label}</option>
+                {/each}
+              </select></label
+            >
+          {/if}
+        </div>
+        <div class="card figure" bind:clientWidth={figureWidth}>
           <Chart
-            spec={effectSpec(matrixRows(rows), theme.mode)}
-            label="The effects that each source reports, by agent and target"
+            spec={view === "matrix"
+              ? effectSpec(matrixRows(rows), theme.mode, labelLimit)
+              : view === "list"
+                ? effectListSpec(groupedMarks(rows, key, "list"), theme.mode, labelLimit)
+                : effectTilesSpec(groupedMarks(rows, key, "tiles"), theme.mode, labelLimit)}
+            label="The effects that each source reports"
             onselect={(report: number) => {
               open(report, reports);
             }}
@@ -134,7 +186,7 @@
       }}
       {cell}
       {actions}
-      above={matrix}
+      above={figure}
       key={(row: EffectItem) => row.report.id}
       name="effects"
       placeholder="Find effects, for example: hydralazine apoptosis"
@@ -143,3 +195,24 @@
 {:catch error}
   <p>arity cannot load the effects: {error instanceof Error ? error.message : String(error)}</p>
 {/await}
+
+<style>
+  .figure {
+    overflow-x: auto;
+  }
+
+  .rows {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    margin-left: 0.5rem;
+  }
+
+  select {
+    background: var(--surface);
+    border: 1px solid var(--axis);
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+    max-width: 16rem;
+  }
+</style>

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { TOKENS, config, effectSpec, valueSpec, type EffectRow, type ValueRow } from "./charts";
+import {
+  TOKENS,
+  config,
+  effectListSpec,
+  effectSpec,
+  effectTilesSpec,
+  valueSpec,
+  type EffectRow,
+  type ValueRow,
+} from "./charts";
 
 const value: ValueRow = {
   report: 1,
@@ -24,6 +33,7 @@ const effect: EffectRow = {
   report: 2,
   agent: "hydralazine",
   target: "MCF-7 \u{b7} cell viability",
+  group: "hydralazine",
   direction: "no_change",
   score: "0",
   slot: 0,
@@ -138,5 +148,40 @@ describe("effectSpec", () => {
     const second = { ...effect, report: 3, slot: 1, direction: "decrease" as const };
     const spec = effectSpec([effect, second], "dark");
     expect((spec.data as { values: unknown[] }).values).toHaveLength(2);
+  });
+
+  it("turns the labels of the targets and gives each target its own width", () => {
+    const spec = JSON.stringify(effectSpec([effect], "light", 200));
+    expect(spec).toContain('"labelAngle":-40');
+    expect(spec).toContain('"width":{"step":');
+    expect(spec).toContain('"labelLimit":200');
+  });
+});
+
+describe("effectListSpec", () => {
+  it("gives each row one column for each direction, and each report its own mark", () => {
+    const spec = effectListSpec([effect], "light", 200) as unknown as {
+      encoding: {
+        x: { field: string; scale: { domain: string[] } };
+        y: { field: string };
+        xOffset: { field: string };
+      };
+    };
+    expect(spec.encoding.x.field).toBe("direction");
+    expect(spec.encoding.x.scale.domain).toEqual(["decrease", "no_change", "increase", "mixed"]);
+    expect(spec.encoding.y.field).toBe("group");
+    expect(spec.encoding.xOffset.field).toBe("slot");
+  });
+});
+
+describe("effectTilesSpec", () => {
+  it("gives each report one square in its row, with the color of its direction", () => {
+    const spec = effectTilesSpec([effect], "light", 200) as unknown as {
+      encoding: { x: { field: string }; y: { field: string } };
+      layer: { mark: { type: string; shape?: string } }[];
+    };
+    expect(spec.encoding.x.field).toBe("slot");
+    expect(spec.encoding.y.field).toBe("group");
+    expect(spec.layer[0]?.mark).toMatchObject({ type: "point", shape: "square" });
   });
 });

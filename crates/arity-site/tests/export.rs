@@ -218,3 +218,39 @@ fn writes_the_current_reports_and_keeps_the_replaced_reports_apart() {
     assert_eq!(page["runs"][0]["replaced_by"], second.0);
     assert_eq!(page["runs"][1]["replaces"], first);
 }
+
+#[test]
+fn writes_the_entities_that_only_replaced_runs_name_apart() {
+    let folder = tempfile::tempdir().unwrap();
+    let blobs = Blobs::new(folder.path().join("blobs"));
+    let out = folder.path().join("site");
+    let store = Store::open_in_memory().unwrap();
+    let (work_id, document) = work(
+        &store,
+        &blobs,
+        "PMC1",
+        License::Unknown("free to read".to_owned()),
+        "The IC50 of doxorubicin was 240 ± 20 nM.",
+    );
+    let first = store.run_views().unwrap()[0].id;
+    let mut correction = submission(&store, "PMC1", &document);
+    correction["replaces"] = json!(first);
+    correction["entities"][0]["id"] = json!("doxorubicin");
+    correction["entities"][0]["xrefs"] = json!([]);
+    correction["reports"][0]["subject"] = json!(["doxorubicin"]);
+    submit(&store, work_id, &document, &correction);
+
+    export(&store, &blobs, &out, at()).unwrap();
+
+    let index = read(&out.join("index.json"));
+    let entities = index["entities"].as_array().unwrap();
+    assert_eq!(entities.len(), 1);
+    assert_eq!(entities[0]["xrefs"], json!([]));
+    assert_eq!(entities[0]["reports"], 1);
+    let former = index["former_entities"].as_array().unwrap();
+    assert_eq!(former.len(), 1);
+    assert_eq!(former[0]["xrefs"], json!(["CHEBI:28748"]));
+    assert_eq!(former[0]["current"], false);
+    let replaced = read(&out.join("replaced.json"));
+    assert_eq!(replaced[0]["entities"]["dox"], former[0]["id"]);
+}

@@ -63,6 +63,9 @@ struct Index {
     works: Vec<WorkSummary>,
     properties: Vec<PropertySummary>,
     entities: Vec<EntitySummary>,
+    /// The entities that only replaced runs name. The reports of the replaced
+    /// runs use them, and links to them continue to work.
+    former_entities: Vec<EntitySummary>,
 }
 
 #[derive(Debug, Serialize)]
@@ -358,6 +361,14 @@ fn write_index(
             .copied()
             .collect::<BTreeSet<i64>>()
     }));
+    let (entities, former_entities) = store
+        .entity_views()?
+        .into_iter()
+        .map(|entity| EntitySummary {
+            reports: entity_counts.get(&entity.id).copied().unwrap_or(0),
+            entity,
+        })
+        .partition(|summary| summary.entity.current);
     let index = Index {
         format: SITE_FORMAT,
         software: arity_store::SOFTWARE,
@@ -371,14 +382,8 @@ fn write_index(
                 property,
             })
             .collect(),
-        entities: store
-            .entity_views()?
-            .into_iter()
-            .map(|entity| EntitySummary {
-                reports: entity_counts.get(&entity.id).copied().unwrap_or(0),
-                entity,
-            })
-            .collect(),
+        entities,
+        former_entities,
     };
     write_json(&out.join("index.json"), &index)
 }

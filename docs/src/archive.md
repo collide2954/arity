@@ -39,8 +39,8 @@ The data folder must have no works. A rebuild:
 1. adds the works in the order of the catalogue,
 2. downloads each file from its address, and stops if a digest is not the
    archived digest,
-3. makes each canonical text again, and stops if its digest is not the
-   archived digest,
+3. makes each canonical text again with the version of the parser that the
+   archive names, and stops if its digest is not the archived digest,
 4. adds the notices,
 5. stores the runs in their first order, with the checks of this version of
    arity, and stops if a submission does not pass or if a run does not get
@@ -56,8 +56,10 @@ you get the same files.
 
 - A source can change a file at its address. The rebuild then stops, and names
   the address.
-- A new version of the parser can make a different canonical text. The rebuild
-  then stops, and names the parser of the archive and the parser of this arity.
+- The archive can name a version of the parser that this arity does not have.
+  The rebuild then stops, and names that version. Each version of the parser
+  always makes the same text from the same file, so an archived text never
+  needs a new parser.
 - A new version of the checks can refuse an old submission. The rebuild then
   stops, and lists the issues.
 

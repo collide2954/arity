@@ -582,6 +582,19 @@ fn refuses_an_archive_whose_run_numbers_have_a_gap() {
 }
 
 #[test]
+fn refuses_an_archive_that_names_an_unknown_parser() {
+    let (_data, folder) = archived();
+    let path = folder.path().join("works/PMC6274071/work.json");
+    let mut file: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    file["texts"][0]["parser"] = serde_json::json!("arity-jats 9.9.9");
+    fs::write(&path, serde_json::to_vec_pretty(&file).unwrap()).unwrap();
+    let rebuilt_data = tempfile::tempdir().unwrap();
+    let rebuilt = Context::open(rebuilt_data.path(), Box::new(fake())).unwrap();
+    let error = archive::rebuild(&rebuilt, folder.path()).unwrap_err();
+    assert!(error.to_string().contains("arity-jats 9.9.9"), "{error}");
+}
+
+#[test]
 fn rebuilds_only_into_an_empty_database() {
     let (data, folder) = archived();
     let context = Context::open(data.path(), Box::new(fake())).unwrap();

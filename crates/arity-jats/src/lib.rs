@@ -12,8 +12,33 @@ mod table;
 use arity_core::{Digest, Doi, Pmid, WorkMetadata};
 use arity_text::{Document, DocumentError};
 
-/// The name and version that each parsed document records.
-pub const PARSER: &str = concat!("arity-jats ", env!("CARGO_PKG_VERSION"));
+/// A version of the canonical text that the parser makes. Each document
+/// records the name of its version, and the name is part of the digest of
+/// the document. Thus a version never changes its output, and a rebuild
+/// makes each archived text with the version that made it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Version {
+    /// Writes superscripts and subscripts as plain characters, and a formula
+    /// that has only TeX as its TeX source.
+    V1,
+}
+
+impl Version {
+    /// The version that makes new texts.
+    pub const LATEST: Self = Self::V1;
+
+    const ALL: [Self; 1] = [Self::V1];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::V1 => "arity-jats 0.1.0",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|version| version.name() == name)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Article {
@@ -57,7 +82,13 @@ pub enum JatsError {
     Document(#[from] DocumentError),
 }
 
+/// Reads an article with the latest version of the parser.
 pub fn parse(bytes: &[u8]) -> Result<Article, JatsError> {
+    parse_as(bytes, Version::LATEST)
+}
+
+/// Reads an article with one version of the parser.
+pub fn parse_as(bytes: &[u8], version: Version) -> Result<Article, JatsError> {
     let text = std::str::from_utf8(bytes).map_err(|_| JatsError::Encoding)?;
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let options = roxmltree::ParsingOptions {
@@ -72,7 +103,7 @@ pub fn parse(bytes: &[u8]) -> Result<Article, JatsError> {
     let built = blocks::build(root);
     Ok(Article {
         metadata: metadata::read(root),
-        document: Document::new(Digest::of(bytes), PARSER, built.blocks)?,
+        document: Document::new(Digest::of(bytes), version.name(), built.blocks)?,
         supplements: built.supplements,
         related: metadata::related(root),
     })

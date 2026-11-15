@@ -397,7 +397,13 @@ fn restore_files(context: &Context, work: WorkId, file: &WorkFile) -> Result<usi
                     text.source
                 ))
             })?;
-        let article = arity_jats::parse(&context.blobs.get(&archived.sha256)?)?;
+        let version = arity_jats::Version::from_name(&text.parser).ok_or_else(|| {
+            CliError::Usage(format!(
+                "the archive names the parser {}, which this arity does not have",
+                text.parser
+            ))
+        })?;
+        let article = arity_jats::parse_as(&context.blobs.get(&archived.sha256)?, version)?;
         let mut document = article.document;
         for supplement in &article.supplements {
             let data = restored.iter().find(|(_, retrieval)| {
@@ -414,8 +420,8 @@ fn restore_files(context: &Context, work: WorkId, file: &WorkFile) -> Result<usi
             .map_err(|error| CliError::Usage(error.to_string()))?;
         if digest != text.sha256 {
             return Err(CliError::Usage(format!(
-                "the text that arity makes from {} has the digest {digest}, not {}; the archive names the parser {}, and this arity has {}",
-                archived.url, text.sha256, text.parser, document.parser
+                "the text that the parser {} makes from {} has the digest {digest}, not {}",
+                text.parser, archived.url, text.sha256
             )));
         }
         context

@@ -1,5 +1,5 @@
 use arity_core::{CcElements, Digest, License};
-use arity_jats::{JatsError, parse};
+use arity_jats::{JatsError, Version, parse, parse_as};
 use arity_text::BlockKind;
 
 const SYNTHETIC: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -198,7 +198,38 @@ fn lists_each_supplementary_file_once() {
 fn records_the_source_digest_and_the_parser() {
     let article = parse(SYNTHETIC.as_bytes()).unwrap();
     assert_eq!(article.document.source, Digest::of(SYNTHETIC.as_bytes()));
-    assert!(article.document.parser.starts_with("arity-jats "));
+    assert_eq!(article.document.parser, Version::LATEST.name());
+}
+
+#[test]
+fn finds_each_version_by_its_name() {
+    assert_eq!(Version::from_name("arity-jats 0.1.0"), Some(Version::V1));
+    assert_eq!(
+        Version::from_name(Version::LATEST.name()),
+        Some(Version::LATEST)
+    );
+    assert_eq!(Version::from_name("arity-jats 9.9.9"), None);
+}
+
+#[test]
+fn version_1_keeps_the_texts_that_it_made() {
+    let digest = |bytes: &[u8]| {
+        parse_as(bytes, Version::V1)
+            .unwrap()
+            .document
+            .digest()
+            .unwrap()
+            .as_str()
+            .to_owned()
+    };
+    assert_eq!(
+        digest(SYNTHETIC.as_bytes()),
+        "fd7d57ab07d76a0fc10ae2ae67e729880bdb9dcf81712a1bc1109a3b4b3240fe"
+    );
+    assert_eq!(
+        digest(include_bytes!("../../../testdata/jats/PMC6274071.xml")),
+        "19a1880236721d7169ac5058af326f7f048af76c2b5a7986d45f17557d52abd5"
+    );
 }
 
 #[test]

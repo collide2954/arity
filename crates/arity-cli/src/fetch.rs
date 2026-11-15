@@ -8,7 +8,9 @@ use jiff::Timestamp;
 use crate::context::Context;
 use crate::error::{CliError, Result};
 
-const SHEETS_PARSER: &str = concat!("arity-sheets ", env!("CARGO_PKG_VERSION"));
+/// The name of the cells that arity reads from a data file. The name is part
+/// of the digest of each text, so it changes only when the cells change.
+const SHEETS_PARSER: &str = "arity-sheets 0.1.0";
 
 /// What a fetch stored.
 #[derive(Debug, Clone, PartialEq, Eq)]

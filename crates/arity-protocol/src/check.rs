@@ -3,7 +3,9 @@ use std::ops::Range;
 
 use arity_core::vocabulary::{AgentKind, SkipReason, UncertaintyKind, ValueType};
 use arity_core::{Decimal, Digest, EntityKind};
-use arity_text::{BlockKind, Document, contains_number, find_numbers, normalize};
+use arity_text::{
+    BlockKind, Document, contains_number, find_numbers, normalize, normalize_numbers,
+};
 use arity_units::Unit;
 
 use crate::cues;
@@ -232,7 +234,7 @@ impl Checker<'_> {
             occurrence: skip.occurrence,
         };
         if let Some(quote) = self.evidence(path, &evidence)
-            && find_numbers(normalize(&quote).as_str()).is_empty()
+            && find_numbers(normalize_numbers(&quote).as_str()).is_empty()
         {
             self.raise(
                 format!("{path}/quote"),

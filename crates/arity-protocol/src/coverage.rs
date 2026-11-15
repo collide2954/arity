@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::hash::BuildHasher;
 use std::ops::Range;
 
-use arity_text::{BlockKind, Document, find_numbers, normalize};
+use arity_text::{BlockKind, Document, find_numbers, normalize_numbers};
 use arity_units::Unit;
 use serde::Serialize;
 
@@ -161,7 +161,7 @@ pub fn coverage<S: BuildHasher, T: BuildHasher>(
         {
             continue;
         }
-        let normalized = normalize(&block.text);
+        let normalized = normalize_numbers(&block.text);
         let chars: Vec<char> = normalized.as_str().chars().collect();
         let mut found = find_numbers(normalized.as_str());
         found.sort_by_key(|number| (number.range.start, usize::MAX - number.range.end));

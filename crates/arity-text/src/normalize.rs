@@ -51,13 +51,61 @@ impl Normalized {
 }
 
 pub fn normalize(text: &str) -> Normalized {
+    normalize_with(text, false)
+}
+
+/// Text in the normal form that number search uses. It is the normal form of
+/// quote search, but a run of superscript characters starts with `^`, and a
+/// run of subscript characters starts with `_`. Thus `10⁻³` becomes `10^-3`,
+/// and not `10-3`.
+pub fn normalize_numbers(text: &str) -> Normalized {
+    normalize_with(text, true)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Script {
+    Base,
+    Superscript,
+    Subscript,
+}
+
+fn script(c: char) -> Script {
+    match c {
+        '\u{00B2}' | '\u{00B3}' | '\u{00B9}' | '\u{2070}' | '\u{2074}'..='\u{207E}' => {
+            Script::Superscript
+        }
+        '\u{2080}'..='\u{208E}' => Script::Subscript,
+        _ => Script::Base,
+    }
+}
+
+fn normalize_with(text: &str, mark_scripts: bool) -> Normalized {
     let mut out = String::with_capacity(text.len());
     let mut origins = Vec::with_capacity(text.len());
     let mut pending_space: Option<usize> = None;
+    let mut previous = Script::Base;
     for (index, c) in text.chars().enumerate() {
         if is_removed(c) {
             continue;
         }
+        let current = if mark_scripts {
+            script(c)
+        } else {
+            Script::Base
+        };
+        if current != previous && current != Script::Base {
+            if let Some(space) = pending_space.take() {
+                out.push(' ');
+                origins.push(space);
+            }
+            out.push(if current == Script::Superscript {
+                '^'
+            } else {
+                '_'
+            });
+            origins.push(index);
+        }
+        previous = current;
         for folded in std::iter::once(c).nfkc().map(fold) {
             if folded == ' ' {
                 if !out.is_empty() && pending_space.is_none() {
@@ -145,6 +193,16 @@ mod tests {
                 case.text
             );
         }
+    }
+
+    #[test]
+    fn marks_superscripts_and_subscripts_in_the_form_for_numbers() {
+        let text = "10\u{207b}\u{00b3} M, IC\u{2085}\u{2080}";
+        assert_eq!(normalize(text).as_str(), "10-3 M, IC50");
+        let marked = normalize_numbers(text);
+        assert_eq!(marked.as_str(), "10^-3 M, IC_50");
+        assert_eq!(marked.original(0..5), Some(0..4));
+        assert_eq!(marked.original(11..14), Some(10..12));
     }
 
     #[test]

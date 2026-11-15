@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use arity_core::Decimal;
 
-use crate::normalize;
+use crate::normalize_numbers;
 
 /// A number that a text can mean at one place.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -13,9 +13,9 @@ pub struct NumberMatch {
 }
 
 /// True when the text contains the value in any form that an article can
-/// write it, for example `0.002`, `2 × 10−3`, or `2e-3`.
+/// write it, for example `0.002`, `2 × 10⁻³`, `2 × 10−3`, or `2e-3`.
 pub fn contains_number(text: &str, value: Decimal) -> bool {
-    find_numbers(normalize(text).as_str())
+    find_numbers(normalize_numbers(text).as_str())
         .iter()
         .any(|found| found.value == value)
 }
@@ -45,9 +45,24 @@ pub fn find_numbers(text: &str) -> Vec<NumberMatch> {
     unique
 }
 
+/// True when the digits at the index are an exponent or a subscript, for
+/// example the `2` of `cm^-2` or the `50` of `IC_50`.
+fn in_script(chars: &[char], index: usize) -> bool {
+    let mut before = index;
+    if before > 0 && matches!(chars[before - 1], '-' | '+' | '(') {
+        before -= 1;
+    }
+    before
+        .checked_sub(1)
+        .is_some_and(|i| matches!(chars[i], '^' | '_'))
+}
+
 fn starts_number(chars: &[char], index: usize) -> bool {
     let previous = index.checked_sub(1).map(|i| chars[i]);
     let after_digit = previous.is_some_and(|c| c.is_ascii_digit() || c == '.');
+    if in_script(chars, index) {
+        return false;
+    }
     match chars[index] {
         c if c.is_ascii_digit() => !after_digit,
         '.' => {
@@ -135,9 +150,12 @@ fn scan(chars: &[char], start: usize, found: &mut Vec<NumberMatch>) -> usize {
         }
     }
     if plain == "10"
-        && let Some((power, end)) = bare_power(chars, plain_end)
+        && let Some((power, end, marked)) = bare_power(chars, plain_end)
     {
         push(chars, found, "1", start..end, power);
+        if marked {
+            return end;
+        }
     }
     if let Some((digits, end)) = grouped(chars, start, integer_end) {
         push(chars, found, &digits, start..end, 0);
@@ -218,11 +236,19 @@ fn times_ten(chars: &[char], from: usize) -> Option<(i32, usize, bool)> {
     Some((power, end, ambiguous))
 }
 
-fn bare_power(chars: &[char], from: usize) -> Option<(i32, usize)> {
+/// Reads the power after a bare `10`: `^-3` and `^4` from a superscript,
+/// which have one meaning, or `-3` from plain text, which can also be a
+/// range. The flag tells whether the power is a superscript.
+fn bare_power(chars: &[char], from: usize) -> Option<(i32, usize, bool)> {
+    if chars.get(from) == Some(&'^') {
+        let (power, end) = signed_integer(chars, from + 1)?;
+        return Some((power, end, true));
+    }
     if !matches!(chars.get(from), Some('-' | '+')) {
         return None;
     }
-    signed_integer(chars, from)
+    let (power, end) = signed_integer(chars, from)?;
+    Some((power, end, false))
 }
 
 fn grouped(chars: &[char], start: usize, integer_end: usize) -> Option<(String, usize)> {
@@ -276,7 +302,7 @@ mod tests {
     use super::*;
 
     fn values(text: &str) -> Vec<String> {
-        find_numbers(normalize(text).as_str())
+        find_numbers(normalize_numbers(text).as_str())
             .into_iter()
             .map(|found| found.value.to_string())
             .collect()
@@ -322,9 +348,25 @@ mod tests {
     }
 
     #[test]
+    fn reads_a_superscript_as_a_power_of_ten() {
+        assert_eq!(values("1 × 10\u{00b3} cells"), ["1000"]);
+        assert_eq!(values("10\u{207b}\u{00b3} M"), ["0.001"]);
+        assert_eq!(values("2.0 × 10\u{207b}\u{00b3} M"), ["0.002"]);
+        assert_eq!(values("10\u{2074} cells"), ["10000"]);
+    }
+
+    #[test]
+    fn does_not_read_exponents_of_units_and_subscripts_as_numbers() {
+        assert_eq!(values("5 cm\u{207b}\u{00b2}"), ["5"]);
+        assert_eq!(values("\u{00b9}\u{00b3}C NMR"), Vec::<String>::new());
+        assert_eq!(values("IC\u{2085}\u{2080} = 3.2 \u{3bc}M"), ["3.2"]);
+        assert_eq!(values("CO\u{2082} (5%)"), ["5"]);
+    }
+
+    #[test]
     fn keeps_each_meaning_of_ambiguous_forms() {
-        assert_eq!(values("1 × 10\u{00b3} cells"), ["1000", "1", "103"]);
-        assert_eq!(values("10\u{207b}\u{00b3} M"), ["0.001", "10", "3"]);
+        assert_eq!(values("1 × 103 cells"), ["1000", "1", "103"]);
+        assert_eq!(values("10\u{2212}3 M"), ["0.001", "10", "3"]);
         assert_eq!(values("12,345.6"), ["12345.6", "12", "345.6"]);
         assert_eq!(values("10 000 cells"), ["10000", "10", "0"]);
         assert_eq!(values("3,5 mg"), ["3.5", "3", "5"]);
@@ -345,5 +387,8 @@ mod tests {
         assert!(!contains_number("2 × 10−3 M", decimal("2")));
         assert!(!contains_number("3.2", decimal("32")));
         assert!(!contains_number("\u{2212}0.5", decimal("0.5")));
+        let fluence = "1 × 10\u{00b9}\u{2074} cm\u{207b}\u{00b2}";
+        assert!(contains_number(fluence, decimal("1e14")));
+        assert!(!contains_number(fluence, decimal("1014")));
     }
 }

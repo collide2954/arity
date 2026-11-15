@@ -104,7 +104,7 @@ fn push_children(node: Node<'_, '_>, version: Version, out: &mut String) {
 }
 
 fn push_element(node: Node<'_, '_>, version: Version, out: &mut String) {
-    if version == Version::V2 && push_markup(node, out) {
+    if version >= Version::V2 && push_markup(node, version, out) {
         return;
     }
     let block = BLOCK_LEVEL.contains(&name(node));
@@ -117,39 +117,39 @@ fn push_element(node: Node<'_, '_>, version: Version, out: &mut String) {
     }
 }
 
-/// The text of the children of an element, in version 2.
-fn content(node: Node<'_, '_>) -> String {
-    text(node, Version::V2)
+/// The text of the children of an element, from version 2.
+fn content(node: Node<'_, '_>, version: Version) -> String {
+    text(node, version)
 }
 
-/// The text of each child element, in version 2: for example the base and
+/// The text of each child element, from version 2: for example the base and
 /// the script of a MathML superscript.
-fn parts(node: Node<'_, '_>) -> Vec<String> {
+fn parts(node: Node<'_, '_>, version: Version) -> Vec<String> {
     node.children()
         .filter(Node::is_element)
         .map(|part| {
             let mut raw = String::new();
-            push_element(part, Version::V2, &mut raw);
+            push_element(part, version, &mut raw);
             collapse(&raw)
         })
         .collect()
 }
 
-/// Writes the markup that version 2 writes as plain text: the scripts, the
-/// parts of MathML formulas, and formulas in TeX. Gives false for each other
-/// element.
-fn push_markup(node: Node<'_, '_>, out: &mut String) -> bool {
+/// Writes the markup that version 2 and later versions write as plain text:
+/// the scripts, the parts of MathML formulas, and formulas in TeX. Gives
+/// false for each other element.
+fn push_markup(node: Node<'_, '_>, version: Version, out: &mut String) -> bool {
     match name(node) {
-        "sup" => out.push_str(&script::write(&content(node), Script::Superscript)),
-        "sub" => out.push_str(&script::write(&content(node), Script::Subscript)),
+        "sup" => out.push_str(&script::write(&content(node, version), Script::Superscript)),
+        "sub" => out.push_str(&script::write(&content(node, version), Script::Subscript)),
         "msqrt" => {
             out.push('√');
-            out.push_str(&group(&content(node)));
+            out.push_str(&group(&content(node, version)));
         }
-        "mfenced" => out.push_str(&fenced(node)),
+        "mfenced" => out.push_str(&fenced(node, version)),
         "mtr" | "mtd" => {
             out.push(' ');
-            push_children(node, Version::V2, out);
+            push_children(node, version, out);
             out.push(' ');
         }
         "tex-math" => {
@@ -158,11 +158,11 @@ fn push_markup(node: Node<'_, '_>, out: &mut String) -> bool {
                 .filter(Node::is_text)
                 .filter_map(|part| part.text())
                 .collect();
-            out.push_str(&tex::text(&source));
+            out.push_str(&tex::text(&source, version));
         }
         "annotation" | "annotation-xml" => {}
         tag @ ("msup" | "msub" | "msubsup" | "mfrac" | "mroot") => {
-            let parts = parts(node);
+            let parts = parts(node, version);
             let written = match (tag, parts.as_slice()) {
                 ("msup", [base, sup]) => {
                     format!("{base}{}", script::write(sup, Script::Superscript))
@@ -196,7 +196,7 @@ fn push_markup(node: Node<'_, '_>, out: &mut String) -> bool {
 /// it names them. Sources often put each part of one expression in an
 /// `mfenced` that names no separators, so arity does not add the default
 /// comma.
-fn fenced(node: Node<'_, '_>) -> String {
+fn fenced(node: Node<'_, '_>, version: Version) -> String {
     let separators: Vec<char> = node
         .attribute("separators")
         .unwrap_or_default()
@@ -204,7 +204,7 @@ fn fenced(node: Node<'_, '_>) -> String {
         .filter(|c| !c.is_whitespace())
         .collect();
     let mut out = node.attribute("open").unwrap_or("(").to_owned();
-    for (index, part) in parts(node).iter().enumerate() {
+    for (index, part) in parts(node, version).iter().enumerate() {
         if index > 0
             && let Some(separator) = separators.get(index - 1).or(separators.last())
         {

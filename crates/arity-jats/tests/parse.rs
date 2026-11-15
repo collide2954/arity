@@ -210,6 +210,8 @@ fn records_the_source_digest_and_the_parser() {
 #[test]
 fn finds_each_version_by_its_name() {
     assert_eq!(Version::from_name("arity-jats 0.1.0"), Some(Version::V1));
+    assert_eq!(Version::from_name("arity-jats 0.2.0"), Some(Version::V2));
+    assert_eq!(Version::from_name("arity-jats 0.3.0"), Some(Version::V3));
     assert_eq!(
         Version::from_name(Version::LATEST.name()),
         Some(Version::LATEST)
@@ -239,6 +241,28 @@ fn version_2_keeps_the_texts_that_it_made() {
         digest(REAL, Version::V2),
         "1b3765109cfe9a4399d004eb11c0bdbec7faab228dc27800041bf52b64977e54"
     );
+}
+
+#[test]
+fn version_3_keeps_the_texts_that_it_made() {
+    assert_eq!(
+        digest(SYNTHETIC.as_bytes(), Version::V3),
+        "c3ad9cd2afa744da4c208e5e49896582106e3c9dda2bf004f8c5818c4c900ad4"
+    );
+    assert_eq!(
+        digest(REAL, Version::V3),
+        "94721ff47dc82c9b08d301325ec3a59f9f60af04477538e8c5dd7327f665bdf5"
+    );
+}
+
+#[test]
+fn version_3_writes_the_blocks_of_version_2_without_variant_letters() {
+    for bytes in [SYNTHETIC.as_bytes(), REAL] {
+        assert_eq!(
+            parse_as(bytes, Version::V3).unwrap().document.blocks,
+            parse_as(bytes, Version::V2).unwrap().document.blocks
+        );
+    }
 }
 
 const REAL: &[u8] = include_bytes!("../../../testdata/jats/PMC6274071.xml");

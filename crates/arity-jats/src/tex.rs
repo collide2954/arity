@@ -1,15 +1,17 @@
 //! Writes a formula that a source gives only in TeX as plain text.
 
+use crate::Version;
 use crate::script::{Script, group, write};
 
 /// The plain text of a TeX formula: without the preamble of the document,
 /// with each common command as its character, and with the scripts and the
 /// fractions of the other formulas.
-pub(crate) fn text(source: &str) -> String {
+pub(crate) fn text(source: &str, version: Version) -> String {
     let chars: Vec<char> = body(source).chars().collect();
     let mut reader = Reader {
         chars: &chars,
         index: 0,
+        version,
     };
     let text = reader.sequence(None, false);
     text.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -38,6 +40,7 @@ fn body(source: &str) -> &str {
 struct Reader<'a> {
     chars: &'a [char],
     index: usize,
+    version: Version,
 }
 
 impl Reader<'_> {
@@ -195,15 +198,33 @@ impl Reader<'_> {
             | "scriptscriptstyle" | "limits" | "nolimits" | "mathstrut" | "strut"
             | "allowbreak" => String::new(),
             "quad" | "qquad" | "newline" | "linebreak" | "enspace" | "thinspace" => " ".to_owned(),
-            _ => symbol(&name).map_or(name, str::to_owned),
+            _ => symbol(&name, self.version).map_or(name, str::to_owned),
         }
     }
 }
 
 /// The character of a command, or of a Greek letter, also in the upright
-/// form of the package upgreek, for example `\upmu`.
-fn symbol(name: &str) -> Option<&'static str> {
-    named(name).or_else(|| name.strip_prefix("up").and_then(greek))
+/// form of the package upgreek, for example `\upmu`. From version 3, also a
+/// variant Greek letter, for example `\varDelta`.
+fn symbol(name: &str, version: Version) -> Option<&'static str> {
+    named(name)
+        .or_else(|| name.strip_prefix("up").and_then(greek))
+        .or_else(|| variant(name).filter(|_| version >= Version::V3))
+}
+
+/// A variant Greek letter of amsmath: a capital, for example `\varDelta`, or
+/// a variant form of a small letter, for example `\varrho`.
+fn variant(name: &str) -> Option<&'static str> {
+    match name {
+        "varpi" => Some("ϖ"),
+        "varrho" => Some("ϱ"),
+        "varsigma" => Some("ς"),
+        "varkappa" => Some("ϰ"),
+        _ => name
+            .strip_prefix("var")
+            .filter(|letter| letter.starts_with(|c: char| c.is_ascii_uppercase()))
+            .and_then(greek),
+    }
 }
 
 fn named(name: &str) -> Option<&'static str> {
@@ -304,15 +325,37 @@ mod tests {
 
     const PREAMBLE: &str = "\\documentclass[12pt]{minimal}\n\\usepackage{amsmath}\n\\usepackage{upgreek}\n\\setlength{\\oddsidemargin}{-69pt}\n\\begin{document}";
 
+    /// The text of version 2, which version 3 also writes.
+    fn plain(source: &str) -> String {
+        let written = text(source, Version::V2);
+        assert_eq!(text(source, Version::V3), written);
+        written
+    }
+
     fn formula(tex: &str) -> String {
-        text(&format!("{PREAMBLE}$${tex}$$\\end{{document}}"))
+        plain(&format!("{PREAMBLE}$${tex}$$\\end{{document}}"))
     }
 
     #[test]
     fn removes_the_preamble_and_the_math_delimiters() {
         assert_eq!(formula("y=2"), "y=2");
-        assert_eq!(text("$x$"), "x");
-        assert_eq!(text("a + b"), "a+b");
+        assert_eq!(plain("$x$"), "x");
+        assert_eq!(plain("a + b"), "a+b");
+    }
+
+    #[test]
+    fn version_3_writes_the_variant_greek_letters() {
+        let source = format!("{PREAMBLE}$$\\:\\varDelta\\:\\varPsi\\:m)\\:$$\\end{{document}}");
+        assert_eq!(text(&source, Version::V3), "Δ Ψ m)");
+        assert_eq!(text(&source, Version::V2), "varDelta varPsi m)");
+        assert_eq!(
+            text(
+                "$\\varpi+\\varrho+\\varsigma+\\varkappa+\\varGamma$",
+                Version::V3
+            ),
+            "ϖ+ϱ+ς+ϰ+Γ"
+        );
+        assert_eq!(text("$\\varnothing$", Version::V3), "varnothing");
     }
 
     #[test]

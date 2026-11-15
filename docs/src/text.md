@@ -36,6 +36,7 @@ so a rebuild makes each archived text again with its own version.
 | --- | --- |
 | `arity-jats 0.1.0` | Superscripts and subscripts as plain characters, so `10<sup>4</sup>` becomes "104". A formula that has only TeX as its TeX source. |
 | `arity-jats 0.2.0` | The digits and the signs of superscripts and subscripts as script characters: "10⁴", "cm⁻²", "Ca²⁺", "IC₅₀". Other scripts with a mark and braces: "^{a}" for the footnote mark a, "λ_{max}". A script of only symbols, for example "*" or "®", as it is. Fractions as "a/b", roots as "√", and the brackets of MathML formulas. A formula that has only TeX as plain text, for example "IC₅₀=2.3±0.4 μM", without the TeX preamble. |
+| `arity-jats 0.3.0` | The text of `arity-jats 0.2.0`, and the variant Greek letters of TeX as their letters: `\varDelta` becomes "Δ", and `\varrho` becomes "ϱ". Version 0.2.0 writes the name of the command, for example "varDelta". |
 
 New texts use the latest version. A sign becomes a script character only at
 the start or at the end of a script, so that `C<sub>1–2</sub>` keeps the
@@ -68,6 +69,16 @@ the problems. For example, a reader could read `10<sup>4</sup>` in the old text
 as the number 104. The new text writes "10⁴", so the check of that value fails,
 and a reader must correct the run first. Without works, the command updates
 each work. `--dry-run` shows what would change, and changes nothing.
+
+A new version can change the words of only some texts. For example, version
+0.3.0 changes only the texts with variant Greek letters in TeX. The other texts
+can stay on their version, because a rebuild makes each text with the version
+that made it. To move only the works whose words change, name them:
+
+```sh
+arity update-text --dry-run PMC13694592
+arity update-text PMC13694592
+```
 
 ## Normalization
 

@@ -18,7 +18,7 @@ use arity_text::{Document, DocumentError};
 /// records the name of its version, and the name is part of the digest of
 /// the document. Thus a version never changes its output, and a rebuild
 /// makes each archived text with the version that made it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Version {
     /// Writes superscripts and subscripts as plain characters, and a formula
     /// that has only TeX as its TeX source.
@@ -29,18 +29,22 @@ pub enum Version {
     /// brackets of MathML formulas, and a formula that has only TeX as plain
     /// text.
     V2,
+    /// Writes as version 2, and also writes the variant Greek letters of TeX,
+    /// for example `\varDelta`, as their characters.
+    V3,
 }
 
 impl Version {
     /// The version that makes new texts.
-    pub const LATEST: Self = Self::V2;
+    pub const LATEST: Self = Self::V3;
 
-    const ALL: [Self; 2] = [Self::V1, Self::V2];
+    const ALL: [Self; 3] = [Self::V1, Self::V2, Self::V3];
 
     pub fn name(self) -> &'static str {
         match self {
             Self::V1 => "arity-jats 0.1.0",
             Self::V2 => "arity-jats 0.2.0",
+            Self::V3 => "arity-jats 0.3.0",
         }
     }
 

@@ -19,6 +19,7 @@ cannot add a judgement.
 | `reader` | The reader: `kind` (`software` or `person`), `name`, `version`, and an optional `orcid`. |
 | `responsible` | The person who is responsible for the submission: `name` and an optional `orcid`. |
 | `note` | An optional note about the reading. |
+| `replaces` | The number of an earlier run of the same work that this submission corrects. See [Corrections](#corrections). |
 | `entities` | The entities that the reports are about. |
 | `properties` | The properties that the reports use. |
 | `reports` | The value reports and the effect reports. |
@@ -103,6 +104,42 @@ A submission can list quotes with numbers that the reader does not report, in
 The checks find each skipped quote in its block, like the quote of a report,
 and the quote must contain a number. Coverage counts skipped numbers apart
 from quoted numbers. A submission can hold only skipped quotes and no reports.
+
+## Corrections
+
+arity does not change a run after it stores it. To correct a run, submit a new
+run of the same work. Give `replaces`, the number of the earlier run, and a
+`note` that tells what the new run corrects:
+
+```json
+"replaces": 18,
+"note": "The conditions now include the time and the temperature of the annealing."
+```
+
+The new run holds all of its reports again, not only the changed reports.
+arity checks it like each other submission. Then arity:
+
+- keeps the earlier run, its reports, and the checks by people of those
+  reports,
+- shows only the reports of the current runs in the lists, the figures, the
+  counts, and the coverage,
+- keeps the page of each earlier report, with a link to the report that has the
+  same local `id` in the current run.
+
+The number of a run is in the table of runs on the page of its work, and in
+the name of its file in the archive. A run can replace one earlier run of the
+same work, and only a run that no other run replaces. To correct a correction,
+replace the newest run.
+
+The checks by people stay with the earlier reports. A new report is a new
+statement, so a person must check it again.
+
+arity finds the stored entity of each entity in the new run as it does for each
+run: by a registry identifier, or by the same entity id in an earlier run of
+the work. Thus, to correct an entity, for example an entity that holds two
+strains, give each correct entity a new id, and do not give it an identifier of
+the incorrect entity. When only replaced runs name an entity, the lists leave
+it out, and its page tells you so.
 
 ## An example
 

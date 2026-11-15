@@ -22,8 +22,8 @@ identifier is the PMCID of the work, or its DOI or PMID.
   that arity downloaded, the digests of its canonical texts, its notices, and
   its runs with the checks of their reports.
 - `run-<sequence>.json` holds each submission, byte for byte. The sequence is
-  the place of the run among all runs. The digest of the file is in
-  `work.json`.
+  the place of the run among all runs, and the number of the run in the
+  database. The digest of the file is in `work.json`.
 
 A run does not change. If the archive has another file at the place of a run,
 `arity archive` stops with an error.
@@ -43,7 +43,9 @@ The data folder must have no works. A rebuild:
    archived digest,
 4. adds the notices,
 5. stores the runs in their first order, with the checks of this version of
-   arity, and stops if a submission does not pass,
+   arity, and stops if a submission does not pass or if a run does not get
+   its number in the archive (a [correction](submissions.md#corrections)
+   names the run that it replaces by this number),
 6. records the checks of the reports, with their persons and times,
 7. puts back the queue entries and the times of the works.
 

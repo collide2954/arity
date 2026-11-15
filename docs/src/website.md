@@ -10,15 +10,19 @@ The website is a static site in Svelte and TypeScript. It reads the files that
 | Page | What it shows |
 | --- | --- |
 | Works | The works in the order that arity found them, with their licenses, notices, and number of reports. |
-| Work | The PDF, or the canonical text when there is no PDF, with a mark on each quote. The list of reports, the notices, and the files with their digests. |
+| Work | The PDF, or the canonical text when there is no PDF, with a mark on each quote. The list of reports, the notices, the runs of the readers, and the files with their digests. |
 | Reports | All reports in one table, with a search, filters, a sort, a choice of columns, and downloads. |
-| Report | One report: its value or effect, its conditions, its quotes, its checks, and its provenance. |
+| Report | One report: its value or effect, its conditions, its quotes, its checks, and its provenance. The page of a report from a replaced run tells which run corrects it, and links to the current report. |
 | Properties | Each property with its unit and its dimension. |
 | Property | A figure and a table of all values of the property, in the unit of the property, with the filters of the Reports page. |
 | Entities | Each entity with its kind and its registry identifiers. |
-| Entity | The reports about one entity. |
+| Entity | The reports about one entity. When only replaced runs name the entity, the page tells you so, and lists the reports of those runs. |
 | Effects | A matrix of agents and targets, with one mark for each reported effect. |
 | Compare | The reports of one property in a matrix. You select what the rows and the columns are. |
+
+The lists, the figures, and the counts show only the reports of the current
+runs, and only the entities that a current run names. See
+[Corrections](submissions.md#corrections).
 
 Each table can download its rows as a CSV file. The pages of works,
 properties, entities, and effects also have a search box, filters, and columns

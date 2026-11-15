@@ -61,10 +61,12 @@ const index: Index = {
       label: "doxorubicin",
       xrefs: ["CHEBI:28748"],
       names: ["DOX"],
+      current: true,
       reports: 2,
     },
-    { id: 8, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 2 },
+    { id: 8, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 2 },
   ],
+  former_entities: [],
 };
 
 const value: Report = {
@@ -93,6 +95,7 @@ const value: Report = {
   score: null,
   check: "unchecked",
   checks: [],
+  replaced_by: null,
   evidence: [{ block: "s3/p2", quote: "The IC50 of DOX was 0.24 \u{3bc}M", start: 0, end: 31 }],
   display: {
     unit: "umol/L",

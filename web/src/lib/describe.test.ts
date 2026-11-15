@@ -34,9 +34,36 @@ const index: Index = {
     },
   ],
   entities: [
-    { id: 1, kind: "chemical", label: "doxorubicin", xrefs: [], names: [], reports: 1 },
-    { id: 2, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 1 },
-    { id: 3, kind: "chemical", label: "hydralazine", xrefs: [], names: [], reports: 1 },
+    {
+      id: 1,
+      kind: "chemical",
+      label: "doxorubicin",
+      xrefs: [],
+      names: [],
+      current: true,
+      reports: 1,
+    },
+    { id: 2, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 1 },
+    {
+      id: 3,
+      kind: "chemical",
+      label: "hydralazine",
+      xrefs: [],
+      names: [],
+      current: true,
+      reports: 1,
+    },
+  ],
+  former_entities: [
+    {
+      id: 4,
+      kind: "organism",
+      label: "Sprague-Dawley rat",
+      xrefs: ["NCBITaxon:10116"],
+      names: ["Sprague-Dawley rat", "Wistar rat"],
+      current: false,
+      reports: 0,
+    },
   ],
 };
 
@@ -54,10 +81,17 @@ function report(body: Report["body"]): Report {
     score: null,
     check: "unchecked",
     checks: [],
+    replaced_by: null,
     evidence: [],
     display: null,
   };
 }
+
+describe("names", () => {
+  it("finds the entities that only replaced runs name", () => {
+    expect(names(index).entities.get(4)?.label).toBe("Sprague-Dawley rat");
+  });
+});
 
 describe("headline", () => {
   it("states a value with the reported numbers", () => {

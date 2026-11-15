@@ -6,10 +6,12 @@
   import { coverageLine } from "../lib/coverage";
   import { dataUrl, loadIndex, loadReports, loadWork } from "../lib/data";
   import { names } from "../lib/describe";
+  import { docsLink } from "../lib/docs";
   import { emptySelection, filter, selectionQuery } from "../lib/filter";
   import { highlightsOf } from "../lib/highlight";
   import { REPORT_FACETS, reportRows } from "../lib/reports";
   import { link } from "../lib/route";
+  import { agentName, runState } from "../lib/runs";
 
   let { id, selected: initial }: { id: number; selected: number | null } = $props();
 
@@ -81,6 +83,13 @@
   </header>
 
   <Notices notices={page.work.notices} />
+
+  {#if selected !== null && !own.some((report) => report.id === selected)}
+    <p class="correction">
+      Report {selected} is not one of the current reports of this work.
+      <a href={link({ page: "report", id: selected })}>See report {selected}</a>.
+    </p>
+  {/if}
 
   <div class="layout">
     <section class="source" aria-label="Source">
@@ -165,6 +174,41 @@
       </div>
     </aside>
   </div>
+
+  <section>
+    <h2>Runs of the readers</h2>
+    <p class="secondary">
+      Each run is one submission of a reader. A later run can correct an earlier run of the same
+      work. arity keeps the earlier run, and shows only the reports of the current runs.
+      <a href={docsLink("submissions", "corrections")}>How corrections work</a>.
+    </p>
+    <div class="table-wrap card">
+      <table>
+        <thead>
+          <tr>
+            <th>Run</th><th>Read by</th><th>Responsible person</th><th>Submitted</th><th
+              >Current reports</th
+            ><th>State</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each page.runs as run (run.id)}
+            <tr>
+              <td>{run.id}</td>
+              <td>{agentName(run.reader)}</td>
+              <td>{run.responsible.name}</td>
+              <td>{run.submitted_at}</td>
+              <td>{own.filter((report) => report.run === run.id).length}</td>
+              <td>
+                {runState(run)}
+                {#if run.note}<div class="muted">{run.note}</div>{/if}
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  </section>
 
   <section>
     <h2>Provenance of the source files</h2>

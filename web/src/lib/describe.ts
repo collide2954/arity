@@ -7,9 +7,12 @@ export interface Names {
   readonly properties: ReadonlyMap<string, PropertySummary>;
 }
 
+/** The lookups of a catalogue. The reports of replaced runs can use the former entities. */
 export function names(index: Index): Names {
   return {
-    entities: new Map(index.entities.map((entity) => [entity.id, entity])),
+    entities: new Map(
+      [...index.entities, ...index.former_entities].map((entity) => [entity.id, entity]),
+    ),
     properties: new Map(index.properties.map((property) => [property.key, property])),
   };
 }

@@ -39,8 +39,17 @@ const index: Index = {
     },
   ],
   entities: [
-    { id: 7, kind: "chemical", label: "doxorubicin", xrefs: [], names: ["DOX"], reports: 1 },
+    {
+      id: 7,
+      kind: "chemical",
+      label: "doxorubicin",
+      xrefs: [],
+      names: ["DOX"],
+      current: true,
+      reports: 1,
+    },
   ],
+  former_entities: [],
 };
 
 const report: Report = {
@@ -62,6 +71,7 @@ const report: Report = {
   score: null,
   check: "unchecked",
   checks: [],
+  replaced_by: null,
   evidence: [],
   display: null,
 };

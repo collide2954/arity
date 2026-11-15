@@ -45,10 +45,12 @@ const index: Index = {
       label: "doxorubicin",
       xrefs: ["CHEBI:28748"],
       names: ["DOX", "Adriamycin"],
+      current: true,
       reports: 1,
     },
-    { id: 8, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 1 },
+    { id: 8, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 1 },
   ],
+  former_entities: [],
 };
 
 const ids = (search: string) => {

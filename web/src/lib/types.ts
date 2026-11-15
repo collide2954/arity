@@ -69,6 +69,8 @@ export interface EntitySummary {
   label: string;
   xrefs: string[];
   names: string[];
+  /** Whether a current run names the entity. */
+  current: boolean;
   reports: number;
 }
 
@@ -80,6 +82,8 @@ export interface Index {
   works: WorkSummary[];
   properties: PropertySummary[];
   entities: EntitySummary[];
+  /** The entities that only replaced runs name. */
+  former_entities: EntitySummary[];
 }
 
 export interface Evidence {
@@ -181,6 +185,14 @@ export interface Report {
   checks: Check[];
   evidence: Evidence[];
   display: Display | null;
+  /** The run that corrects the run of this report. */
+  replaced_by: number | null;
+}
+
+/** A report of a run that a later run of the same work corrects. */
+export interface ReplacedReport extends Report {
+  /** The report with the same local id in the current run of the work. */
+  successor: number | null;
 }
 
 export interface Cell {
@@ -242,6 +254,11 @@ export interface Run {
   text_sha256: string;
   parser: string;
   warnings: Issue[];
+  note: string | null;
+  /** The earlier run that this run corrects. */
+  replaces: number | null;
+  /** The later run that corrects this run. */
+  replaced_by: number | null;
 }
 
 export interface Retrieval {

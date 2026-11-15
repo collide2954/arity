@@ -82,10 +82,12 @@ const index: Index = {
       label: "doxorubicin",
       xrefs: ["CHEBI:28748", "PUBCHEM.COMPOUND:31703"],
       names: ["DOX"],
+      current: true,
       reports: 40,
     },
-    { id: 8, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 30 },
+    { id: 8, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 30 },
   ],
+  former_entities: [],
 };
 
 describe("workRows", () => {

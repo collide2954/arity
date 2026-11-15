@@ -1,4 +1,4 @@
-import type { Index, Report, WorkPage } from "./types";
+import type { Index, ReplacedReport, Report, WorkPage } from "./types";
 
 const cache = new Map<string, Promise<unknown>>();
 
@@ -30,6 +30,11 @@ export function loadIndex(): Promise<Index> {
 
 export function loadReports(): Promise<Report[]> {
   return load<Report[]>("reports.json");
+}
+
+/** The reports of runs that a later run corrects. */
+export function loadReplaced(): Promise<ReplacedReport[]> {
+  return load<ReplacedReport[]>("replaced.json");
 }
 
 export function loadWork(id: number): Promise<WorkPage> {

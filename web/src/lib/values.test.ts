@@ -38,10 +38,27 @@ const index: Index = {
     },
   ],
   entities: [
-    { id: 1, kind: "chemical", label: "doxorubicin", xrefs: [], names: [], reports: 2 },
-    { id: 2, kind: "chemical", label: "hydralazine", xrefs: [], names: [], reports: 1 },
-    { id: 3, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 2 },
+    {
+      id: 1,
+      kind: "chemical",
+      label: "doxorubicin",
+      xrefs: [],
+      names: [],
+      current: true,
+      reports: 2,
+    },
+    {
+      id: 2,
+      kind: "chemical",
+      label: "hydralazine",
+      xrefs: [],
+      names: [],
+      current: true,
+      reports: 1,
+    },
+    { id: 3, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 2 },
   ],
+  former_entities: [],
 };
 
 function value(id: number, work: number, subject: "dox" | "hyd", display: number | null): Report {
@@ -65,6 +82,7 @@ function value(id: number, work: number, subject: "dox" | "hyd", display: number
     score: null,
     check: "unchecked",
     checks: [],
+    replaced_by: null,
     evidence: [],
     display:
       display === null

@@ -61,10 +61,19 @@ const index: Index = {
     },
   ],
   entities: [
-    { id: 1, kind: "chemical", label: "doxorubicin", xrefs: [], names: [], reports: 3 },
-    { id: 2, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 2 },
-    { id: 3, kind: "cell_line", label: "HeLa", xrefs: [], names: [], reports: 1 },
+    {
+      id: 1,
+      kind: "chemical",
+      label: "doxorubicin",
+      xrefs: [],
+      names: [],
+      current: true,
+      reports: 3,
+    },
+    { id: 2, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 2 },
+    { id: 3, kind: "cell_line", label: "HeLa", xrefs: [], names: [], current: true, reports: 1 },
   ],
+  former_entities: [],
 };
 
 function value(id: number, number: string, conditions: Condition[]): Report {
@@ -89,6 +98,7 @@ function value(id: number, number: string, conditions: Condition[]): Report {
     score: null,
     check: "unchecked",
     checks: [],
+    replaced_by: null,
     evidence: [],
     display: null,
   };

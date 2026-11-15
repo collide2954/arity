@@ -50,9 +50,18 @@ const index: Index = {
     },
   ],
   entities: [
-    { id: 1, kind: "chemical", label: "doxorubicin", xrefs: [], names: [], reports: 2 },
-    { id: 2, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], reports: 2 },
+    {
+      id: 1,
+      kind: "chemical",
+      label: "doxorubicin",
+      xrefs: [],
+      names: [],
+      current: true,
+      reports: 2,
+    },
+    { id: 2, kind: "cell_line", label: "MCF-7", xrefs: [], names: [], current: true, reports: 2 },
   ],
+  former_entities: [],
 };
 
 const withoutNotices: Index = {
@@ -81,6 +90,7 @@ function value(id: number, check: Report["check"], display: number | null): Repo
     score: null,
     check,
     checks: [],
+    replaced_by: null,
     evidence: [],
     display:
       display === null

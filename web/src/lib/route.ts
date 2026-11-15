@@ -1,15 +1,19 @@
-/** The pages of the website, as hash routes, for example `#/works/12?report=40`. */
+/**
+ * The pages of the website, as hash routes, for example `#/works/12?report=40`.
+ * The pages with filters keep them in `params`, the query of the address.
+ */
 
 export type Route =
   | { page: "home" }
-  | { page: "works" }
+  | { page: "works"; params?: string }
   | { page: "work"; id: number; report: number | null }
+  | { page: "reports"; params?: string }
   | { page: "report"; id: number }
-  | { page: "properties" }
-  | { page: "property"; key: string }
-  | { page: "entities" }
+  | { page: "properties"; params?: string }
+  | { page: "property"; key: string; params?: string }
+  | { page: "entities"; params?: string }
   | { page: "entity"; id: number }
-  | { page: "effects" }
+  | { page: "effects"; params?: string }
   | { page: "about" }
   | { page: "missing"; path: string };
 
@@ -18,10 +22,18 @@ function integer(text: string | undefined): number | null {
   return Number(text);
 }
 
+/** The route with the parameters of the query, when there are some. */
+function withParams<R extends Route>(route: R, query: URLSearchParams): R {
+  const params = query.toString();
+  return params === "" ? route : { ...route, params };
+}
+
 export function parseRoute(hash: string): Route {
-  const [path = "", query = ""] = hash.replace(/^#/, "").split("?", 2);
+  const address = hash.replace(/^#/, "");
+  const mark = address.indexOf("?");
+  const path = mark < 0 ? address : address.slice(0, mark);
+  const query = new URLSearchParams(mark < 0 ? "" : address.slice(mark + 1));
   const parts = path.split("/").filter((part) => part.length > 0);
-  const parameters = new URLSearchParams(query);
   const [first, second, ...rest] = parts;
   const missing: Route = { page: "missing", path };
   if (rest.length > 0) return missing;
@@ -29,27 +41,28 @@ export function parseRoute(hash: string): Route {
     case undefined:
       return { page: "home" };
     case "works": {
-      if (second === undefined) return { page: "works" };
+      if (second === undefined) return withParams({ page: "works" }, query);
       const id = integer(second);
       return id === null
         ? missing
-        : { page: "work", id, report: integer(parameters.get("report") ?? undefined) };
+        : { page: "work", id, report: integer(query.get("report") ?? undefined) };
     }
     case "reports": {
+      if (second === undefined) return withParams({ page: "reports" }, query);
       const id = integer(second);
       return id === null ? missing : { page: "report", id };
     }
     case "properties":
       return second === undefined
-        ? { page: "properties" }
-        : { page: "property", key: decodeURIComponent(second) };
+        ? withParams({ page: "properties" }, query)
+        : withParams({ page: "property", key: decodeURIComponent(second) }, query);
     case "entities": {
-      if (second === undefined) return { page: "entities" };
+      if (second === undefined) return withParams({ page: "entities" }, query);
       const id = integer(second);
       return id === null ? missing : { page: "entity", id };
     }
     case "effects":
-      return second === undefined ? { page: "effects" } : missing;
+      return second === undefined ? withParams({ page: "effects" }, query) : missing;
     case "about":
       return second === undefined ? { page: "about" } : missing;
     default:
@@ -57,28 +70,34 @@ export function parseRoute(hash: string): Route {
   }
 }
 
+function querySuffix(params: string | undefined): string {
+  return params === undefined || params === "" ? "" : `?${params}`;
+}
+
 export function link(route: Route): string {
   switch (route.page) {
     case "home":
       return "#/";
     case "works":
-      return "#/works";
+      return `#/works${querySuffix(route.params)}`;
     case "work":
       return route.report === null
         ? `#/works/${String(route.id)}`
         : `#/works/${String(route.id)}?report=${String(route.report)}`;
+    case "reports":
+      return `#/reports${querySuffix(route.params)}`;
     case "report":
       return `#/reports/${String(route.id)}`;
     case "properties":
-      return "#/properties";
+      return `#/properties${querySuffix(route.params)}`;
     case "property":
-      return `#/properties/${encodeURIComponent(route.key)}`;
+      return `#/properties/${encodeURIComponent(route.key)}${querySuffix(route.params)}`;
     case "entities":
-      return "#/entities";
+      return `#/entities${querySuffix(route.params)}`;
     case "entity":
       return `#/entities/${String(route.id)}`;
     case "effects":
-      return "#/effects";
+      return `#/effects${querySuffix(route.params)}`;
     case "about":
       return "#/about";
     case "missing":

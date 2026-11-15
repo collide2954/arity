@@ -9,12 +9,14 @@
   import Properties from "./pages/Properties.svelte";
   import Property from "./pages/Property.svelte";
   import Report from "./pages/Report.svelte";
+  import Reports from "./pages/Reports.svelte";
   import Work from "./pages/Work.svelte";
   import Works from "./pages/Works.svelte";
 
   const route = $derived(location.route);
   const sections = [
     { page: "works", label: "Works" },
+    { page: "reports", label: "Reports" },
     { page: "properties", label: "Properties" },
     { page: "entities", label: "Entities" },
     { page: "effects", label: "Effects" },
@@ -25,6 +27,7 @@
     return (
       route.page === page ||
       (page === "works" && route.page === "work") ||
+      (page === "reports" && route.page === "report") ||
       (page === "properties" && route.page === "property") ||
       (page === "entities" && route.page === "entity")
     );
@@ -52,6 +55,8 @@
     {#key route.id}
       <Work id={route.id} selected={route.report} />
     {/key}
+  {:else if route.page === "reports"}
+    <Reports params={route.params ?? ""} />
   {:else if route.page === "report"}
     {#key route.id}
       <Report id={route.id} />

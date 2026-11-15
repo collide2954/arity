@@ -1,5 +1,5 @@
 import type { Mode } from "./charts";
-import { parseRoute, type Route } from "./route";
+import { link, parseRoute, type Route } from "./route";
 
 const query = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -11,6 +11,12 @@ function currentMode(): Mode {
 
 export const location: { route: Route } = $state({ route: parseRoute(window.location.hash) });
 export const theme: { mode: Mode } = $state({ mode: currentMode() });
+
+/** Shows a route and changes the address to it, without a new entry in the history of the browser. */
+export function replaceRoute(route: Route): void {
+  history.replaceState(null, "", link(route));
+  location.route = route;
+}
 
 window.addEventListener("hashchange", () => {
   location.route = parseRoute(window.location.hash);

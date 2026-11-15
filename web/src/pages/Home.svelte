@@ -35,7 +35,9 @@
     <a class="card stat" href={link({ page: "works" })}
       ><strong>{index.works.length}</strong><span>works</span></a
     >
-    <span class="card stat"><strong>{reports}</strong><span>reports</span></span>
+    <a class="card stat" href={link({ page: "reports" })}
+      ><strong>{reports}</strong><span>reports</span></a
+    >
     <a class="card stat" href={link({ page: "properties" })}
       ><strong>{index.properties.length}</strong><span>properties</span></a
     >

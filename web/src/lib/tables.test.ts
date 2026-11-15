@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { EFFECT_FACETS, effectItems, effectLabels, effectRows, matrixRows } from "./effects";
+import { NOT_STATED } from "./compare";
+import {
+  EFFECT_FACETS,
+  effectGroupings,
+  effectItems,
+  effectLabels,
+  effectRows,
+  groupedMarks,
+  groupOf,
+  matrixRows,
+} from "./effects";
 import { emptySelection, filter } from "./filter";
-import type { Index, Report } from "./types";
+import type { Condition, Index, Report } from "./types";
 
 const index: Index = {
   format: "arity-site/1",
@@ -103,6 +113,55 @@ function effect(id: number, direction: "increase" | "no_change", score: number):
     },
   };
 }
+
+function withConditions(report: Report, conditions: Condition[]): Report {
+  return { ...report, body: { ...report.body, conditions } };
+}
+
+describe("effect figures", () => {
+  const items = effectItems(
+    effectRows(index, [
+      withConditions(effect(5, "no_change", 0), [{ role: "cell_line", entity: "mcf7" }]),
+      withConditions(effect(6, "increase", 1), [
+        { property: "ic50", value: { number: "24", unit: "h", unit_text: "h" } },
+      ]),
+      withConditions(effect(7, "increase", 1), [{ role: "cell_line", entity: "mcf7" }]),
+    ]),
+  );
+
+  it("groups by the agent, the target, both, the work, or a condition of the effects", () => {
+    expect(effectGroupings(items)).toEqual([
+      { key: "agent", label: "Agent" },
+      { key: "target", label: "Target" },
+      { key: "pair", label: "Agent and target" },
+      { key: "work", label: "Work" },
+      { key: "condition:cell line", label: "cell line" },
+      { key: "condition:IC50", label: "IC50" },
+    ]);
+    const [first, second] = items;
+    expect(first && groupOf(first, "pair")).toBe("doxorubicin \u{2192} MCF-7");
+    expect(first && groupOf(first, "condition:cell line")).toBe("MCF-7");
+    expect(second && groupOf(second, "condition:cell line")).toBe(NOT_STATED);
+  });
+
+  it("puts the tiles of a row in the order of the directions", () => {
+    const marks = groupedMarks(items, "agent", "tiles");
+    expect(marks.map((mark) => [mark.report, mark.group, mark.slot])).toEqual([
+      [5, "doxorubicin", 2],
+      [6, "doxorubicin", 0],
+      [7, "doxorubicin", 1],
+    ]);
+  });
+
+  it("gives the marks of a list one slot in each cell of a row and a direction", () => {
+    const marks = groupedMarks(items, "condition:cell line", "list");
+    expect(marks.map((mark) => [mark.report, mark.group, mark.slot])).toEqual([
+      [5, "MCF-7", 0],
+      [6, NOT_STATED, 0],
+      [7, "MCF-7", 0],
+    ]);
+  });
+});
 
 describe("effectRows", () => {
   it("puts reports of the same cell in separate slots", () => {

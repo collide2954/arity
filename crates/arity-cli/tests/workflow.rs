@@ -6,10 +6,12 @@ use std::path::Path;
 
 use arity_cli::config::{Config, PersonConfig};
 use arity_cli::submit::Outcome;
+use arity_cli::update_text::{self, MovedRun, Update};
 use arity_cli::{Context, archive, catalogue, checks, coverage, fetch, show, submit};
 use arity_core::vocabulary::CheckState;
 use arity_core::{CcElements, License, Notice, NoticeKind, NoticeSource};
 use arity_sources::{Http, Response, SourceError, europepmc, pmc};
+use arity_store::{Retrieval, RetrievalRole, RunId, WorkId};
 use jiff::Timestamp;
 use serde_json::json;
 
@@ -121,9 +123,9 @@ fn submission(context: &Context, number: &str) -> serde_json::Value {
         .blocks
         .iter()
         .find(|block| {
-            block
-                .text
-                .contains("reference drug, doxorubicin (IC₅₀ = 7.30")
+            arity_text::normalize(&block.text)
+                .as_str()
+                .contains("reference drug, doxorubicin (IC50 = 7.30")
         })
         .unwrap();
     json!({
@@ -153,7 +155,7 @@ fn submission(context: &Context, number: &str) -> serde_json::Value {
                 "uncertainty": { "kind": "other", "number": "0.84" }
             },
             "conditions": [{ "role": "cell_line", "entity": "mcf7" }],
-            "evidence": [{ "block": block.key, "quote": "doxorubicin (IC₅₀ = 7.30 ± 0.84 μM)" }]
+            "evidence": [{ "block": block.key, "quote": "doxorubicin (IC50 = 7.30 ± 0.84 μM)" }]
         }]
     })
 }
@@ -338,7 +340,7 @@ fn files_in(root: &Path) -> BTreeMap<String, Vec<u8>> {
 }
 
 /// A database with one stored submission, and the run of its report `r1`.
-fn stored(directory: &Path) -> (Context, arity_store::RunId, arity_store::ReportId) {
+fn stored(directory: &Path) -> (Context, RunId, arity_store::ReportId) {
     let context = context(directory);
     let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
     fetch::fetch(&context, work, now()).unwrap();
@@ -356,7 +358,7 @@ fn stored(directory: &Path) -> (Context, arity_store::RunId, arity_store::Report
     (context, run, reports[0].0)
 }
 
-fn check_file(run: arity_store::RunId, report: &str, state: &str, at: &str) -> Vec<u8> {
+fn check_file(run: RunId, report: &str, state: &str, at: &str) -> Vec<u8> {
     serde_json::to_vec(&json!({
         "format": "arity-checks/1",
         "person": { "name": "A Checker", "orcid": "0000-0002-1825-0097" },
@@ -405,7 +407,7 @@ fn refuses_a_check_file_with_a_problem_and_records_none_of_its_checks() {
             "later than now",
         ),
         (
-            check_file(arity_store::RunId(run.0 + 1), "r1", "confirmed", at),
+            check_file(RunId(run.0 + 1), "r1", "confirmed", at),
             "no run",
         ),
         (b"{\"format\": \"arity-checks/9\"}".to_vec(), "check file"),
@@ -579,6 +581,139 @@ fn refuses_an_archive_whose_run_numbers_have_a_gap() {
         error.to_string().contains("run 2 of the archive"),
         "{error}"
     );
+}
+
+/// Stores a work with the text that version 1 of the parser makes from its
+/// file, as arity did before version 2, and submits one run on it.
+fn work_with_a_run_on_version_1(
+    data: &Path,
+    change: impl FnOnce(&mut serde_json::Value, &arity_text::Document),
+) -> (Context, WorkId) {
+    let context = context(data);
+    let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
+    let retrieval = context
+        .store
+        .add_retrieval(
+            work,
+            &Retrieval {
+                role: RetrievalRole::FullText,
+                supplement_key: None,
+                url: "https://example.org/PMC6274071.xml".to_owned(),
+                media_type: Some("application/xml".to_owned()),
+                digest: context.blobs.put(XML).unwrap(),
+                bytes: u64::try_from(XML.len()).unwrap(),
+                software: arity_store::SOFTWARE.to_owned(),
+                retrieved_at: now(),
+            },
+        )
+        .unwrap();
+    let old = arity_jats::parse_as(XML, arity_jats::Version::V1)
+        .unwrap()
+        .document;
+    context
+        .store
+        .add_text(work, retrieval, &old, now())
+        .unwrap();
+    let mut value = submission(&context, "7.30");
+    change(&mut value, &old);
+    let path = data.join("submission.json");
+    fs::write(&path, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+    let Outcome::Stored { .. } = submit::submit(&context, &path, false, now()).unwrap() else {
+        panic!("the submission was not stored");
+    };
+    (context, work)
+}
+
+#[test]
+fn moves_the_current_runs_of_a_work_to_the_text_of_the_latest_parser() {
+    let data = tempfile::tempdir().unwrap();
+    let (context, work) = work_with_a_run_on_version_1(data.path(), |value, _| {
+        value["reports"][0]["evidence"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({ "block": "t1/r1c5", "quote": "IC50 (μM) a" }));
+    });
+
+    let planned = update_text::update_text(&context, work, true, now()).unwrap();
+    let Update::Moved { runs, .. } = planned else {
+        panic!("{planned:?}");
+    };
+    assert_eq!(
+        runs,
+        [MovedRun {
+            from: RunId(1),
+            to: None,
+            quotes: 2,
+            skips: 0
+        }]
+    );
+    assert_eq!(context.store.runs().unwrap().len(), 1);
+
+    let done = update_text::update_text(&context, work, false, now()).unwrap();
+    let Update::Moved { runs, .. } = done else {
+        panic!("{done:?}");
+    };
+    assert_eq!(
+        runs,
+        [MovedRun {
+            from: RunId(1),
+            to: Some(RunId(2)),
+            quotes: 2,
+            skips: 0
+        }]
+    );
+    let (_, document) = context.store.latest_text(work).unwrap().unwrap();
+    assert_eq!(document.parser, arity_jats::Version::LATEST.name());
+    let moved: serde_json::Value =
+        serde_json::from_str(&context.store.runs().unwrap()[1].submission).unwrap();
+    assert_eq!(moved["text"], document.digest().unwrap().as_str());
+    assert_eq!(moved["replaces"], 1);
+    assert_eq!(
+        moved["reports"][0]["evidence"][0]["quote"],
+        "doxorubicin (IC₅₀ = 7.30 ± 0.84 μM)"
+    );
+    assert_eq!(
+        moved["reports"][0]["evidence"][1]["quote"],
+        "IC₅₀ (μM) ^{a}"
+    );
+    assert_eq!(
+        update_text::update_text(&context, work, false, now()).unwrap(),
+        Update::Current
+    );
+}
+
+#[test]
+fn moves_no_run_of_a_work_when_the_new_text_does_not_state_a_value() {
+    let data = tempfile::tempdir().unwrap();
+    let (context, work) = work_with_a_run_on_version_1(data.path(), |value, old| {
+        let block = old
+            .blocks
+            .iter()
+            .find(|block| block.text.contains("13C spectra were run at 100 MHz"))
+            .unwrap();
+        value["properties"].as_array_mut().unwrap().push(json!({
+            "id": "spectrometer_frequency", "label": "spectrometer frequency",
+            "value_type": "quantity", "unit": "MHz"
+        }));
+        value["reports"].as_array_mut().unwrap().push(json!({
+            "type": "value", "id": "r2", "subject": ["dox"], "property": "spectrometer_frequency",
+            "value": { "number": "13", "unit": "MHz", "unit_text": "MHz" },
+            "evidence": [{ "block": block.key, "quote": "13C spectra were run at 100 MHz" }]
+        }));
+    });
+
+    let update = update_text::update_text(&context, work, false, now()).unwrap();
+    let Update::Blocked { problems } = update else {
+        panic!("{update:?}");
+    };
+    let places: Vec<_> = problems
+        .iter()
+        .map(|problem| (problem.run, problem.path.as_str()))
+        .collect();
+    assert_eq!(places, [(RunId(1), "/reports/1/value/number")]);
+    assert_eq!(context.store.runs().unwrap().len(), 1);
+    let (_, document) = context.store.latest_text(work).unwrap().unwrap();
+    assert_eq!(document.parser, arity_jats::Version::V1.name());
 }
 
 #[test]

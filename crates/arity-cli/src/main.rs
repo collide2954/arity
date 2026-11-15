@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use arity_cli::config::{CONFIG_FILE, Config, PersonConfig};
 use arity_cli::submit::Outcome;
+use arity_cli::update_text::{self, Update};
 use arity_cli::{
     CliError, Context, Result, archive, catalogue, checks, coverage, fetch, notices, show, submit,
 };
@@ -115,6 +116,17 @@ enum Command {
         /// The folder of the archive.
         folder: PathBuf,
     },
+    /// Make the text of works again with the latest version of the parser,
+    /// and move the current runs of each work to the new text. When a run of
+    /// a work cannot move, arity lists the problems and changes nothing for
+    /// that work.
+    UpdateText {
+        /// PMCIDs, DOIs, or PMIDs. Without them, each work.
+        identifiers: Vec<String>,
+        /// Show what would change, but change nothing.
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// List the terms of a vocabulary.
     Vocab {
         #[arg(value_enum)]
@@ -197,6 +209,10 @@ fn run(cli: Cli, out: &mut impl Write) -> Result<ExitCode> {
         Command::Export { out: folder } => export(data, &folder, now, out),
         Command::Archive { folder } => write_archive(data, &folder, out),
         Command::Rebuild { folder } => rebuild(data, &folder, out),
+        Command::UpdateText {
+            identifiers,
+            dry_run,
+        } => update_texts(data, &identifiers, dry_run, now, out),
         Command::Vocab { list } => vocab(list, data, out),
         Command::Schema => {
             emit(out, json_text(&arity_protocol::schema())?)?;
@@ -483,6 +499,85 @@ fn refresh_notices(
         }
     }
     Ok(ExitCode::SUCCESS)
+}
+
+fn update_texts(
+    data: &Path,
+    identifiers: &[String],
+    dry_run: bool,
+    now: Timestamp,
+    out: &mut impl Write,
+) -> Result<ExitCode> {
+    let context = open(data)?;
+    let records = context.store.works()?;
+    let works: Vec<&WorkRecord> = if identifiers.is_empty() {
+        records.iter().collect()
+    } else {
+        let wanted: Vec<WorkId> = identifiers
+            .iter()
+            .map(|identifier| context.work(identifier))
+            .collect::<Result<_>>()?;
+        records
+            .iter()
+            .filter(|record| wanted.contains(&record.id))
+            .collect()
+    };
+    let mut blocked = false;
+    for record in works {
+        let name = identifier_of(record);
+        match update_text::update_text(&context, record.id, dry_run, now)? {
+            Update::Current => {}
+            Update::Moved { text, blocks, runs } => {
+                let verb = if dry_run { "can move" } else { "moved" };
+                emit(
+                    out,
+                    format!(
+                        "{name}: {verb} {} runs to the text {text} of {}, in which {blocks} blocks change.",
+                        runs.len(),
+                        arity_jats::Version::LATEST.name()
+                    ),
+                )?;
+                for run in runs {
+                    let to = run
+                        .to
+                        .map_or_else(String::new, |to| format!(" as run {}", to.0));
+                    let skips = if run.skips > 0 {
+                        format!(
+                            ", and {} skipped quotes with no number leave the run",
+                            run.skips
+                        )
+                    } else {
+                        String::new()
+                    };
+                    emit(
+                        out,
+                        format!(
+                            "  run {}{to}: the words of {} quotes change{skips}",
+                            run.from.0, run.quotes
+                        ),
+                    )?;
+                }
+            }
+            Update::Blocked { problems } => {
+                blocked = true;
+                emit(out, format!("{name}: no run moves, because:"))?;
+                for problem in problems {
+                    emit(
+                        out,
+                        format!(
+                            "  run {} at {}: {}",
+                            problem.run.0, problem.path, problem.message
+                        ),
+                    )?;
+                }
+            }
+        }
+    }
+    Ok(if blocked {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    })
 }
 
 fn export(data: &Path, folder: &Path, now: Timestamp, out: &mut impl Write) -> Result<ExitCode> {

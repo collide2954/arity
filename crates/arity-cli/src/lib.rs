@@ -12,6 +12,7 @@ pub mod fetch;
 pub mod notices;
 pub mod show;
 pub mod submit;
+pub mod update_text;
 
 pub use context::Context;
 pub use error::{CliError, Result};

@@ -39,7 +39,35 @@ so a rebuild makes each archived text again with its own version.
 
 New texts use the latest version. A sign becomes a script character only at
 the start or at the end of a script, so that `C<sub>1–2</sub>` keeps the
-meaning of a range and becomes "C_{1–2}".
+meaning of a range and becomes "C_{1–2}". A MathML formula gets the separators
+of its brackets only when it names them.
+
+## Move readings to a new version
+
+```sh
+arity update-text --dry-run
+arity update-text
+```
+
+`arity update-text` makes the text of each work again with the latest version
+of the parser, from the same files. Then it moves each current run of the work
+to the new text, as a new run that [replaces](submissions.md#corrections) it:
+
+- Each quote gets the words of the new text at the same place. arity aligns
+  the old block with the new block, so "IC50 (μM) a" becomes
+  "IC₅₀ (μM) ^{a}".
+- A skipped quote that has no number in the new text leaves the run. For
+  example, the old text wrote "CoV₂O₆" as "CoV2O6", so a reader had to skip
+  the 2 and the 6.
+- The values, the entities, and the conditions stay the same. The note of the
+  new run tells what changed.
+- The new run passes the same checks as each other submission.
+
+When one run of a work cannot move, no run of the work moves, and arity lists
+the problems. For example, a reader could read `10<sup>4</sup>` in the old text
+as the number 104. The new text writes "10⁴", so the check of that value fails,
+and a reader must correct the run first. Without works, the command updates
+each work. `--dry-run` shows what would change, and changes nothing.
 
 ## Normalization
 
@@ -69,5 +97,6 @@ keeps each reading.
 A superscript after a number is a power of ten, with one reading: "2 × 10⁻³"
 is 0.002, and "10⁴" is 10000. The same form in plain characters, "2 × 10−3",
 can also be 2, 10, and 3, so arity keeps each of those readings. A superscript
-after a letter, for example the "−2" of "cm⁻²" or the "13" of "¹³C", and a
-subscript, for example the "50" of "IC₅₀", are not numbers.
+after a letter, for example the "−2" of "cm⁻²" or the "13" of "¹³C", a
+subscript, for example the "50" of "IC₅₀", and a script with a mark, for
+example the citations "^{59,60}", are not numbers.

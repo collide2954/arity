@@ -105,6 +105,8 @@ pub struct ReportView {
     pub check: String,
     pub checks: Vec<CheckView>,
     pub evidence: Vec<EvidenceView>,
+    /// The warnings of the checks about this report.
+    pub warnings: Vec<Value>,
     /// The run that corrects the run of this report, if there is one.
     pub replaced_by: Option<i64>,
 }
@@ -417,6 +419,7 @@ impl Store {
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         let mut entities_by_run: HashMap<i64, BTreeMap<String, i64>> = HashMap::new();
+        let mut warnings_by_run: HashMap<i64, HashMap<String, Vec<Value>>> = HashMap::new();
         rows.into_iter()
             .map(
                 |(
@@ -443,6 +446,12 @@ impl Store {
                         .filter(|(local, _)| used.contains(local.as_str()))
                         .map(|(local, entity)| (local.clone(), *entity))
                         .collect();
+                    let warnings = match warnings_by_run.entry(run) {
+                        Entry::Occupied(entry) => entry.into_mut(),
+                        Entry::Vacant(entry) => entry.insert(self.report_warnings(run)?),
+                    }
+                    .remove(&local_id)
+                    .unwrap_or_default();
                     let score = direction
                         .as_deref()
                         .map(str::parse::<Direction>)
@@ -464,11 +473,46 @@ impl Store {
                         check,
                         checks: self.checks_of(id)?,
                         evidence: self.evidence_of(id)?,
+                        warnings,
                         replaced_by,
                     })
                 },
             )
             .collect()
+    }
+
+    /// The warnings of the checks of a run, for the local id of each report.
+    /// A warning about a report has a path that starts with the place of the
+    /// report in the submission, for example `/reports/3/`.
+    fn report_warnings(&self, run: i64) -> Result<HashMap<String, Vec<Value>>> {
+        let (submission, warnings): (String, String) = self.connection.query_row(
+            "SELECT submission, warnings FROM run WHERE id = ?1",
+            [run],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        let submission: Value = serde_json::from_str(&submission)?;
+        let locals: Vec<&str> = submission["reports"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|report| report["id"].as_str().unwrap_or_default())
+            .collect();
+        let mut by_report: HashMap<String, Vec<Value>> = HashMap::new();
+        for warning in serde_json::from_str::<Vec<Value>>(&warnings)? {
+            let local = warning["path"]
+                .as_str()
+                .and_then(|path| path.strip_prefix("/reports/"))
+                .and_then(|rest| rest.split('/').next())
+                .and_then(|place| place.parse::<usize>().ok())
+                .and_then(|place| locals.get(place));
+            if let Some(local) = local {
+                by_report
+                    .entry((*local).to_owned())
+                    .or_default()
+                    .push(warning);
+            }
+        }
+        Ok(by_report)
     }
 
     fn retrieval_views(&self, work: WorkId) -> Result<Vec<RetrievalView>> {

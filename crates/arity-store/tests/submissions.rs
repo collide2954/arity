@@ -513,6 +513,43 @@ fn stores_a_correction_that_replaces_an_earlier_run() {
 }
 
 #[test]
+fn gives_each_report_the_warnings_of_its_own_checks() {
+    let store = Store::open_in_memory().unwrap();
+    let (work, text, document) = setup(&store, "PMC1", "The IC50 of doxorubicin was 0.24 μM.");
+    let mut value = submission(&document, "0.24", "chemical");
+    value["entities"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("xrefs");
+    let mut second = value["reports"][0].clone();
+    second["id"] = json!("r2");
+    second["method"] = json!({ "label": "flow cytometry" });
+    value["reports"].as_array_mut().unwrap().push(second);
+    store_one(&store, work, text, &document, &value).unwrap();
+
+    let warnings: Vec<(String, Vec<String>)> = store
+        .report_views()
+        .unwrap()
+        .into_iter()
+        .map(|report| {
+            let paths = report
+                .warnings
+                .iter()
+                .map(|warning| warning["path"].as_str().unwrap().to_owned())
+                .collect();
+            (report.local_id, paths)
+        })
+        .collect();
+    assert_eq!(
+        warnings,
+        [
+            ("r1".to_owned(), vec![]),
+            ("r2".to_owned(), vec!["/reports/1/method/label".to_owned()]),
+        ]
+    );
+}
+
+#[test]
 fn gives_the_names_of_an_entity_from_the_current_runs() {
     let store = Store::open_in_memory().unwrap();
     let (work, text, document) = setup(

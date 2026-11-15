@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { conditions, headline, names } from "./describe";
+import { conditionParts, conditions, headline, names } from "./describe";
 import type { Index, Report } from "./types";
 
 const index: Index = {
@@ -84,6 +84,30 @@ describe("headline", () => {
     expect(headline(effect, names(index))).toBe(
       "hydralazine, effect on MCF-7 cell viability: no change (0)",
     );
+  });
+});
+
+describe("conditionParts", () => {
+  it("gives the name and the value of each condition", () => {
+    const value = report({
+      type: "value",
+      id: "r1",
+      subject: ["dox"],
+      property: "ic50",
+      value: { number: "7.30", unit: "umol/L" },
+      conditions: [
+        { role: "cell_line", entity: "mcf7" },
+        { property: "cell_viability", value: { number: "48", unit: "h", unit_text: "h" } },
+        { role: "medium", text: "RPMI 1640 with 10% FBS" },
+        { text: "in the dark" },
+      ],
+    });
+    expect(conditionParts(value, names(index))).toEqual([
+      { name: "cell line", value: "MCF-7" },
+      { name: "cell viability", value: "48 h" },
+      { name: "medium", value: "RPMI 1640 with 10% FBS" },
+      { name: "", value: "in the dark" },
+    ]);
   });
 });
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { noticeNames } from "../lib/notices";
+  import ConditionList from "./ConditionList.svelte";
   import type { ReportRow } from "../lib/reports";
   import { link } from "../lib/route";
 
@@ -22,9 +23,9 @@
     </ol>
   {/if}
   <dl>
-    {#if row.conditions.length > 0}
+    {#if row.conditionParts.length > 0}
       <dt>Conditions</dt>
-      <dd>{row.conditions.join(" \u{b7} ")}</dd>
+      <dd><ConditionList parts={row.conditionParts} /></dd>
     {/if}
     {#if row.method}
       <dt>Method</dt>

@@ -4,6 +4,7 @@
   import { link } from "../lib/route";
   import type { Column } from "../lib/view";
   import CheckBadge from "./CheckBadge.svelte";
+  import ConditionList from "./ConditionList.svelte";
   import NoticeChips from "./NoticeChips.svelte";
 
   let { row, column }: { row: ReportRow; column: Column<ReportRow> } = $props();
@@ -29,8 +30,7 @@
 {:else if column.numeric && typeof value === "number" && column.id !== "id" && column.id !== "year"}
   {formatNumber(value)}
 {:else if column.id === "conditions"}
-  {@const text = row.conditions.join(" \u{b7} ")}
-  <span class="clamp" title={text}>{text}</span>
+  <ConditionList parts={row.conditionParts} limit={4} />
 {:else if column.id === "source"}
   <a href={link({ page: "work", id: report.work, report: report.id })}>{row.citation}</a>
 {:else if column.id === "identifier"}

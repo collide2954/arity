@@ -31,16 +31,38 @@ const ROLES: Record<string, string> = {
   co_treatment: "with",
 };
 
-export function conditionText(report: Report, condition: Condition, lookup: Names): string {
+/** One condition of a report: what it is, and its value. The name is empty for a condition with no role. */
+export interface ConditionPart {
+  readonly name: string;
+  readonly value: string;
+}
+
+function conditionPart(report: Report, condition: Condition, lookup: Names): ConditionPart {
   if (condition.property !== undefined && condition.value !== undefined) {
-    return `${propertyName(condition.property, lookup)} ${reportedValue(condition.value)}`;
+    return {
+      name: propertyName(condition.property, lookup),
+      value: reportedValue(condition.value),
+    };
   }
-  const role = condition.role === undefined ? "" : (ROLES[condition.role] ?? condition.role);
-  const what =
-    condition.entity === undefined
-      ? (condition.text ?? "")
-      : entityName(report, condition.entity, lookup);
-  return role ? `${role}: ${what}` : what;
+  return {
+    name: condition.role === undefined ? "" : (ROLES[condition.role] ?? condition.role),
+    value:
+      condition.entity === undefined
+        ? (condition.text ?? "")
+        : entityName(report, condition.entity, lookup),
+  };
+}
+
+export function conditionText(report: Report, condition: Condition, lookup: Names): string {
+  const { name, value } = conditionPart(report, condition, lookup);
+  if (condition.property !== undefined && condition.value !== undefined) return `${name} ${value}`;
+  return name ? `${name}: ${value}` : value;
+}
+
+export function conditionParts(report: Report, lookup: Names): ConditionPart[] {
+  return (report.body.conditions ?? []).map((condition) =>
+    conditionPart(report, condition, lookup),
+  );
 }
 
 export function conditions(report: Report, lookup: Names): string[] {

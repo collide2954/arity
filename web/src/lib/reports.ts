@@ -1,6 +1,14 @@
 import { DIRECTIONS } from "./charts";
 import { toCsv } from "./csv";
-import { conditions, entityName, names, propertyName, type Names } from "./describe";
+import {
+  conditionParts,
+  conditions,
+  entityName,
+  names,
+  propertyName,
+  type ConditionPart,
+  type Names,
+} from "./describe";
 import type { Item } from "./filter";
 import { directionLabel, reportedValue, scoreLabel, unitLabel } from "./format";
 import { noticeLabel } from "./notices";
@@ -47,6 +55,8 @@ export interface ReportRow extends Item<ReportFacet> {
   readonly converted: number | null;
   readonly unit: string;
   readonly conditions: readonly string[];
+  /** The conditions, each as a name and a value. */
+  readonly conditionParts: readonly ConditionPart[];
   readonly method: string;
   readonly citation: string;
   /** The PMCID of the work, or its DOI. */
@@ -141,6 +151,7 @@ function reportRow(
     converted,
     unit: report.display ? unitLabel(report.display.unit) : "",
     conditions: context,
+    conditionParts: conditionParts(report, lookup),
     method: body.method?.label ?? "",
     citation,
     identifier: work?.pmcid ?? work?.doi ?? "",

@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { docsLink } from "../lib/docs";
   import CheckBadge from "../components/CheckBadge.svelte";
   import Chart from "../components/Chart.svelte";
+  import ConditionList from "../components/ConditionList.svelte";
   import FilteredTable from "../components/FilteredTable.svelte";
   import NoticeChips from "../components/NoticeChips.svelte";
   import { effectSpec } from "../lib/charts";
@@ -74,6 +76,8 @@
     <CheckBadge state={row.report.check} />
   {:else if column.id === "notices"}
     <NoticeChips kinds={row.notices} />
+  {:else if column.id === "conditions"}
+    <ConditionList parts={row.contextParts} limit={4} />
   {:else}
     {column.value(row) ?? ""}
   {/if}
@@ -94,6 +98,7 @@
   decrease (−1), and a dot is a statement of no change or no effect (0). Two sources that disagree
   show as two marks in the same cell: arity does not combine them. If the source has a notice, for
   example a retraction, a sign shows above the mark. The filters change the matrix and the table.
+  <a href={docsLink("website", "figures")}>How the figures work</a>.
 </p>
 
 {#await data}

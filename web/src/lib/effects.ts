@@ -1,6 +1,13 @@
 import type { EffectRow } from "./charts";
 import type { Item } from "./filter";
-import { conditions, entityName, names, propertyName } from "./describe";
+import {
+  conditionParts,
+  conditions,
+  entityName,
+  names,
+  propertyName,
+  type ConditionPart,
+} from "./describe";
 import { directionLabel, scoreLabel, significanceLabel } from "./format";
 import { markerSign, noticeLabel, noticeNames } from "./notices";
 import { facetLabels } from "./reports";
@@ -18,6 +25,8 @@ export interface EffectTableRow {
   readonly notices: readonly string[];
   readonly detail: string;
   readonly context: string;
+  /** The conditions, each as a name and a value. */
+  readonly contextParts: readonly ConditionPart[];
 }
 
 export function effectRows(index: Index, reports: readonly Report[]): EffectTableRow[] {
@@ -47,6 +56,7 @@ export function effectRows(index: Index, reports: readonly Report[]): EffectTabl
         notices: work?.notices ?? [],
         detail,
         context: conditions(report, lookup).join(" \u{b7} "),
+        contextParts: conditionParts(report, lookup),
       };
     });
 }

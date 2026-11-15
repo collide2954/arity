@@ -57,9 +57,37 @@ pub fn normalize(text: &str) -> Normalized {
 /// Text in the normal form that number search uses. It is the normal form of
 /// quote search, but a run of superscript characters starts with `^`, and a
 /// run of subscript characters starts with `_`. Thus `10⁻³` becomes `10^-3`,
-/// and not `10-3`.
+/// and not `10-3`. A script with a mark, for example the citations of
+/// `solvents^{59,60}`, has no numbers, so this form leaves it out.
 pub fn normalize_numbers(text: &str) -> Normalized {
     normalize_with(text, true)
+}
+
+/// The places of the characters of each script with a mark: `^{...}` or
+/// `_{...}`, with its braces.
+fn marked_scripts(chars: &[char]) -> Vec<bool> {
+    let mut inside = vec![false; chars.len()];
+    let mut index = 0;
+    while index + 1 < chars.len() {
+        if matches!(chars[index], '^' | '_') && chars[index + 1] == '{' {
+            let mut depth = 0_usize;
+            let close = (index + 1..chars.len()).find(|&at| {
+                match chars[at] {
+                    '{' => depth += 1,
+                    '}' => depth -= 1,
+                    _ => {}
+                }
+                depth == 0
+            });
+            if let Some(close) = close {
+                inside[index..=close].fill(true);
+                index = close + 1;
+                continue;
+            }
+        }
+        index += 1;
+    }
+    inside
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,8 +112,13 @@ fn normalize_with(text: &str, mark_scripts: bool) -> Normalized {
     let mut origins = Vec::with_capacity(text.len());
     let mut pending_space: Option<usize> = None;
     let mut previous = Script::Base;
+    let skipped = if mark_scripts {
+        marked_scripts(&text.chars().collect::<Vec<_>>())
+    } else {
+        Vec::new()
+    };
     for (index, c) in text.chars().enumerate() {
-        if is_removed(c) {
+        if is_removed(c) || skipped.get(index).copied().unwrap_or(false) {
             continue;
         }
         let current = if mark_scripts {

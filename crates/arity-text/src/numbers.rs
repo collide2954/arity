@@ -356,6 +356,14 @@ mod tests {
     }
 
     #[test]
+    fn does_not_read_a_script_with_a_mark_as_numbers() {
+        assert_eq!(values("the solvents^{59,60} and 5 mg"), ["5"]);
+        assert_eq!(values("(αhν)^{0.5} at 2 eV"), ["2"]);
+        assert_eq!(values("Li_{0.8}NiVO₄"), Vec::<String>::new());
+        assert_eq!(values("a^{b"), Vec::<String>::new());
+    }
+
+    #[test]
     fn does_not_read_exponents_of_units_and_subscripts_as_numbers() {
         assert_eq!(values("5 cm\u{207b}\u{00b2}"), ["5"]);
         assert_eq!(values("\u{00b9}\u{00b3}C NMR"), Vec::<String>::new());

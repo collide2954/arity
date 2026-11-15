@@ -91,8 +91,9 @@ pub struct TextFile {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RunFile {
-    /// The place of the run among all runs. A rebuild stores the runs in
-    /// this order. The file `run-<sequence>.json` holds the submission.
+    /// The place of the run among all runs, and the number of the run in the
+    /// database. A rebuild stores the runs in this order. The file
+    /// `run-<sequence>.json` holds the submission.
     pub sequence: i64,
     pub sha256: Digest,
     /// The software that checked the submission.
@@ -446,11 +447,21 @@ fn replay(context: &Context, directory: &Path, run: &RunFile) -> Result<usize> {
             run.sha256
         )));
     }
-    let reports = match submit_bytes(context, &raw, false, run.submitted_at)? {
-        Outcome::Stored { reports, .. } => reports,
+    let (stored, reports) = match submit_bytes(context, &raw, false, run.submitted_at)? {
+        Outcome::Stored { run, reports, .. } => (run, reports),
         Outcome::Rejected { issues } => return Err(not_stored(&path, &issues)),
         Outcome::Passed { .. } => return Err(not_stored(&path, &[])),
     };
+    if stored.0 != run.sequence {
+        return Err(CliError::Usage(format!(
+            "{} is run {} of the archive, but the database stored it as run {}. A correction \
+             names the run that it replaces by its number, so the numbers must go up from 1 \
+             with no gap",
+            path.display(),
+            run.sequence,
+            stored.0
+        )));
+    }
     for check in &run.checks {
         let report = reports
             .iter()

@@ -533,6 +533,55 @@ fn refuses_a_submission_that_is_not_the_archived_submission() {
 }
 
 #[test]
+fn rebuilds_a_correction_with_the_numbers_of_its_runs() {
+    let data = tempfile::tempdir().unwrap();
+    let context = context(data.path());
+    let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
+    fetch::fetch(&context, work, now()).unwrap();
+    let mut correction = submission(&context, "7.30");
+    correction["replaces"] = serde_json::json!(1);
+    correction["note"] = serde_json::json!("The reader corrected the conditions.");
+    for (name, value) in [
+        ("first.json", submission(&context, "7.30")),
+        ("second.json", correction),
+    ] {
+        let path = data.path().join(name);
+        fs::write(&path, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+        submit::submit(&context, &path, false, now()).unwrap();
+    }
+    let folder = tempfile::tempdir().unwrap();
+    archive::write(&context, folder.path()).unwrap();
+
+    let rebuilt_data = tempfile::tempdir().unwrap();
+    let rebuilt = Context::open(rebuilt_data.path(), Box::new(fake())).unwrap();
+    archive::rebuild(&rebuilt, folder.path()).unwrap();
+    let runs = rebuilt.store.run_views().unwrap();
+    let links: Vec<_> = runs
+        .iter()
+        .map(|run| (run.id, run.replaces, run.replaced_by))
+        .collect();
+    assert_eq!(links, [(1, None, Some(2)), (2, Some(1), None)]);
+}
+
+#[test]
+fn refuses_an_archive_whose_run_numbers_have_a_gap() {
+    let (_data, folder) = archived();
+    let directory = folder.path().join("works/PMC6274071");
+    fs::rename(directory.join("run-1.json"), directory.join("run-2.json")).unwrap();
+    let path = directory.join("work.json");
+    let mut file: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    file["runs"][0]["sequence"] = serde_json::json!(2);
+    fs::write(&path, serde_json::to_vec_pretty(&file).unwrap()).unwrap();
+    let rebuilt_data = tempfile::tempdir().unwrap();
+    let rebuilt = Context::open(rebuilt_data.path(), Box::new(fake())).unwrap();
+    let error = archive::rebuild(&rebuilt, folder.path()).unwrap_err();
+    assert!(
+        error.to_string().contains("run 2 of the archive"),
+        "{error}"
+    );
+}
+
+#[test]
 fn rebuilds_only_into_an_empty_database() {
     let (data, folder) = archived();
     let context = Context::open(data.path(), Box::new(fake())).unwrap();

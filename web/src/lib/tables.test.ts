@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { effectRows, matrixRows } from "./effects";
+import { EFFECT_FACETS, effectItems, effectLabels, effectRows, matrixRows } from "./effects";
+import { emptySelection, filter } from "./filter";
 import type { Index, Report } from "./types";
 
 const index: Index = {
@@ -117,6 +118,26 @@ describe("effectRows", () => {
       [1, "increase (+1)"],
     ]);
     expect(rows[0]?.detail).toBe("p = 0.34");
+  });
+
+  it("gives the facets of each effect, and finds an effect by its words", () => {
+    const items = effectItems(
+      effectRows(index, [effect(5, "no_change", 0), effect(6, "increase", 1)]),
+    );
+    expect(items[0]?.values).toEqual({
+      agent: ["doxorubicin"],
+      target: ["MCF-7"],
+      direction: ["no_change"],
+      work: ["1"],
+      check: ["unchecked"],
+      notice: ["retraction"],
+    });
+    const found = filter(items, { ...emptySelection(), text: "dox increase" }, EFFECT_FACETS);
+    expect(found.items.map((item) => item.report.id)).toEqual([6]);
+    const label = effectLabels(index);
+    expect(label("direction", "no_change")).toBe("no change");
+    expect(label("work", "1")).toBe("Lafi et al. 2023, PLOS ONE");
+    expect(label("agent", "doxorubicin")).toBe("doxorubicin");
   });
 
   it("gives each mark the notices of its source", () => {

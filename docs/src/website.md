@@ -11,6 +11,7 @@ The website is a static site in Svelte and TypeScript. It reads the files that
 | --- | --- |
 | Works | The works in the order that arity found them, with their licenses, notices, and number of reports. |
 | Work | The PDF, or the canonical text when there is no PDF, with a mark on each quote. The list of reports, the notices, and the files with their digests. |
+| Reports | All reports in one table, with a search, filters, a sort, a choice of columns, and downloads. |
 | Report | One report: its value or effect, its conditions, its quotes, its checks, and its provenance. |
 | Properties | Each property with its unit and its dimension. |
 | Property | A figure and a table of all values of the property, in the unit of the property. |
@@ -19,6 +20,29 @@ The website is a static site in Svelte and TypeScript. It reads the files that
 | Effects | A matrix of agents and targets, with one mark for each reported effect. |
 
 Each table can download its rows as a CSV file.
+
+## Find and filter reports
+
+On the Reports page, type words in the search box. A report agrees with the
+search when each word is in its property, its entities, its conditions, its
+value, its method, its source, or its quotes. Put a phrase in double quotes to
+find its words together. The search ignores case and accents. It also ignores
+the differences between the forms of a character, for example "µ" and "μ", or
+"IC₅₀" and "IC50".
+
+The filters divide the reports by property, entity, condition, work, kind of
+report, check, notice, origin of the value, and direction of the effect. A
+report must agree with one of the values that you select in each filter. The
+number next to a value is the number of reports that you see when you also
+select that value. When you select one property, you can also give a range for
+the converted value.
+
+Select the head of a column to sort the table by that column. Select it again
+to sort in the opposite direction. The address of the page keeps the words, the
+filters, the sort, the page, and the columns, so you can share a selection as a
+link. A download gives all the rows that you select, not only the rows of the
+page: a CSV file with all columns, or a JSON file with each report as arity
+exports it.
 
 ## Marks on the PDF
 

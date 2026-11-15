@@ -7,7 +7,7 @@ use std::time::Duration;
 use arity_cli::config::{CONFIG_FILE, Config, PersonConfig};
 use arity_cli::submit::Outcome;
 use arity_cli::{
-    CliError, Context, Result, archive, catalogue, coverage, fetch, notices, show, submit,
+    CliError, Context, Result, archive, catalogue, checks, coverage, fetch, notices, show, submit,
 };
 use arity_core::vocabulary::CheckState;
 use arity_core::{EntityKind, License, NoticeKind, Orcid, PREFIXES, Scope};
@@ -81,13 +81,19 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Record that you compared a report with its source.
+    /// Record that you compared a report with its source. With `--file`,
+    /// record the checks of a check file that the website makes.
     Check {
-        report: i64,
-        #[arg(value_enum)]
-        verdict: Verdict,
-        #[arg(long)]
+        #[arg(required_unless_present = "file")]
+        report: Option<i64>,
+        #[arg(value_enum, required_unless_present = "file")]
+        verdict: Option<Verdict>,
+        #[arg(long, conflicts_with = "file")]
         note: Option<String>,
+        /// A check file from the website. arity records each check with the
+        /// person that the file names.
+        #[arg(long, conflicts_with_all = ["report", "verdict"])]
+        file: Option<PathBuf>,
     },
     /// Read the notices about works again: retractions, corrections, and others.
     Notices { identifiers: Vec<String> },
@@ -176,10 +182,17 @@ fn run(cli: Cli, out: &mut impl Write) -> Result<ExitCode> {
         Command::Coverage { identifier, json } => coverage_of(data, &identifier, json, out),
         Command::Submit { file, dry_run } => submit_file(data, &file, dry_run, now, out),
         Command::Check {
-            report,
-            verdict,
+            file: Some(file), ..
+        } => check_file(data, &file, now, out),
+        Command::Check {
+            report: Some(report),
+            verdict: Some(verdict),
             note,
+            file: None,
         } => check(data, report, verdict, note.as_deref(), now, out),
+        Command::Check { .. } => Err(CliError::Usage(
+            "give a report and a verdict, or a check file".to_owned(),
+        )),
         Command::Notices { identifiers } => refresh_notices(data, &identifiers, now, out),
         Command::Export { out: folder } => export(data, &folder, now, out),
         Command::Archive { folder } => write_archive(data, &folder, out),
@@ -421,6 +434,16 @@ fn check(
     };
     submit::record_check(&context, ReportId(report), state, note, now)?;
     emit(out, format!("Report {report} is {state}."))?;
+    Ok(ExitCode::SUCCESS)
+}
+
+fn check_file(data: &Path, file: &Path, now: Timestamp, out: &mut impl Write) -> Result<ExitCode> {
+    let context = open(data)?;
+    let recorded = checks::record_file(&context, file, now)?;
+    emit(
+        out,
+        format!("Recorded {recorded} new checks from {}.", file.display()),
+    )?;
     Ok(ExitCode::SUCCESS)
 }
 

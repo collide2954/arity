@@ -3,6 +3,7 @@
 
 pub mod archive;
 pub mod catalogue;
+pub mod checks;
 pub mod config;
 pub mod context;
 pub mod coverage;

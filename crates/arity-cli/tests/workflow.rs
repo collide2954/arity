@@ -6,7 +6,7 @@ use std::path::Path;
 
 use arity_cli::config::{Config, PersonConfig};
 use arity_cli::submit::Outcome;
-use arity_cli::{Context, archive, catalogue, coverage, fetch, show, submit};
+use arity_cli::{Context, archive, catalogue, checks, coverage, fetch, show, submit};
 use arity_core::vocabulary::CheckState;
 use arity_core::{CcElements, License, Notice, NoticeKind, NoticeSource};
 use arity_sources::{Http, Response, SourceError, europepmc, pmc};
@@ -335,6 +335,87 @@ fn files_in(root: &Path) -> BTreeMap<String, Vec<u8>> {
         }
     }
     files
+}
+
+/// A database with one stored submission, and the run of its report `r1`.
+fn stored(directory: &Path) -> (Context, arity_store::RunId, arity_store::ReportId) {
+    let context = context(directory);
+    let work = catalogue::search(&context, TOPIC, 5, now()).unwrap()[0].work;
+    fetch::fetch(&context, work, now()).unwrap();
+    let path = directory.join("submission.json");
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&submission(&context, "7.30")).unwrap(),
+    )
+    .unwrap();
+    let Outcome::Stored { run, reports, .. } =
+        submit::submit(&context, &path, false, now()).unwrap()
+    else {
+        panic!("the submission was not stored");
+    };
+    (context, run, reports[0].0)
+}
+
+fn check_file(run: arity_store::RunId, report: &str, state: &str, at: &str) -> Vec<u8> {
+    serde_json::to_vec(&json!({
+        "format": "arity-checks/1",
+        "person": { "name": "A Checker", "orcid": "0000-0002-1825-0097" },
+        "checks": [{
+            "work": "PMC6274071", "run": run.0, "report": report, "state": state,
+            "note": "The source states 7.30 ± 0.84 μM.", "at": at
+        }]
+    }))
+    .unwrap()
+}
+
+#[test]
+fn records_the_checks_of_a_check_file_with_the_person_of_the_file() {
+    let directory = tempfile::tempdir().unwrap();
+    let (context, run, report) = stored(directory.path());
+    let file = check_file(run, "r1", "rejected", "2026-11-14T09:00:00Z");
+
+    assert_eq!(checks::record(&context, &file, now()).unwrap(), 1);
+    assert_eq!(
+        context.store.check_state(report).unwrap(),
+        CheckState::Rejected
+    );
+    let events = context.store.check_events().unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].person.name, "A Checker");
+    assert_eq!(
+        events[0].note.as_deref(),
+        Some("The source states 7.30 ± 0.84 μM.")
+    );
+    assert_eq!(events[0].at, "2026-11-14T09:00:00Z".parse().unwrap());
+
+    assert_eq!(checks::record(&context, &file, now()).unwrap(), 0);
+    assert_eq!(context.store.check_events().unwrap().len(), 1);
+}
+
+#[test]
+fn refuses_a_check_file_with_a_problem_and_records_none_of_its_checks() {
+    let directory = tempfile::tempdir().unwrap();
+    let (context, run, _) = stored(directory.path());
+    let at = "2026-11-14T09:00:00Z";
+    for (file, problem) in [
+        (check_file(run, "r9", "confirmed", at), "no report r9"),
+        (check_file(run, "r1", "unchecked", at), "confirm or reject"),
+        (
+            check_file(run, "r1", "confirmed", "2026-11-15T09:00:00Z"),
+            "later than now",
+        ),
+        (
+            check_file(arity_store::RunId(run.0 + 1), "r1", "confirmed", at),
+            "no run",
+        ),
+        (b"{\"format\": \"arity-checks/9\"}".to_vec(), "check file"),
+    ] {
+        let error = checks::record(&context, &file, now())
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(problem), "{error}");
+    }
+    assert_eq!(context.store.check_events().unwrap(), Vec::new());
 }
 
 /// A database with one work, a notice, one run, and one check, and the

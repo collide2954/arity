@@ -241,6 +241,14 @@ kbd {
   padding: var(--space-4);
 }
 
+.card > :first-child {
+  margin-top: 0;
+}
+
+.card > :last-child {
+  margin-bottom: 0;
+}
+
 /* A notice that a later run corrected what the page shows */
 
 .correction {

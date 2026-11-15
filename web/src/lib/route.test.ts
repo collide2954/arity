@@ -21,6 +21,7 @@ describe("parseRoute", () => {
     ["#/effects", { page: "effects" }],
     ["#/effects?direction=decrease", { page: "effects", params: "direction=decrease" }],
     ["#/compare", { page: "compare" }],
+    ["#/checks", { page: "checks" }],
     ["#/compare?property=ic50&by=subject", { page: "compare", params: "property=ic50&by=subject" }],
     ["#/about", { page: "about" }],
   ])("reads %s", (hash, route) => {
@@ -65,6 +66,7 @@ describe("link", () => {
     { page: "entity", id: 3 },
     { page: "effects" },
     { page: "compare", params: "property=ic50&across=work" },
+    { page: "checks" },
     { page: "about" },
   ])("round-trips %j", (route) => {
     expect(parseRoute(link(route))).toEqual(route);

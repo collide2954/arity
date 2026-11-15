@@ -1,6 +1,8 @@
 <script lang="ts">
   import CheckBadge from "../components/CheckBadge.svelte";
+  import CheckControls from "../components/CheckControls.svelte";
   import Notices from "../components/Notices.svelte";
+  import { checking } from "../lib/checking.svelte";
   import { loadIndex, loadReports, loadWork } from "../lib/data";
   import { conditions, entityName, headline, names, propertyName } from "../lib/describe";
   import {
@@ -37,6 +39,10 @@
         >Show at its place in the source</a
       >
     </p>
+    {@const work = index.works.find((candidate) => candidate.id === report.work)}
+    {#if checking.on && work}
+      <CheckControls {report} {work} />
+    {/if}
 
     <section class="card">
       <h2>What the source reports</h2>

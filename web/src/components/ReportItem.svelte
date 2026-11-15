@@ -1,14 +1,17 @@
 <script lang="ts">
+  import { checking } from "../lib/checking.svelte";
   import { conditions, headline, type Names } from "../lib/describe";
   import { imageReading } from "../lib/format";
   import { link } from "../lib/route";
-  import type { Report } from "../lib/types";
+  import type { Report, WorkSummary } from "../lib/types";
   import CheckBadge from "./CheckBadge.svelte";
+  import CheckControls from "./CheckControls.svelte";
   import NoticeChips from "./NoticeChips.svelte";
 
   let {
     report,
     lookup,
+    work,
     notices = [],
     selected = false,
     located = true,
@@ -16,6 +19,8 @@
   }: {
     report: Report;
     lookup: Names;
+    /** The work of the report. With it, check mode shows the controls of a check. */
+    work?: WorkSummary | undefined;
     notices?: readonly string[];
     selected?: boolean;
     located?: boolean;
@@ -43,6 +48,9 @@
     <p class="muted small">arity cannot find this quote in the PDF. The text view shows it.</p>
   {/if}
   <a class="small" href={link({ page: "report", id: report.id })}>Details and provenance</a>
+  {#if checking.on && work}
+    <CheckControls {report} {work} />
+  {/if}
 </article>
 
 <style>

@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { checking, setCheckMode } from "./lib/checking.svelte";
   import { link } from "./lib/route";
   import { location } from "./lib/state.svelte";
   import About from "./pages/About.svelte";
+  import Checks from "./pages/Checks.svelte";
   import Compare from "./pages/Compare.svelte";
   import Effects from "./pages/Effects.svelte";
   import Entities from "./pages/Entities.svelte";
@@ -45,6 +47,23 @@
         aria-current={active(section.page) ? "page" : undefined}>{section.label}</a
       >
     {/each}
+    <span class="checking">
+      {#if checking.on || checking.draft.marks.length > 0}
+        <a
+          href={link({ page: "checks" })}
+          aria-current={route.page === "checks" ? "page" : undefined}
+          >Your checks ({checking.draft.marks.length})</a
+        >
+      {/if}
+      <button
+        type="button"
+        aria-pressed={checking.on}
+        title="In check mode, you can confirm or reject reports."
+        onclick={() => {
+          setCheckMode(!checking.on);
+        }}>Check mode</button
+      >
+    </span>
   </nav>
 </header>
 
@@ -79,6 +98,8 @@
     <Effects params={route.params ?? ""} />
   {:else if route.page === "compare"}
     <Compare params={route.params ?? ""} />
+  {:else if route.page === "checks"}
+    <Checks />
   {:else if route.page === "about"}
     <About />
   {:else}
@@ -130,6 +151,18 @@
     font-weight: 700;
     font-size: 1.1rem;
     margin-right: 0.5rem;
+  }
+
+  .checking {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 1rem;
+    align-items: baseline;
+  }
+
+  .checking button {
+    padding: 0.15rem 0.6rem;
+    font-size: 0.9rem;
   }
 
   footer {

@@ -42,6 +42,7 @@
           (row) => row.report,
         )}
   {@const highlights = highlightsOf(own, lookup)}
+  {@const summary = index.works.find((work) => work.id === id)}
   {@const metadata = page.work.metadata}
   {@const shown = view ?? (page.pdf ? "pdf" : "text")}
   <header>
@@ -155,6 +156,7 @@
           <ReportItem
             {report}
             {lookup}
+            work={summary}
             selected={selected === report.id}
             located={shown !== "pdf" || located === null || located.has(report.id)}
             onselect={select}

@@ -25,6 +25,7 @@
     {@const lookup = names(index)}
     {@const noticesOf = noticesOfWorks(index.works)}
     {@const related = reports.filter((report) => Object.values(report.entities).includes(id))}
+    {@const works = new Map(index.works.map((work) => [work.id, work]))}
     <h1>{entity.label}</h1>
     <p class="secondary">{entity.kind.replaceAll("_", " ")}</p>
     <p class="chips">
@@ -41,6 +42,7 @@
         <ReportItem
           {report}
           {lookup}
+          work={works.get(report.work)}
           notices={noticesOf(report.work)}
           onselect={(selected: number) => {
             open(selected, report.work);

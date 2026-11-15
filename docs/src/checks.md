@@ -15,7 +15,9 @@ See [Issue codes](reference/issues.md) for the full list.
 - They find each quote in its block, after [normalization](text.md).
 - They find each number of a report in its quotes: the value or the ends of
   its interval, the uncertainty and its level, the number of samples, each
-  dose, the value of each condition, the magnitude, and the p-value.
+  dose, the value of each condition, the magnitude, the p-value, the q-value,
+  the statistic of a test and its degrees of freedom, and the number of
+  samples of each group.
 - They find the unit text in the quotes, read it as a unit, and make sure that
   it is the same unit as the UCUM unit of the value.
 - They make sure that each unit measures the dimension of its property.
@@ -39,6 +41,8 @@ checks look for cue words in the quotes:
 - For a direction such as `decrease`, a quote must have a word such as
   "decreased", "reduced", or "lower". For `no_change`, a quote must have a word
   such as "no", "not", "unchanged", or "similar".
+- For a correction for multiple tests such as `bonferroni`, a quote must name
+  it, for example "Bonferroni".
 
 When a quote has no cue word, the checks give a warning, and a person must
 check the report.

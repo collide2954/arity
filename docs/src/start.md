@@ -66,7 +66,8 @@ arity show PMC6274071
 
 `show` prints the canonical text with the key of each block, for example
 `[t1/r24c5] 7.30 ± 0.84`. A submission uses these keys and quotes. See
-[Submissions](submissions.md).
+[Submissions](submissions.md). `arity guide` prints the rules and the steps of
+a reading; see [Read a work](reading.md).
 
 ```sh
 arity submit submission.json --dry-run

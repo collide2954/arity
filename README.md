@@ -88,6 +88,15 @@ pnpm --dir web check
 pnpm --dir web test
 ```
 
+## Read works for arity
+
+A reader can be a person, or a language model that a person runs. Give the
+reader the guide [Read a work](docs/src/reading.md): `arity guide` prints it,
+and a reader can also load it from
+<https://raw.githubusercontent.com/collide2954/arity/main/docs/src/reading.md>.
+The guide tells the rules, the steps, and how to check a submission before you
+give it to a person who keeps the data of arity.
+
 ## Documentation
 
 The documentation is in [docs](docs/src/SUMMARY.md). To read it as a book,
